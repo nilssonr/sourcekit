@@ -14,6 +14,7 @@ from .errors import (
     ValidationError,
 )
 from .ids import ArxivId, is_valid_id, parse_id
+from .models import Author, Feed, FeedItem, FetchResult, Paper, PdfResult, SearchPage
 from .query import Q
 
 __version__ = "0.1.0"
