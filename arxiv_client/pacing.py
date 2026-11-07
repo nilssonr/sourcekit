@@ -1,22 +1,31 @@
-"""Request pacing inside one call, and the shared 406 block marker.
+"""Request pacing, the cross-process request gate, and the shared 406 block marker.
 
-There is deliberately no global or cross-process throttle: pacing between separate
-calls is the caller's (the skill's) job. A ``Pacer`` lives for one public call and
-spaces the requests *that call* makes. The one piece of state shared between calls
-and processes is the 406 block marker, because retrying during a 406 block extends it.
+arXiv allows at most 1 request every 3 s and one connection at a time, across all your
+processes and all its legacy APIs together (doc section 6.1). Three pieces enforce that:
+
+- ``Pacer`` lives for one public call and spaces the requests *that call* makes.
+- ``FileGate`` is shared by every call in every process on this machine. It holds an OS
+  file lock for the whole of each request (one connection at a time) and keeps the
+  start time of the last request in that file, so separate calls and parallel
+  processes are spaced too. The OS drops the lock when a process exits, so a crash
+  can't leave it stuck.
+- ``BlockStore`` remembers a 406, because retrying during a 406 block extends it.
 """
 
 from __future__ import annotations
 
+import contextlib
+import json
 import os
 import sys
 import tempfile
 import time
-from typing import Callable, Optional, TextIO
+from typing import Callable, Dict, Iterator, Optional, TextIO
 
 from .errors import ArxivTimeoutError
 
 BLOCK_SECONDS = 600.0
+GATE_MARGIN = 0.001  # added to every gate wait: wall-clock floats and stored timestamps are not exact
 
 
 class Pacer:
@@ -136,3 +145,190 @@ class MemoryBlockStore(BlockStore):
 
     def _read_file(self) -> float:
         return 0.0
+
+
+try:
+    import fcntl as _fcntl
+except ImportError:  # pragma: no cover - not POSIX: the gate falls back to this process only
+    _fcntl = None  # type: ignore[assignment]
+
+
+class _Contended(Exception):
+    """Another process holds the gate."""
+
+
+class MemoryGate:
+    """Spaces requests made through it, within this process only (tests and embedding).
+
+    ``hold(intervals, deadline)`` waits until every lane in ``intervals`` (lane name to
+    seconds) is clear, records the request start in those lanes, and holds the gate
+    while the request runs. ``deadline`` is a ``clock()`` value: waiting past it raises
+    ArxivTimeoutError instead of sending the request.
+    """
+
+    def __init__(
+        self,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+        wall: Callable[[], float] = time.time,
+    ) -> None:
+        self._clock = clock
+        self._sleep = sleep
+        self._wall = wall
+        self._lanes: Dict[str, float] = {}
+
+    @contextlib.contextmanager
+    def hold(self, intervals: Dict[str, float], deadline: float) -> Iterator[None]:
+        self._lock(deadline)
+        try:
+            lanes = self._merge(self._read())
+            self._wait(lanes, intervals, deadline)
+            start = self._wall()
+            for lane in intervals:
+                lanes[lane] = start
+            self._lanes = dict(lanes)
+            self._write(lanes)
+            yield
+        finally:
+            self._unlock()
+
+    def _wait(self, lanes: Dict[str, float], intervals: Dict[str, float], deadline: float) -> None:
+        now = self._wall()
+        wait = 0.0
+        for lane, interval in intervals.items():
+            last = lanes.get(lane)
+            if last is None:
+                continue
+            # A timestamp in the future (clock change, corruption) never waits longer than one interval.
+            wait = max(wait, min(interval, last + interval - now))
+        if wait > 0:
+            wait += GATE_MARGIN
+            if self._clock() + wait >= deadline:
+                raise ArxivTimeoutError(
+                    "time budget exhausted: next request would have to wait %.1fs for pacing" % wait
+                )
+            self._sleep(wait)
+
+    def _merge(self, stored: Dict[str, float]) -> Dict[str, float]:
+        lanes = dict(self._lanes)
+        for lane, t in stored.items():
+            lanes[lane] = max(lanes.get(lane, t), t)
+        return lanes
+
+    # Storage hooks: in memory here, a locked file in FileGate.
+    def _lock(self, deadline: float) -> None:
+        pass
+
+    def _unlock(self) -> None:
+        pass
+
+    def _read(self) -> Dict[str, float]:
+        return {}
+
+    def _write(self, lanes: Dict[str, float]) -> None:
+        pass
+
+
+class FileGate(MemoryGate):
+    """A gate shared by every process on this machine, through a locked file.
+
+    The lock is taken without blocking and retried every ``poll`` seconds until the
+    deadline, so a busy gate ends in ArxivTimeoutError rather than a hang. OS locks are
+    not first-come-first-served: with many processes queued, the later ones may time
+    out. If the file can't be opened, the gate warns once on stderr and spaces only
+    this process's requests.
+    """
+
+    def __init__(
+        self,
+        path: Optional[str] = None,
+        *,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+        wall: Callable[[], float] = time.time,
+        poll: float = 0.1,
+        warn_stream: Optional[TextIO] = None,
+    ) -> None:
+        super().__init__(clock=clock, sleep=sleep, wall=wall)
+        self.path = path if path is not None else os.path.join(default_cache_dir(), "request.lock")
+        self._poll = poll
+        self._fd: Optional[int] = None
+        self._warned = False
+        self._warn_stream = warn_stream
+
+    def _lock(self, deadline: float) -> None:
+        if _fcntl is None:  # pragma: no cover
+            self._warn(OSError("file locking needs a POSIX system"))
+            return
+        try:
+            os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
+            fd = os.open(self.path, os.O_RDWR | os.O_CREAT, 0o600)
+        except OSError as e:
+            self._warn(e)
+            return
+        try:
+            while True:
+                try:
+                    _try_lock(fd)
+                    break
+                except _Contended:
+                    if self._clock() + self._poll >= deadline:
+                        raise ArxivTimeoutError(
+                            "time budget exhausted waiting for another arxiv_client process to "
+                            "finish its request (gate %s)" % self.path
+                        ) from None
+                    self._sleep(self._poll)
+        except BaseException:
+            os.close(fd)
+            raise
+        self._fd = fd
+
+    def _unlock(self) -> None:
+        fd, self._fd = self._fd, None
+        if fd is None:
+            return
+        try:
+            _unlock(fd)
+        finally:
+            os.close(fd)
+
+    def _read(self) -> Dict[str, float]:
+        if self._fd is None:
+            return {}
+        try:
+            os.lseek(self._fd, 0, os.SEEK_SET)
+            data = json.loads(os.read(self._fd, 4096).decode("utf-8") or "{}")
+            return {str(k): float(v) for k, v in data.items()}
+        except (OSError, ValueError, AttributeError, TypeError):
+            return {}  # unreadable or corrupt: the in-memory lanes still apply
+
+    def _write(self, lanes: Dict[str, float]) -> None:
+        if self._fd is None:
+            return
+        data = json.dumps({k: round(v, 6) for k, v in sorted(lanes.items())}).encode("utf-8")
+        try:
+            os.lseek(self._fd, 0, os.SEEK_SET)
+            os.write(self._fd, data)
+            os.ftruncate(self._fd, len(data))
+        except OSError as e:
+            self._warn(e)
+
+    def _warn(self, error: OSError) -> None:
+        if not self._warned:
+            self._warned = True
+            stream = self._warn_stream if self._warn_stream is not None else sys.stderr
+            stream.write(
+                "arxiv_client: could not use request gate %s (%s); spacing this process's "
+                "requests only\n" % (self.path, error)
+            )
+
+
+def _try_lock(fd: int) -> None:
+    try:
+        _fcntl.flock(fd, _fcntl.LOCK_EX | _fcntl.LOCK_NB)
+    except BlockingIOError:
+        raise _Contended() from None
+
+
+def _unlock(fd: int) -> None:
+    _fcntl.flock(fd, _fcntl.LOCK_UN)

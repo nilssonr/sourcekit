@@ -9,6 +9,7 @@ from arxiv_client import (
     ArxivTimeoutError,
     MalformedResponseError,
     MemoryBlockStore,
+    MemoryGate,
     NetworkBlockedError,
     NotFoundError,
     Pacer,
@@ -25,6 +26,7 @@ OK = make_feed([make_entry("2401.00001")])
 
 def transport(clock, opener, **kw):
     kw.setdefault("block_store", MemoryBlockStore(wall=clock.wall))
+    kw.setdefault("gate", MemoryGate(clock=clock.monotonic, sleep=clock.sleep, wall=clock.wall))
     return Transport("test-agent/1.0", opener=opener, clock=clock.monotonic, sleep=clock.sleep, **kw)
 
 
@@ -148,6 +150,69 @@ class ThrottleSignalTests(unittest.TestCase):
         with self.assertRaises(MalformedResponseError):
             transport(clock, opener).get(URL, pacer(clock))
         self.assertEqual(len(opener.requests), 1)
+
+
+class RecordingGate(MemoryGate):
+    """A gate that logs when it is taken and released into a shared event list."""
+
+    def __init__(self, clock, events):
+        super().__init__(clock=clock.monotonic, sleep=clock.sleep, wall=clock.wall)
+        self.events = events
+
+    def _lock(self, deadline):
+        self.events.append("lock")
+
+    def _unlock(self):
+        self.events.append("unlock")
+
+
+class LoggedResponse(FakeResponse):
+    def __init__(self, events, *a, **kw):
+        super().__init__(*a, **kw)
+        self.events = events
+
+    def read(self, n):
+        self.events.append("read")
+        return super().read(n)
+
+    def close(self):
+        self.events.append("close")
+        super().close()
+
+
+class GateTests(unittest.TestCase):
+    def test_gate_held_for_the_connection_and_released_during_backoff(self):
+        clock = FakeClock()
+        events = []
+        real_sleep = clock.sleep
+
+        def sleep(seconds):
+            events.append("sleep")
+            real_sleep(seconds)
+
+        def step(body, headers):
+            def respond(rec):
+                events.append("open")
+                return LoggedResponse(events, 200, body, headers)
+            return respond
+
+        opener = FakeOpener(clock, [step(b"Rate exceeded.", {}), step(OK, {"content-type": "application/atom+xml"})])
+        t = Transport("test-agent/1.0", opener=opener, clock=clock.monotonic, sleep=sleep,
+                      block_store=MemoryBlockStore(wall=clock.wall), gate=RecordingGate(clock, events))
+        t.get(URL, Pacer(3.0, clock.monotonic, sleep))
+        first = events[: events.index("unlock") + 1]
+        self.assertEqual(first[0], "lock")
+        self.assertEqual(first[-2:], ["close", "unlock"])
+        self.assertIn("open", first)
+        self.assertIn("read", first)
+        backoff = events.index("sleep", events.index("unlock"))
+        self.assertEqual(events[backoff + 1], "lock", "backoff sleep must happen outside the gate")
+        self.assertEqual(events[-1], "unlock")
+        self.assertEqual(events.count("lock"), events.count("unlock"))
+
+    def test_default_gate_is_a_file_gate(self):
+        from arxiv_client import FileGate
+        self.assertIsInstance(Transport("test-agent/1.0").gate, FileGate)
 
 
 class ErrorStatusTests(unittest.TestCase):

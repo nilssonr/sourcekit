@@ -30,11 +30,13 @@ from .errors import (
     ThrottledError,
     ValidationError,
 )
-from .pacing import BLOCK_SECONDS, BlockStore, Pacer
+from .pacing import BLOCK_SECONDS, BlockStore, FileGate, MemoryGate, Pacer
 
 DEFAULT_USER_AGENT = "research-client/0.1"
 DEFAULT_BUDGET = 30.0
 DEFAULT_REQUEST_TIMEOUT = 10.0
+MIN_INTERVAL = 3.0              # arXiv: at most 1 request every 3 s, across all hosts and processes
+PDF_INTERVAL = 15.0             # robots.txt Crawl-delay for User-agent: *
 
 BACKOFFS = (5.0, 10.0)          # sleeps before the 2nd and 3rd attempt on 429/503/rate-exceeded
 MIN_REQUEST_WINDOW = 5.0        # budget that must remain after a backoff sleep to bother retrying
@@ -142,6 +144,9 @@ class Transport:
         sleep: Callable[[float], None] = time.sleep,
         block_store: Optional[BlockStore] = None,
         request_timeout: float = DEFAULT_REQUEST_TIMEOUT,
+        gate: Optional[MemoryGate] = None,
+        min_interval: float = MIN_INTERVAL,
+        pdf_interval: float = PDF_INTERVAL,
     ) -> None:
         if not user_agent or not user_agent.strip():
             raise ValidationError("user_agent must not be empty")
@@ -151,6 +156,9 @@ class Transport:
         self._sleep = sleep
         self.block_store = block_store if block_store is not None else BlockStore()
         self.request_timeout = float(request_timeout)
+        self.gate = gate if gate is not None else FileGate(clock=clock, sleep=sleep)
+        self._api_lanes = {"any": float(min_interval)}
+        self._pdf_lanes = {"any": float(min_interval), "pdf": float(pdf_interval)}
 
     # ----- public ------------------------------------------------------------
     def get(self, url: str, pacer: Pacer, budget: float = DEFAULT_BUDGET) -> Response:
@@ -158,13 +166,15 @@ class Transport:
         deadline = self._clock() + budget
         attempt = 0
         while True:
-            raw = self._open(url, pacer, deadline)
-            try:
-                status = int(raw.status)
-                headers = _lower_headers(raw.headers)
-                body = self._read(raw, deadline, MAX_XML_BYTES)
-            finally:
-                raw.close()
+            # The gate is held for the whole connection and released before any backoff sleep.
+            with self.gate.hold(self._api_lanes, deadline):
+                raw = self._open(url, pacer, deadline)
+                try:
+                    status = int(raw.status)
+                    headers = _lower_headers(raw.headers)
+                    body = self._read(raw, deadline, MAX_XML_BYTES)
+                finally:
+                    raw.close()
             if status == 200:
                 signal = self._classify_200(headers, body, expect="xml")
                 if signal is None:
@@ -192,17 +202,18 @@ class Transport:
         deadline = self._clock() + budget
         attempt = 0
         while True:
-            raw = self._open(url, pacer, deadline)
-            try:
-                status = int(raw.status)
-                headers = _lower_headers(raw.headers)
-                ctype = headers.get("content-type", "").lower()
-                if status == 200 and "application/pdf" in ctype:
-                    path, size = self._stream_pdf(raw, deadline, dest_dir, max_bytes)
-                    return path, headers, size
-                body = self._read(raw, deadline, 1024 * 1024)
-            finally:
-                raw.close()
+            with self.gate.hold(self._pdf_lanes, deadline):
+                raw = self._open(url, pacer, deadline)
+                try:
+                    status = int(raw.status)
+                    headers = _lower_headers(raw.headers)
+                    ctype = headers.get("content-type", "").lower()
+                    if status == 200 and "application/pdf" in ctype:
+                        path, size = self._stream_pdf(raw, deadline, dest_dir, max_bytes)
+                        return path, headers, size
+                    body = self._read(raw, deadline, 1024 * 1024)
+                finally:
+                    raw.close()
             if status == 200:
                 signal = self._classify_200(headers, body, expect="pdf")
             else:
@@ -349,7 +360,7 @@ class Transport:
         if attempt < len(BACKOFFS):
             wait = BACKOFFS[attempt]
             if self._clock() + wait + MIN_REQUEST_WINDOW <= deadline:
-                self._sleep(wait)  # no lock is held here; pacing is per call
+                self._sleep(wait)  # the gate is released while backing off (doc section 6.2)
                 return attempt + 1
         host = urlsplit(url).hostname or url
         if signal == "empty-200":

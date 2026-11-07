@@ -13,12 +13,14 @@ from .errors import ArxivError, NotFoundError, ServerError, ValidationError
 from .feeds import parse_atom_feed, parse_rss, validate_categories
 from .ids import ArxivId, parse_id
 from .models import FeedItem, Feed, FetchResult, Paper, PdfResult, SearchPage
-from .pacing import BlockStore, Pacer
+from .pacing import BlockStore, MemoryGate, Pacer
 from .query import Q, encode_params, to_search_query
 from .transport import (
     DEFAULT_BUDGET,
     DEFAULT_REQUEST_TIMEOUT,
     DEFAULT_USER_AGENT,
+    MIN_INTERVAL,
+    PDF_INTERVAL,
     Opener,
     Transport,
 )
@@ -34,8 +36,6 @@ START_LIMIT = 10000          # start >= 10000 returns a deterministic 500 (doc s
 MAX_PAGE_REQUEST = 2000      # largest max_results we send in one request
 ID_CHUNK_SIZE = 100          # GET URLs with ~650+ IDs return 414
 EMPTY_PAGE_RETRIES = 3       # an empty page partway through paging is retried this many times
-MIN_INTERVAL = 3.0           # seconds between requests within one call
-PDF_INTERVAL = 15.0          # robots.txt Crawl-delay for User-agent: *
 MAX_PDFS_PER_CALL = 10
 DEFAULT_MAX_PDF_BYTES = 50 * 1024 * 1024
 
@@ -124,9 +124,11 @@ class SearchResults:
 class ArxivClient:
     """Client for the arXiv query API and announcement feeds.
 
-    Pacing: requests made *within one call* (pages, ID chunks, retries) are spaced at
-    least 3 s apart. There is no pacing *between* separate calls: that is the caller's
-    job. arXiv's terms allow at most 1 request every 3 s and one connection at a time.
+    Pacing: arXiv's terms allow at most 1 request every 3 s and one connection at a
+    time, across all processes. Every request goes through ``gate`` (by default a
+    ``FileGate`` in the cache dir shared by all processes on this machine), which holds
+    the connection exclusively and spaces requests 3 s apart (15 s between PDFs), across
+    separate calls and processes too. Waiting for the gate counts against the budget.
 
     Time budget: every HTTP fetch (one page, one ID chunk, one PDF) gets ``budget``
     seconds in total, including pacing waits and retries.
@@ -145,6 +147,7 @@ class ArxivClient:
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
         block_store: Optional[BlockStore] = None,
+        gate: Optional[MemoryGate] = None,
         min_interval: float = MIN_INTERVAL,
         pdf_interval: float = PDF_INTERVAL,
     ) -> None:
@@ -164,6 +167,9 @@ class ArxivClient:
             clock=clock,
             sleep=sleep,
             block_store=block_store,
+            gate=gate,
+            min_interval=min_interval,
+            pdf_interval=pdf_interval,
             request_timeout=request_timeout,
         )
 

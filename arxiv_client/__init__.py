@@ -18,7 +18,7 @@ from .errors import (
 )
 from .ids import ArxivId, is_valid_id, parse_id
 from .models import Author, Feed, FeedItem, FetchResult, Paper, PdfResult, SearchPage
-from .pacing import BlockStore, MemoryBlockStore, Pacer
+from .pacing import BlockStore, FileGate, MemoryBlockStore, MemoryGate, Pacer
 from .query import Q
 from .transport import DEFAULT_USER_AGENT
 
@@ -47,6 +47,8 @@ __all__ = [
     "SearchPage",
     "BlockStore",
     "MemoryBlockStore",
+    "FileGate",
+    "MemoryGate",
     "Pacer",
     "Q",
     "DEFAULT_USER_AGENT",

@@ -9,7 +9,7 @@ import os
 from typing import Any, Callable, Dict, List, Optional, Union
 from urllib.parse import parse_qs, urlsplit
 
-from arxiv_client import ArxivClient, MemoryBlockStore
+from arxiv_client import ArxivClient, MemoryBlockStore, MemoryGate
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures", "arxiv")
 ATOM_CT = "application/atom+xml; charset=utf-8"
@@ -179,4 +179,5 @@ def make_feed(entries: List[str], total: Optional[int] = None, start: int = 0, i
 
 def make_client(clock: FakeClock, opener: FakeOpener, **kw: Any) -> ArxivClient:
     kw.setdefault("block_store", MemoryBlockStore(wall=clock.wall))
+    kw.setdefault("gate", MemoryGate(clock=clock.monotonic, sleep=clock.sleep, wall=clock.wall))
     return ArxivClient(opener=opener, clock=clock.monotonic, sleep=clock.sleep, **kw)
