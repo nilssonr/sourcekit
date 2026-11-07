@@ -1,0 +1,310 @@
+[
+ {
+  "a": "dis",
+  "b": "agreement",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p23"
+ },
+ {
+  "a": "test",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p23"
+ },
+ {
+  "a": "cus",
+  "b": "tomers",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p25"
+ },
+ {
+  "a": "maintain",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p26"
+ },
+ {
+  "a": "compa",
+  "b": "nies",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p26"
+ },
+ {
+  "a": "integra",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p26"
+ },
+ {
+  "a": "any",
+  "b": "where",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p26"
+ },
+ {
+  "a": "program",
+  "b": "mers",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p26"
+ },
+ {
+  "a": "exam",
+  "b": "ples",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p27"
+ },
+ {
+  "a": "characteris",
+  "b": "tics",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p27"
+ },
+ {
+  "a": "deci",
+  "b": "sions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p28"
+ },
+ {
+  "a": "cer",
+  "b": "tain",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p29"
+ },
+ {
+  "a": "bet",
+  "b": "ter",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p29"
+ },
+ {
+  "a": "situa",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p29"
+ },
+ {
+  "a": "exe",
+  "b": "cutes",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p30"
+ },
+ {
+  "a": "pre",
+  "b": "cise",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p32"
+ },
+ {
+  "a": "shortcom",
+  "b": "ings",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p32"
+ },
+ {
+  "a": "struc",
+  "b": "tures",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p32"
+ },
+ {
+  "a": "cov",
+  "b": "erage",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p33"
+ },
+ {
+  "a": "consider",
+  "b": "ation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p33"
+ },
+ {
+  "a": "pos",
+  "b": "sible",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p33"
+ },
+ {
+  "a": "mean",
+  "b": "ingful",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p34"
+ },
+ {
+  "a": "devel",
+  "b": "opers",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p35"
+ },
+ {
+  "a": "pro",
+  "b": "ductive",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p35"
+ },
+ {
+  "a": "meth",
+  "b": "ods",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p36"
+ },
+ {
+  "a": "moder",
+  "b": "ate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p37"
+ },
+ {
+  "a": "dif",
+  "b": "ficult",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p37"
+ },
+ {
+  "a": "develop",
+  "b": "ers",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p37"
+ },
+ {
+  "a": "posi",
+  "b": "tive",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p37"
+ },
+ {
+  "a": "mea",
+  "b": "sure",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p37"
+ },
+ {
+  "a": "sys",
+  "b": "tem",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p38"
+ },
+ {
+  "a": "put",
+  "b": "ting",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p39"
+ },
+ {
+  "a": "asymmetri",
+  "b": "cally",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p39"
+ },
+ {
+  "a": "sig",
+  "b": "nificant",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p39"
+ },
+ {
+  "a": "tech",
+  "b": "niques",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p39"
+ },
+ {
+  "a": "col",
+  "b": "leagues",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p39"
+ },
+ {
+  "a": "some",
+  "b": "thing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p39"
+ },
+ {
+  "a": "stagna",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p40"
+ },
+ {
+  "a": "devel",
+  "b": "opment",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p40"
+ },
+ {
+  "a": "posi",
+  "b": "tive",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p40"
+ },
+ {
+  "a": "direc",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p40"
+ },
+ {
+  "a": "guaran",
+  "b": "tee",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p40"
+ },
+ {
+  "a": "num",
+  "b": "ber",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p40"
+ },
+ {
+  "a": "third",
+  "b": "party",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p41"
+ }
+]
