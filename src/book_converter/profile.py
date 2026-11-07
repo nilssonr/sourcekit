@@ -11,8 +11,16 @@ import importlib.util
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import ModuleType
+from typing import TYPE_CHECKING
 
 from .sections import Section
+
+if TYPE_CHECKING:  # annotations only: verify imports this module
+    from .figures import FigureConfig
+    from .listings import ListingConfig
+    from .tables import TableConfig
+    from .verify import VerifyConfig
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -21,6 +29,11 @@ REPO = Path(__file__).resolve().parents[2]
 class Profile:
     name: str
     sections: dict[str, Section]
+    styles: ModuleType            # style predicates and constants used by convert.py (until step 4 of the plan)
+    listings: ListingConfig
+    figures: FigureConfig
+    tables: TableConfig
+    verify: VerifyConfig
     skip_pages: set[int] = field(default_factory=set)          # pages inside a section range that are not converted
     page_figures: dict[int, tuple[str, int]] = field(default_factory=dict)  # page -> (figure id, rotation)
     data_dir: Path | None = None

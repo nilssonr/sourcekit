@@ -12,6 +12,7 @@ import sys
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import ModuleType
 
 import pymupdf
 
@@ -20,14 +21,13 @@ from . import tables as tabmod
 from .hyphens import Resolver
 from .listings import (Callout, CodeLine, hexrgb, code_lines, fmt_lines, listing_bars, listing_parts, map_callouts,
                        with_blank_lines)
-from .pdf import Book, Span
+from .pdf import Book, Span, is_ws, near
 from .profile import Profile, load as load_profile
 from .sections import Section
-from .styles import (BLUE, HEADER_BAND, SIDEBAR_BG, column_left, column_right, is_bullet, is_callout, is_caption_font,
-                     is_code_block, is_figure_text, is_fn_marker, is_fn_start_marker, is_list_number,
-                     is_listing_head, is_ws, near)
 
 ROW_TOL = 2.7
+
+ST: ModuleType  # the profile's styles module; set in main (replaced by explicit config in step 4 of the plan)
 
 
 # ---------------------------------------------------------------- rows
@@ -52,7 +52,7 @@ def _ink_right(s: Span) -> float:
 
 def rows_of(spans: list[Span]) -> list[Row]:
     rows: list[Row] = []
-    normal = [s for s in spans if not is_fn_marker(s) and s.size < 40]
+    normal = [s for s in spans if not ST.is_fn_marker(s) and s.size < 40]
     for s in sorted(normal, key=lambda s: (s.page, s.baseline, s.x0)):
         r = next((r for r in rows if r.page == s.page and abs(r.top - s.baseline) <= ROW_TOL), None)
         if r:
@@ -62,7 +62,7 @@ def rows_of(spans: list[Span]) -> list[Row]:
     for s in spans:
         if s.size >= 40:
             rows.append(Row(s.page, s.y0, [s]))
-        elif is_fn_marker(s):
+        elif ST.is_fn_marker(s):
             cand = [r for r in rows if r.page == s.page and -1.0 <= r.top - s.baseline <= 5.0]
             if cand:
                 min(cand, key=lambda r: abs(r.top - s.baseline)).spans.append(s)
@@ -70,7 +70,7 @@ def rows_of(spans: list[Span]) -> list[Row]:
                 rows.append(Row(s.page, s.baseline, [s]))
     for r in rows:
         r.spans.sort(key=lambda s: s.x0)
-        ink = [s for s in r.spans if not is_ws(s) and not is_bullet(s) and not is_list_number(s)] or r.spans
+        ink = [s for s in r.spans if not is_ws(s) and not ST.is_bullet(s) and not ST.is_list_number(s)] or r.spans
         r.left = min(s.x0 for s in ink)
         r.right = max(_ink_right(s) for s in ink)
         r.cls = classify(r)
@@ -83,33 +83,33 @@ def classify(r: Row) -> str:
         return "blank"
     k = al[0]
     f = k.font
-    if r.top < HEADER_BAND:
+    if r.top < ST.HEADER_BAND:
         return "header"
     if all(s.font.startswith("NewBaskerville-Bold") and s.color == "#000000"
            and re.fullmatch(r"\s*([0-9]+|[ivxlc]+)\s*", s.text) for s in al):
         return "pagenum"
-    if any(s.font == "FranklinGothic-Demi" and near(s.size, 8.46) and s.color == BLUE
+    if any(s.font == "FranklinGothic-Demi" and near(s.size, 8.46) and s.color == ST.BLUE
            and s.text.strip() in ("DEFINITION", "TIP", "NOTE", "IMPORTANT", "WARNING") for s in al):
         return "note-start"
-    if is_bullet(k) or is_list_number(k):
-        if k.color == BLUE:
+    if ST.is_bullet(k) or ST.is_list_number(k):
+        if k.color == ST.BLUE:
             return "covers-item"
-        txt = next((s for s in al if not is_bullet(s) and not is_list_number(s)), None)
+        txt = next((s for s in al if not ST.is_bullet(s) and not ST.is_list_number(s)), None)
         return "sidebar-text" if txt and txt.font.startswith("FranklinGothic-Book") else "bullet"
-    if is_fn_start_marker(k):
+    if ST.is_fn_start_marker(k):
         return "footnote"
     if f.startswith("Courier") and near(k.size, 9.03):
         # a line that starts with inline code takes its class from the first non-code span
-        nk = next((s for s in al if not s.font.startswith("Courier") and not is_fn_marker(s)), None)
+        nk = next((s for s in al if not s.font.startswith("Courier") and not ST.is_fn_marker(s)), None)
         if nk is not None:
             k, f = nk, nk.font
-    if f.startswith("NewBaskerville") and k.size >= 40 and k.color == BLUE:
+    if f.startswith("NewBaskerville") and k.size >= 40 and k.color == ST.BLUE:
         return "dropcap"
-    if f.startswith("NewBaskerville") and near(k.size, 30) and k.color == BLUE:
+    if f.startswith("NewBaskerville") and near(k.size, 30) and k.color == ST.BLUE:
         return "title"
     if f == "FranklinGothic-DemiItal" and near(k.size, 12.0) and k.color == "#000000":
         return "map-title"
-    if f == "FranklinGothic-DemiItal" and k.color == BLUE:
+    if f == "FranklinGothic-DemiItal" and k.color == ST.BLUE:
         if near(k.size, 12.48):
             return "h2"
         if near(k.size, 10.5):
@@ -118,16 +118,16 @@ def classify(r: Row) -> str:
             return "covers-title"
         if k.text.strip() == "(continued)":
             return "continued"
-    if f.startswith("FranklinGothic-Book") and k.color == BLUE:
+    if f.startswith("FranklinGothic-Book") and k.color == ST.BLUE:
         return "covers-cont"
-    if f == "FranklinGothic-Demi" and k.color == BLUE and (near(k.size, 7.56) or near(k.size, 9.48)) \
+    if f == "FranklinGothic-Demi" and k.color == ST.BLUE and (near(k.size, 7.56) or near(k.size, 9.48)) \
             and all(re.fullmatch(r"[A-Z’'\- ]+", s.text) for s in al):
         return "smallcaps"
-    if f == "FranklinGothic-Demi" and k.color == BLUE and near(k.size, 10.5):
+    if f == "FranklinGothic-Demi" and k.color == ST.BLUE and near(k.size, 10.5):
         return "sidebar-title"
     if f.startswith("FranklinGothic-Book"):
         return "sidebar-text"
-    if is_caption_font(k):
+    if ST.is_caption_font(k):
         return "caption"
     if f.startswith("NewBaskerville") and near(k.size, 8.46):
         return "footnote-cont"
@@ -150,7 +150,7 @@ class Run:
 def span_run(s: Span) -> Run:
     if s.font.startswith("Courier"):
         return Run(s.text, "code")
-    if is_fn_marker(s):
+    if ST.is_fn_marker(s):
         return Run(s.text.strip(), "fn")
     i = s.italic
     b = "Bold" in s.font
@@ -158,14 +158,14 @@ def span_run(s: Span) -> Run:
 
 
 def is_note_label(s: Span) -> bool:
-    return s.font == "FranklinGothic-Demi" and near(s.size, 8.46) and s.color == BLUE
+    return s.font == "FranklinGothic-Demi" and near(s.size, 8.46) and s.color == ST.BLUE
 
 
 def row_runs(r: Row, plain: bool = False) -> list[Run]:
     out: list[Run] = []
     prev: Span | None = None
     for s in r.spans:
-        if is_bullet(s) or is_list_number(s) or is_note_label(s):
+        if ST.is_bullet(s) or ST.is_list_number(s) or is_note_label(s):
             continue
         if prev and s.x0 - prev.x1 > 1.0 and not prev.text[-1:].isspace() and not s.text[:1].isspace():
             out.append(Run(" ", ""))
@@ -286,7 +286,7 @@ def render_item(rows: list[Row]) -> str:
         else:
             segs[-1].append(r)
     main, *subs = segs
-    num = next((s.text.strip() for s in main[0].spans if is_list_number(s)), None) if main else None
+    num = next((s.text.strip() for s in main[0].spans if ST.is_list_number(s)), None) if main else None
     out = [(f"{num}. " if num else "- ") + render_runs(join_rows(main))]
     for s in subs:
         out.append("  - " + re.sub(r"^–\s*", "", render_runs(join_rows(s))))
@@ -298,13 +298,13 @@ def render_list(items: list[list[Row]]) -> str:
 
 
 def rel_left(page: int, x: float) -> float:
-    return x - column_left(page)
+    return x - ST.column_left(page)
 
 
 def item_text_lefts(item: list[Row]) -> list[float]:
     """Left edges a continuation line of this list item may align with: the item's text,
     and the text after the dash of any "–" sub-item row."""
-    tl = next(s for s in item[0].spans if not is_bullet(s) and not is_list_number(s) and not is_ws(s))
+    tl = next(s for s in item[0].spans if not ST.is_bullet(s) and not ST.is_list_number(s) and not is_ws(s))
     lefts = [rel_left(tl.page, tl.x0)]
     for r in item:
         for s in r.spans:
@@ -374,8 +374,8 @@ class Converter:
 
     def _listing_image(self, pno: int, spans: list[Span], area: pymupdf.Rect, name: str) -> str:
         ink = [s for s in spans if not is_ws(s)]
-        r = pymupdf.Rect(min([column_left(pno)] + [s.x0 for s in ink]), min(s.y0 for s in ink),
-                         max([column_right(pno)] + [s.x1 for s in ink]), max(s.y1 for s in ink))
+        r = pymupdf.Rect(min([ST.column_left(pno)] + [s.x0 for s in ink]), min(s.y0 for s in ink),
+                         max([ST.column_right(pno)] + [s.x1 for s in ink]), max(s.y1 for s in ink))
         for d in self.book.drawings(pno):
             if d["rect"].intersects(area):
                 r |= d["rect"]
@@ -460,34 +460,34 @@ class Converter:
                 continue
             pf = self.book.spans(p)
             sidebar_boxes = [d["rect"] for d in self.book.drawings(p)
-                             if d["type"] == "f" and hexrgb(d.get("fill")) == SIDEBAR_BG and d["rect"].height > 20]
+                             if d["type"] == "f" and hexrgb(d.get("fill")) == ST.SIDEBAR_BG and d["rect"].height > 20]
             used: set[int] = set()
             items: list[tuple[float, str, object]] = []
 
             # figures
             pf_ = self.prof.page_figures
-            page_figs = [figmod.page_figure(self.book, p, *pf_[p])] if p in pf_ else []
-            for fig in page_figs + figmod.detect(self.book, p, self.warn):
+            page_figs = [figmod.page_figure(self.book, p, self.prof.figures, *pf_[p])] if p in pf_ else []
+            for fig in page_figs + figmod.detect(self.book, p, self.warn, self.prof.figures):
                 for s in fig.labels + fig.caption:
                     used.add(id(s))
                 # a page figure has no caption; it follows its heading
                 items.append((fig.box.y0 if fig.caption else fig.box.y1, "fig", fig))
             for s in pf:
-                if is_figure_text(s) and id(s) not in used and s.text.strip():
+                if ST.is_figure_text(s) and id(s) not in used and s.text.strip():
                     self.warn(f"figure-font text outside any figure p{p}: {s.text.strip()!r}")
-                if is_figure_text(s):
+                if ST.is_figure_text(s):
                     used.add(id(s))
 
             # tables
-            for tab in tabmod.detect(self.book, p, self.warn):
+            for tab in tabmod.detect(self.book, p, self.warn, self.prof.tables):
                 for s in tab.spans:
                     used.add(id(s))
                 items.append((tab.top, "table", tab))
 
             # listings: header bar + following code/callout spans
             srt = sorted((s for s in pf if id(s) not in used), key=lambda s: (s.baseline, s.x0))
-            for bar in listing_bars(self.book, p):
-                head, body = listing_parts(srt, bar, used)
+            for bar in listing_bars(self.book, p, self.prof.listings):
+                head, body = listing_parts(srt, bar, used, self.prof.listings)
                 items.append((bar.y0, "listing", (bar, head, body)))
 
             # code runs (snippets and listing continuations), with nearby callouts
@@ -495,13 +495,13 @@ class Converter:
             runs: list[list[Span]] = []
             cur: list[Span] = []
             for s in rest:
-                if is_code_block(s) or (cur and is_ws(s) and s.font.startswith("Courier")):
+                if ST.is_code_block(s) or (cur and is_ws(s) and s.font.startswith("Courier")):
                     if cur and s.baseline - cur[-1].baseline > 23.3:
                         runs.append(cur)
                         cur = []
                     cur.append(s)
                     used.add(id(s))
-                elif cur and s.baseline > cur[-1].baseline + 2.7 and not is_callout(s):
+                elif cur and s.baseline > cur[-1].baseline + 2.7 and not ST.is_callout(s):
                     runs.append(cur)
                     cur = []
             if cur:
@@ -511,7 +511,7 @@ class Converter:
                 if not ink:
                     continue
                 y0, y1 = min(s.y0 for s in ink) - 15, max(s.y1 for s in ink) + 15
-                calls = [s for s in rest if is_callout(s) and id(s) not in used and y0 <= s.cy <= y1]
+                calls = [s for s in rest if ST.is_callout(s) and id(s) not in used and y0 <= s.cy <= y1]
                 for s in calls:
                     used.add(id(s))
                 items.append((min(s.baseline for s in ink), "code", (ink, calls)))
@@ -525,7 +525,7 @@ class Converter:
                     fig: figmod.Figure = obj
                     key = fig.id if not fig.caption else f"figure-{fig.id}"
                     name = f"{key}.png"
-                    figmod.render(self.book, p, fig.box, is_figure_text, str(self.out / "illustrations" / name),
+                    figmod.render(self.book, p, fig.box, ST.is_figure_text, str(self.out / "illustrations" / name),
                                   fig.rotate)
                     self.figure_labels[fig.id] = fig.label_texts
                     desc = self.desc.get(key)
@@ -555,27 +555,27 @@ class Converter:
                                                          for r in rows_of(head))).strip()
                     m = re.match(r"^Listing (\d+\.\d+)", title)
                     lid = m.group(1) if m else "?"
-                    code = [s for s in body if is_code_block(s)]
-                    lines = code_lines(code, self.warn)
-                    text, pos = with_blank_lines(lines)
+                    code = [s for s in body if ST.is_code_block(s)]
+                    lines = code_lines(code, self.warn, self.prof.listings)
+                    text, pos = with_blank_lines(lines, self.prof.listings)
                     lst = Listing(title, lid, text, last_page=p)
-                    calls = [s for s in body if is_callout(s)]
+                    calls = [s for s in body if ST.is_callout(s)]
                     if calls:
                         area = pymupdf.Rect(0, bar.y0, self.book.page(p).rect.x1,
                                             max(s.y1 for s in body if not is_ws(s)) + 3)
-                        lst.callouts = map_callouts(self.book, p, area, lines, pos, calls, self.warn)
+                        lst.callouts = map_callouts(self.book, p, area, lines, pos, calls, self.warn, self.prof.listings)
                         lst.images.append(self._listing_image(p, head + body, area, f"listing-{lid}.png"))
                     push(lst)
                     continue
                 if kind == "code":
                     ink, calls = obj
-                    lines = code_lines(ink, self.warn)
+                    lines = code_lines(ink, self.warn, self.prof.listings)
                     prev = blocks[-1] if blocks else None
                     if (not st["para"] and not st["list"] and not st["sidebar"] and not st["note"]
                             and top < 70 and isinstance(prev, Listing) and prev.last_page == p - 1):
                         sep = 1 if prev.text and prev.text[-1].strip() == "}" and lines[0].text.strip() != "}" else 0
                         base = len(prev.text) + sep
-                        text, pos = with_blank_lines(lines)
+                        text, pos = with_blank_lines(lines, self.prof.listings)
                         prev.text.extend([""] * sep + text)
                         prev.last_page = p
                         prev.parts += 1
@@ -584,28 +584,28 @@ class Converter:
                             area = pymupdf.Rect(0, min(s.y0 for s in ink) - 6, self.book.page(p).rect.x1,
                                                 max(s.y1 for s in ink + calls) + 3)
                             prev.callouts += map_callouts(self.book, p, area, lines, [base + i for i in pos],
-                                                          calls, self.warn)
+                                                          calls, self.warn, self.prof.listings)
                             prev.images.append(self._listing_image(p, ink + calls, area,
                                                                    f"listing-{prev.lid}-{prev.parts}.png"))
                     elif st["sidebar"] and not calls and any(b.contains(pymupdf.Point(ink[0].x0 + 1, ink[0].cy))
                                                              for b in sidebar_boxes):
                         sidebar_flush_inner()
-                        st["sidebar"]["parts"].append(fence(with_blank_lines(lines)[0]))
+                        st["sidebar"]["parts"].append(fence(with_blank_lines(lines, self.prof.listings)[0]))
                     else:
                         close_all()
                         if calls:
-                            text, pos = with_blank_lines(lines)
+                            text, pos = with_blank_lines(lines, self.prof.listings)
                             lst = Listing("", f"p{p - 22}", text, last_page=p)
                             area = pymupdf.Rect(0, min(s.y0 for s in ink + calls) - 3, self.book.page(p).rect.x1,
                                                 max(s.y1 for s in ink + calls) + 3)
-                            lst.callouts = map_callouts(self.book, p, area, lines, pos, calls, self.warn)
+                            lst.callouts = map_callouts(self.book, p, area, lines, pos, calls, self.warn, self.prof.listings)
                             n = sum(1 for b in blocks if isinstance(b, Listing) and b.lid.startswith(f"p{p - 22}"))
                             if n:
                                 lst.lid = f"p{p - 22}-{n + 1}"
                             lst.images.append(self._listing_image(p, ink + calls, area, f"code-{lst.lid}.png"))
                             push(lst)
                         else:
-                            push(fence(with_blank_lines(lines)[0]))
+                            push(fence(with_blank_lines(lines, self.prof.listings)[0]))
                     continue
 
                 r: Row = obj
@@ -701,7 +701,7 @@ class Converter:
                     if not sb:
                         self.warn(f"sidebar text without sidebar p{p}: {runs_text(row_runs(r))[:40]!r}")
                         sb = st["sidebar"] = {"title": "", "parts": [], "para": None, "list": None}
-                    if any(is_bullet(s) or is_list_number(s) for s in r.spans):
+                    if any(ST.is_bullet(s) or ST.is_list_number(s) for s in r.spans):
                         if sb["para"]:
                             sidebar_flush_inner()
                         sb["list"] = sb["list"] or []
@@ -759,7 +759,7 @@ class Converter:
                         close_sidebar()
                     lefts = Counter(round(s.x0, 1) for s in pf
                                     if s.font.startswith("NewBaskerville") and near(s.size, 9.96))
-                    col = lefts.most_common(1)[0][0] if lefts else column_left(p)
+                    col = lefts.most_common(1)[0][0] if lefts else ST.column_left(p)
                     indented = r.left - col > 6.7
                     if st["para"]:
                         pr = st["para"][-1]
@@ -780,14 +780,14 @@ class Converter:
     def footnotes(self, sec: Section) -> list[str]:
         p0, p1 = sec.pages
         spans = [s for p in range(p0, p1 + 1) if p not in self.prof.skip_pages for s in self.book.spans(p)
-                 if not is_figure_text(s) and not is_code_block(s) and not is_listing_head(s) and not is_callout(s)]
+                 if not ST.is_figure_text(s) and not ST.is_code_block(s) and not ST.is_listing_head(s) and not ST.is_callout(s)]
         out: list[str] = []
         cur: dict | None = None
 
         def emit() -> None:
             nonlocal cur
             if cur:
-                rows = [Row(r.page, r.top, [s for s in r.spans if not is_fn_start_marker(s)], r.left, r.right, r.cls)
+                rows = [Row(r.page, r.top, [s for s in r.spans if not ST.is_fn_start_marker(s)], r.left, r.right, r.cls)
                         for r in cur["rows"]]
                 out.append(f"[^{cur['num']}]: {render_runs(join_rows(rows))}")
             cur = None
@@ -795,7 +795,7 @@ class Converter:
         for r in rows_of(spans):
             if r.cls == "footnote":
                 emit()
-                cur = {"num": next(s for s in r.spans if is_fn_start_marker(s)).text.strip(), "rows": [r]}
+                cur = {"num": next(s for s in r.spans if ST.is_fn_start_marker(s)).text.strip(), "rows": [r]}
             elif r.cls == "footnote-cont" and cur and cur["rows"][0].page == r.page:
                 cur["rows"].append(r)
             elif cur and r.page != cur["rows"][0].page:
@@ -805,7 +805,7 @@ class Converter:
 
 
 def main() -> None:
-    global CTX
+    global CTX, ST
     ap = argparse.ArgumentParser(prog="convert", description="Convert a PDF into Markdown using a profile.")
     ap.add_argument("--input", required=True, help="the PDF to convert")
     ap.add_argument("--output", required=True, help="directory for everything the run generates")
@@ -820,7 +820,8 @@ def main() -> None:
     out = Path(args.output)
     (out / "illustrations").mkdir(parents=True, exist_ok=True)
     book = Book(args.input)
-    CTX = Ctx(Resolver(book.all_spans(1, book.page_count)))  # whole book, incl. figure labels and index
+    ST = prof.styles
+    CTX = Ctx(Resolver(book.all_spans(1, book.page_count), ST.is_code_font))  # whole book, incl. figure labels and index
     dpath = prof.data_dir / "descriptions.json"
     desc = json.loads(dpath.read_text()) if dpath.exists() else {}
     conv = Converter(book, out, desc, prof)

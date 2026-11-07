@@ -1,6 +1,7 @@
 """Regression tests against the book PDF (skipped when it is not present).
 
 Set BOOK_PDF to the PDF path; defaults to ~/temp/Manning.Unit.Testing.Principles.Practices.and.Patterns.2020.1.pdf.
+Needs the git-ignored profile profiles/manning_unit_testing/ (skipped when it is absent).
 Run: uv run python -m unittest -v
 """
 
@@ -15,30 +16,35 @@ import pymupdf
 from book_converter import figures, tables
 from book_converter.listings import code_lines, listing_bars, listing_parts, map_callouts, with_blank_lines
 from book_converter.pdf import Book
-from book_converter.styles import is_callout, is_code_block, is_figure_text
+from book_converter.profile import REPO, load as load_profile
 
 PDF = os.environ.get("BOOK_PDF", str(Path.home() / "temp/Manning.Unit.Testing.Principles.Practices.and.Patterns.2020.1.pdf"))
+PROFILE_DIR = REPO / "profiles" / "manning_unit_testing"
 
 
 @unittest.skipUnless(Path(PDF).exists(), "book PDF not available")
+@unittest.skipUnless(PROFILE_DIR.is_dir(), "profile manning_unit_testing not available")
 class BookTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.book = Book(PDF)
+        cls.prof = load_profile(str(PROFILE_DIR))
+        cls.lc = cls.prof.listings
 
     def callouts(self, pno: int, index: int = 0) -> dict[str, list[int]]:
         warns: list[str] = []
         spans = sorted(self.book.spans(pno), key=lambda s: (s.baseline, s.x0))
         used: set[int] = set()
-        bars = listing_bars(self.book, pno)
+        lc = self.lc
+        bars = listing_bars(self.book, pno, lc)
         for bar in bars[:index]:
-            listing_parts(spans, bar, used)
+            listing_parts(spans, bar, used, lc)
         bar = bars[index]
-        head, body = listing_parts(spans, bar, used)
-        lines = code_lines([s for s in body if is_code_block(s)], warns.append)
-        _, pos = with_blank_lines(lines)
+        head, body = listing_parts(spans, bar, used, lc)
+        lines = code_lines([s for s in body if lc.is_code_block(s)], warns.append, lc)
+        _, pos = with_blank_lines(lines, lc)
         area = pymupdf.Rect(0, bar.y0, 1000, max(s.y1 for s in body if s.text.strip()) + 3)
-        got = map_callouts(self.book, pno, area, lines, pos, [s for s in body if is_callout(s)], warns.append)
+        got = map_callouts(self.book, pno, area, lines, pos, [s for s in body if lc.is_callout(s)], warns.append, lc)
         self.assertEqual([w for w in warns if "off-grid" in w or "no graphic" in w], [])
         return {" ".join(s.text.strip() for s in c.spans): c.lines for c in got}
 
@@ -74,12 +80,13 @@ class BookTests(unittest.TestCase):
     def test_listing_10_3_continuation_bracket(self):
         # p260 holds the middle part of listing 10.3 (no title bar); check its bracket on the page's own lines
         warns: list[str] = []
-        code = [s for s in self.book.spans(260) if is_code_block(s)]
-        lines = code_lines(code, warns.append)
-        _, pos = with_blank_lines(lines)
-        text, _ = with_blank_lines(lines)
-        calls = [s for s in self.book.spans(260) if is_callout(s)]
-        got = map_callouts(self.book, 260, pymupdf.Rect(0, 40, 1000, 640), lines, pos, calls, warns.append)
+        lc = self.lc
+        code = [s for s in self.book.spans(260) if lc.is_code_block(s)]
+        lines = code_lines(code, warns.append, lc)
+        _, pos = with_blank_lines(lines, lc)
+        text, _ = with_blank_lines(lines, lc)
+        calls = [s for s in self.book.spans(260) if lc.is_callout(s)]
+        got = map_callouts(self.book, 260, pymupdf.Rect(0, 40, 1000, 640), lines, pos, calls, warns.append, lc)
         hit = [c for c in got if " ".join(s.text.strip() for s in c.spans).startswith("Uses the repositories")]
         self.assertEqual(len(hit), 1)
         covered = [text[n - 1].strip() for n in hit[0].lines]
@@ -88,7 +95,7 @@ class BookTests(unittest.TestCase):
                                    "_companyRepository.SaveCompany(company);", "_userRepository.SaveUser(user);"])
 
     def test_table_6_1(self):
-        t = tables.detect(self.book, 150, lambda w: None)
+        t = tables.detect(self.book, 150, lambda w: None, self.prof.tables)
         self.assertEqual(len(t), 1)
         self.assertEqual(t[0].id, "6.1")
         self.assertEqual(len(t[0].header), 4)
@@ -96,14 +103,14 @@ class BookTests(unittest.TestCase):
         self.assertEqual([len([c for c in r if c]) for r in t[0].rows], [4, 4])
 
     def test_figure_4_9_caption_removed(self):
-        figs = [f for f in figures.detect(self.book, 107, lambda w: None) if f.id == "4.9"]
+        figs = [f for f in figures.detect(self.book, 107, lambda w: None, self.prof.figures) if f.id == "4.9"]
         self.assertEqual(len(figs), 1)
         f = figs[0]
         tmp = pymupdf.open()
         tmp.insert_pdf(self.book.doc, from_page=106, to_page=106)
         page = tmp[0]
         for s in self.book.spans(107):
-            if not is_figure_text(s) and s.text.strip() and pymupdf.Rect(s.x0, s.y0, s.x1, s.y1).intersects(f.box):
+            if not self.prof.figures.is_figure_text(s) and s.text.strip() and pymupdf.Rect(s.x0, s.y0, s.x1, s.y1).intersects(f.box):
                 page.add_redact_annot(pymupdf.Rect(s.x0, s.y0, s.x1, s.y1) + (0.3, 0.6, -0.3, -0.6), fill=False)
         page.apply_redactions(images=0, graphics=0, text=0)
         left = page.get_text("text", clip=f.box)

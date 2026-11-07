@@ -4,15 +4,26 @@ a blue header band, and no rules between body rows (rows split on vertical gaps)
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import pymupdf
 
 from .listings import hexrgb
 from .pdf import Book, Span
-from .styles import BLUE, is_caption_font, is_caption_start, is_figure_text
 
-ROW_GAP = 13.0
+
+@dataclass(frozen=True)
+class TableConfig:
+    """The book's table style (set by the profile)."""
+    header_fill: str                          # fill colour of the header band
+    rule_fill: str                            # fill colour of the horizontal and vertical rules
+    row_gap: float                            # a baseline step larger than this starts a new body row
+    caption_word: str                         # caption starts with this word ("Table")
+    id_pattern: str                           # the table id inside the caption start
+    is_caption_font: Callable[[Span], bool]
+    is_caption_start: Callable[[Span], bool]
+    is_figure_text: Callable[[Span], bool]
 
 
 @dataclass(eq=False)
@@ -37,8 +48,8 @@ class Table:
         return (cap + "\n\n" if cap else "") + "\n".join(lines)
 
 
-def _caption(spans: list[Span], start: Span) -> list[Span]:
-    caps = sorted((s for s in spans if is_caption_font(s) and s.y0 >= start.y0 - 1), key=lambda s: (s.baseline, s.x0))
+def _caption(spans: list[Span], start: Span, cfg: TableConfig) -> list[Span]:
+    caps = sorted((s for s in spans if cfg.is_caption_font(s) and s.y0 >= start.y0 - 1), key=lambda s: (s.baseline, s.x0))
     out, last = [], start.baseline
     for s in caps:
         if abs(s.baseline - start.baseline) < 1.5 or 0 < s.baseline - last < 13.5:
@@ -47,20 +58,20 @@ def _caption(spans: list[Span], start: Span) -> list[Span]:
     return out
 
 
-def _rules(book: Book, pno: int):
+def _rules(book: Book, pno: int, cfg: TableConfig):
     draws = book.drawings(pno)
-    black = [d["rect"] for d in draws if d["type"] == "f" and hexrgb(d.get("fill")) == "#000000"]
+    black = [d["rect"] for d in draws if d["type"] == "f" and hexrgb(d.get("fill")) == cfg.rule_fill]
     hrules = sorted((r for r in black if r.width > 100 and r.height < 1.0), key=lambda r: r.y0)
     vrules = [r for r in black if r.width < 0.6 and r.height > 10]
-    heads = sorted((d["rect"] for d in draws if d["type"] == "f" and hexrgb(d.get("fill")) == BLUE
+    heads = sorted((d["rect"] for d in draws if d["type"] == "f" and hexrgb(d.get("fill")) == cfg.header_fill
                     and d["rect"].height > 10), key=lambda r: (r.y0, r.x0))
     return hrules, vrules, heads
 
 
-def regions(book: Book, pno: int) -> list[tuple[pymupdf.Rect, float, list[float]]]:
+def regions(book: Book, pno: int, cfg: TableConfig) -> list[tuple[pymupdf.Rect, float, list[float]]]:
     """Table regions: (rect, header bottom y, inner column rule xs). A table starts at a rule with
     a blue header band directly below it."""
-    hrules, vrules, heads = _rules(book, pno)
+    hrules, vrules, heads = _rules(book, pno, cfg)
     out = []
     seen: list[float] = []
     for h in heads:
@@ -86,17 +97,17 @@ def regions(book: Book, pno: int) -> list[tuple[pymupdf.Rect, float, list[float]
     return out
 
 
-def detect(book: Book, pno: int, warn) -> list[Table]:
+def detect(book: Book, pno: int, warn, cfg: TableConfig) -> list[Table]:
     spans = book.spans(pno)
-    starts = [s for s in spans if is_caption_start(s) and s.text.strip().startswith("Table")]
+    starts = [s for s in spans if cfg.is_caption_start(s) and s.text.strip().startswith(cfg.caption_word)]
     out = []
     used_caps: set[int] = set()
-    for region, head_bottom, vs in regions(book, pno):
+    for region, head_bottom, vs in regions(book, pno, cfg):
         st = next((s for s in starts if region.y0 - 40 < s.y0 < region.y0), None)
         if st is not None:
             used_caps.add(id(st))
-            cap = _caption(spans, st)
-            tid = re.search(r"\d+\.\d+", st.text).group(0)
+            cap = _caption(spans, st, cfg)
+            tid = re.search(cfg.id_pattern, st.text).group(0)
         else:
             cap, tid = [], f"uncaptioned-p{pno}"
             warn(f"p{pno}: table without a caption at y={region.y0:.0f}")
@@ -114,7 +125,7 @@ def detect(book: Book, pno: int, warn) -> list[Table]:
                     return i
             return ncol - 1
 
-        cells = [s for s in spans if region.contains(pymupdf.Point(s.cx, s.cy)) and not is_figure_text(s)]
+        cells = [s for s in spans if region.contains(pymupdf.Point(s.cx, s.cy)) and not cfg.is_figure_text(s)]
         header: list[list[Span]] = [[] for _ in range(ncol)]
         body = []
         for s in cells:
@@ -124,7 +135,7 @@ def detect(book: Book, pno: int, warn) -> list[Table]:
         rows: list[list[list[Span]]] = []
         last_base = None
         for s in sorted(body, key=lambda s: (s.baseline, s.x0)):
-            if last_base is None or s.baseline - last_base > ROW_GAP:
+            if last_base is None or s.baseline - last_base > cfg.row_gap:
                 rows.append([[] for _ in range(ncol)])
             if last_base is None or s.baseline > last_base:
                 last_base = s.baseline

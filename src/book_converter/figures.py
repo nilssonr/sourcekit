@@ -4,18 +4,31 @@ and render it without the caption or surrounding prose (glyphs removed, no white
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import pymupdf
 
 from . import tables as tabmod
-from .listings import hexrgb, listing_bars
+from .listings import ListingConfig, hexrgb, listing_bars
 from .pdf import Book, Span
-from .styles import (BLUE, HEADER_BAND, LISTING_BAR, SIDEBAR_BG, is_caption_font, is_caption_start,
-                     is_figure_text)
 
 DPI = 216
-IGNORE_FILLS = {LISTING_BAR, SIDEBAR_BG, BLUE, "#ffffff", "#e6e6e6"}
+
+
+@dataclass(frozen=True)
+class FigureConfig:
+    """The book's figure style (set by the profile)."""
+    header_band: float                        # drawings and text above this belong to the running header
+    ignore_fills: frozenset[str]              # fill/stroke colours that are never figure art (bars, boxes)
+    caption_word: str                         # caption starts with this word ("Figure")
+    id_pattern: str                           # the figure id inside the caption start
+    listing_fonts: tuple[str, ...]            # font prefixes of code and callouts below a listing bar
+    is_caption_font: Callable[[Span], bool]
+    is_caption_start: Callable[[Span], bool]
+    is_figure_text: Callable[[Span], bool]
+    listings: ListingConfig                   # listing areas are excluded from figure art
+    tables: tabmod.TableConfig                # table regions are excluded from figure art
 
 
 @dataclass(eq=False)
@@ -33,9 +46,9 @@ class Figure:
         return [t for s in self.labels for t in re.split(r"\s{2,}", s.text.strip()) if t]
 
 
-def caption_block(spans: list[Span], start: Span) -> list[Span]:
+def caption_block(spans: list[Span], start: Span, cfg: FigureConfig) -> list[Span]:
     """The caption's spans: the start span's row and the following caption-font rows."""
-    caps = sorted((s for s in spans if is_caption_font(s) and s.y0 >= start.y0 - 1 and s.x1 > start.x0 - 2),
+    caps = sorted((s for s in spans if cfg.is_caption_font(s) and s.y0 >= start.y0 - 1 and s.x1 > start.x0 - 2),
                   key=lambda s: (s.baseline, s.x0))
     out = [s for s in caps if abs(s.baseline - start.baseline) < 1.5]
     last = start.baseline
@@ -50,16 +63,16 @@ def caption_block(spans: list[Span], start: Span) -> list[Span]:
     return sorted(out, key=lambda s: (s.baseline, s.x0))
 
 
-def _ink(book: Book, pno: int, exclude: list[pymupdf.Rect]) -> list[pymupdf.Rect]:
+def _ink(book: Book, pno: int, exclude: list[pymupdf.Rect], cfg: FigureConfig) -> list[pymupdf.Rect]:
     rects: list[pymupdf.Rect] = []
     for d in book.drawings(pno):
         r = d["rect"]
-        if r.y1 < HEADER_BAND:
+        if r.y1 < cfg.header_band:
             continue
         fill, stroke = hexrgb(d.get("fill")), hexrgb(d.get("color"))
-        if d["type"] == "f" and fill in IGNORE_FILLS:
+        if d["type"] == "f" and fill in cfg.ignore_fills:
             continue
-        if d["type"] == "s" and stroke in IGNORE_FILLS:
+        if d["type"] == "s" and stroke in cfg.ignore_fills:
             continue
         if r.width > 300 and r.height < 1.0:
             continue  # table rule
@@ -69,7 +82,7 @@ def _ink(book: Book, pno: int, exclude: list[pymupdf.Rect]) -> list[pymupdf.Rect
             continue
         rects.append(pymupdf.Rect(r))
     for s in book.spans(pno):
-        if is_figure_text(s) and s.text.strip() and s.y0 > HEADER_BAND:
+        if cfg.is_figure_text(s) and s.text.strip() and s.y0 > cfg.header_band:
             rects.append(pymupdf.Rect(s.x0, s.y0, s.x1, s.y1))
     for info in book.page(pno).get_image_info():
         rects.append(pymupdf.Rect(info["bbox"]))
@@ -97,12 +110,12 @@ def _clusters(rects: list[pymupdf.Rect], gap: float = 6.0) -> list[pymupdf.Rect]
     return list(boxes.values())
 
 
-def listing_areas(book: Book, pno: int) -> list[pymupdf.Rect]:
+def listing_areas(book: Book, pno: int, cfg: FigureConfig) -> list[pymupdf.Rect]:
     """Rough listing regions (bar to the last code/callout line below it) for excluding callout art."""
     areas = []
     spans = book.spans(pno)
-    for bar in listing_bars(book, pno):
-        below = [s for s in spans if s.y0 > bar.y1 - 1 and (s.font.startswith(("Courier", "Humanist521")))]
+    for bar in listing_bars(book, pno, cfg.listings):
+        below = [s for s in spans if s.y0 > bar.y1 - 1 and (s.font.startswith(cfg.listing_fonts))]
         y1 = bar.y1
         for s in sorted(below, key=lambda s: s.y0):
             if s.y0 - y1 > 30:
@@ -112,13 +125,13 @@ def listing_areas(book: Book, pno: int) -> list[pymupdf.Rect]:
     return areas
 
 
-def detect(book: Book, pno: int, warn) -> list[Figure]:
+def detect(book: Book, pno: int, warn, cfg: FigureConfig) -> list[Figure]:
     spans = book.spans(pno)
-    starts = [s for s in spans if is_caption_start(s) and s.text.strip().startswith("Figure")]
+    starts = [s for s in spans if cfg.is_caption_start(s) and s.text.strip().startswith(cfg.caption_word)]
     if not starts:
         return []
-    excl = listing_areas(book, pno) + [r for r, _, _ in tabmod.regions(book, pno)]
-    caps = {id(st): caption_block(spans, st) for st in starts}
+    excl = listing_areas(book, pno, cfg) + [r for r, _, _ in tabmod.regions(book, pno, cfg.tables)]
+    caps = {id(st): caption_block(spans, st, cfg) for st in starts}
     cap_rects = []
     for st in starts:
         cb = caps[id(st)]
@@ -126,9 +139,9 @@ def detect(book: Book, pno: int, warn) -> list[Figure]:
         for s in cb[1:]:
             r |= (s.x0, s.y0, s.x1, s.y1)
         cap_rects.append(r)
-    clusters = [c for c in _clusters(_ink(book, pno, excl)) if c.width * c.height > 60]
+    clusters = [c for c in _clusters(_ink(book, pno, excl, cfg)) if c.width * c.height > 60]
     cap_ids = {id(s) for cb in caps.values() for s in cb}
-    prose = [s for s in spans if s.text.strip() and s.y0 > HEADER_BAND and not is_figure_text(s)
+    prose = [s for s in spans if s.text.strip() and s.y0 > cfg.header_band and not cfg.is_figure_text(s)
              and id(s) not in cap_ids]
     used: set[int] = set()
     figs = []
@@ -167,20 +180,20 @@ def detect(book: Book, pno: int, warn) -> list[Figure]:
                 grown = True
         box = box + (-3, -3, 3, 3)
         box &= book.page(pno).rect
-        fid = re.search(r"\d+\.\d+", st.text).group(0)
-        labels = [s for s in spans if is_figure_text(s) and box.contains(pymupdf.Point(s.cx, s.cy))]
+        fid = re.search(cfg.id_pattern, st.text).group(0)
+        labels = [s for s in spans if cfg.is_figure_text(s) and box.contains(pymupdf.Point(s.cx, s.cy))]
         figs.append(Figure(fid, pno, box, caps[id(st)], labels))
     return figs
 
 
-def page_figure(book: Book, pno: int, fid: str, rotate: int = 0) -> Figure:
+def page_figure(book: Book, pno: int, cfg: FigureConfig, fid: str, rotate: int = 0) -> Figure:
     """A figure without a caption that fills its page (the inside-cover chapter map)."""
     box = None
-    for c in _clusters(_ink(book, pno, [])):
+    for c in _clusters(_ink(book, pno, [], cfg)):
         if c.width * c.height > 60:
             box = c if box is None else box | c
     box = (box + (-3, -3, 3, 3)) & book.page(pno).rect
-    labels = [s for s in book.spans(pno) if is_figure_text(s) and box.contains(pymupdf.Point(s.cx, s.cy))]
+    labels = [s for s in book.spans(pno) if cfg.is_figure_text(s) and box.contains(pymupdf.Point(s.cx, s.cy))]
     return Figure(fid, pno, box, [], labels, rotate)
 
 

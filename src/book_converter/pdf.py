@@ -65,6 +65,14 @@ class Span:
         return f"Span(p{self.page} {self.x0:.1f},{self.y0:.1f} {self.font}/{self.size:.2f}/{self.color} {self.text!r})"
 
 
+def is_ws(s: Span) -> bool:
+    return not s.text.strip()
+
+
+def near(a: float, b: float, tol: float = 0.06) -> bool:
+    return abs(a - b) <= tol
+
+
 def hexcolor(c: int) -> str:
     return f"#{c:06x}"
 

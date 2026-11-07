@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, asdict
 
 from .pdf import Span
@@ -22,10 +23,11 @@ class Decision:
 
 
 class Resolver:
-    def __init__(self, spans: list[Span], dict_path: str = "/usr/share/dict/words"):
+    def __init__(self, spans: list[Span], is_code: Callable[[Span], bool], dict_path: str = "/usr/share/dict/words"):
+        """is_code: code text, which is kept out of the corpus of unbroken words."""
         self.corpus: Counter[str] = Counter()
         for s in spans:
-            if s.font.startswith("Courier"):
+            if is_code(s):
                 continue
             t = re.sub(r"[A-Za-z]+-\s*$", "", s.text)  # drop a trailing broken word
             for w in WORD.findall(t):
@@ -34,7 +36,7 @@ class Resolver:
             self.dict = {w.strip().lower() for w in f}
         self.log: list[Decision] = []
         self.code_hyphenated = Counter(
-            w.lower() for sp in spans if sp.font.startswith("Courier")
+            w.lower() for sp in spans if is_code(sp)
             for w in re.findall(r"[A-Za-z]+-[A-Za-z]+", sp.text))
 
     @staticmethod

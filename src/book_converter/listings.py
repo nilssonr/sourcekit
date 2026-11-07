@@ -6,14 +6,26 @@ arrowheads are small filled outlines, brackets are leaders without arrowheads.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import pymupdf
 
-from .pdf import Book, Span
-from .styles import CODE_CW, CODE_PITCH, LISTING_BAR, column_left, is_callout, is_code_block, is_ws
+from .pdf import Book, Span, is_ws
 
-LINE_CENTRE = 2.3  # code line centre = baseline - 2.3 pt (Courier 7.98)
+
+@dataclass(frozen=True)
+class ListingConfig:
+    """The book's listing and code-block style (set by the profile)."""
+    bar_fill: str                            # fill colour of the listing header bar
+    is_code_block: Callable[[Span], bool]    # code block text (not inline code)
+    is_callout: Callable[[Span], bool]       # callout text beside a listing
+    column_left: Callable[[int], float]      # left edge of the text column on a PDF page
+    char_width: float                        # advance of the fixed-pitch code font
+    line_pitch: float                        # code line spacing
+    line_centre: float                       # code line centre = baseline - line_centre
+    bar_min_width: float                     # narrower fills of the bar colour are not listing bars
+    callout_ink: str                         # colour of callout arrows, leaders and brackets
 
 
 @dataclass
@@ -39,13 +51,15 @@ def hexrgb(c) -> str | None:
     return None if c is None else "#%02x%02x%02x" % tuple(round(v * 255) for v in c[:3])
 
 
-def listing_bars(book: Book, pno: int) -> list[pymupdf.Rect]:
+def listing_bars(book: Book, pno: int, cfg: ListingConfig) -> list[pymupdf.Rect]:
     return sorted((d["rect"] for d in book.drawings(pno)
-                   if d["type"] == "f" and hexrgb(d.get("fill")) == LISTING_BAR and d["rect"].width > 300),
+                   if d["type"] == "f" and hexrgb(d.get("fill")) == cfg.bar_fill
+                   and d["rect"].width > cfg.bar_min_width),
                   key=lambda r: r.y0)
 
 
-def listing_parts(spans: list[Span], bar: pymupdf.Rect, used: set[int]) -> tuple[list[Span], list[Span]]:
+def listing_parts(spans: list[Span], bar: pymupdf.Rect, used: set[int],
+                  cfg: ListingConfig) -> tuple[list[Span], list[Span]]:
     """Header spans inside the listing bar, and the code/callout spans that follow it.
 
     `spans` must be sorted by (baseline, x0); consumed spans are added to `used`.
@@ -56,7 +70,7 @@ def listing_parts(spans: list[Span], bar: pymupdf.Rect, used: set[int]) -> tuple
     for s in spans:
         if s.baseline <= bar.y1 + 1 or id(s) in used:
             continue
-        if is_code_block(s) or is_callout(s) or is_ws(s):
+        if cfg.is_code_block(s) or cfg.is_callout(s) or is_ws(s):
             body.append(s)
             used.add(id(s))
             continue
@@ -64,17 +78,17 @@ def listing_parts(spans: list[Span], bar: pymupdf.Rect, used: set[int]) -> tuple
     return head, body
 
 
-def code_lines(spans: list[Span], warn) -> list[CodeLine]:
-    """Rebuild code lines from Courier character positions on the 4.788 pt grid."""
+def code_lines(spans: list[Span], warn, cfg: ListingConfig) -> list[CodeLine]:
+    """Rebuild code lines from character positions on the fixed-pitch grid (cfg.char_width)."""
     rows: dict[tuple[int, float], dict[int, str]] = {}
     keys: list[tuple[int, float]] = []
     # grid origin: the text column, unless the block sits off that grid (e.g. padded inside a sidebar)
     bases: dict[int, float] = {}
     for pg in {s.page for s in spans}:
         xs = [c.x0 for s in spans if s.page == pg for c in s.chars if c.c.strip()]
-        base = column_left(pg)
+        base = cfg.column_left(pg)
         if xs:
-            off = (min(xs) - base) / CODE_CW
+            off = (min(xs) - base) / cfg.char_width
             if abs(off - round(off)) > 0.3:
                 base = min(xs)
         bases[pg] = base
@@ -88,7 +102,7 @@ def code_lines(spans: list[Span], warn) -> list[CodeLine]:
                 k = (s.page, c.y)
                 keys.append(k)
                 rows[k] = {}
-            pos = (c.x0 - base) / CODE_CW
+            pos = (c.x0 - base) / cfg.char_width
             col = max(0, round(pos))
             if abs(pos - col) > 0.3:
                 warn(f"code off-grid p{s.page} col {pos:.2f} in {s.text.strip()[:30]!r}")
@@ -99,17 +113,17 @@ def code_lines(spans: list[Span], warn) -> list[CodeLine]:
     for k in sorted(keys):
         row = rows[k]
         out.append(CodeLine("".join(row.get(i, " ") for i in range(max(row) + 1)).rstrip(), k[1], k[0],
-                            bases[k[0]] + min(row) * CODE_CW))
+                            bases[k[0]] + min(row) * cfg.char_width))
     return out
 
 
-def with_blank_lines(lines: list[CodeLine]) -> tuple[list[str], list[int]]:
+def with_blank_lines(lines: list[CodeLine], cfg: ListingConfig) -> tuple[list[str], list[int]]:
     """Insert blank lines from the line pitch. Returns (text lines, index of each CodeLine in them)."""
     out: list[str] = []
     pos: list[int] = []
     for i, l in enumerate(lines):
         if i > 0 and lines[i - 1].page == l.page:
-            for _ in range(round((l.baseline - lines[i - 1].baseline) / CODE_PITCH) - 1):
+            for _ in range(round((l.baseline - lines[i - 1].baseline) / cfg.line_pitch) - 1):
                 out.append("")
         pos.append(len(out))
         out.append(l.text)
@@ -142,7 +156,7 @@ def _rect(spans: list[Span]) -> pymupdf.Rect:
 
 
 def map_callouts(book: Book, pno: int, area: pymupdf.Rect, lines: list[CodeLine], line_index: list[int],
-                 callout_spans: list[Span], warn) -> list[Callout]:
+                 callout_spans: list[Span], warn, cfg: ListingConfig) -> list[Callout]:
     """Map each callout text block on one page part of a listing to code line numbers.
 
     lines/line_index: the code lines of this page part and their 0-based positions in the
@@ -151,16 +165,16 @@ def map_callouts(book: Book, pno: int, area: pymupdf.Rect, lines: list[CodeLine]
     blocks = _blocks(callout_spans)
     if not blocks:
         return []
-    centres = [(l.baseline - LINE_CENTRE, line_index[i] + 1) for i, l in enumerate(lines)]
+    centres = [(l.baseline - cfg.line_centre, line_index[i] + 1) for i, l in enumerate(lines)]
     segs: list[pymupdf.Rect] = []
     heads: list[pymupdf.Rect] = []
     slants: list[pymupdf.Rect] = []
     for d in book.drawings(pno):
         r = d["rect"]
-        if not r.intersects(area) or hexrgb(d.get("fill")) == LISTING_BAR:
+        if not r.intersects(area) or hexrgb(d.get("fill")) == cfg.bar_fill:
             continue
         col = hexrgb(d.get("fill")) or hexrgb(d.get("color"))
-        if col not in ("#000000",):
+        if col != cfg.callout_ink:
             continue
         if d["type"] == "f" and 2.5 < r.width < 7 and 2.5 < r.height < 7 and len(d["items"]) >= 3:
             heads.append(r)
@@ -209,7 +223,7 @@ def map_callouts(book: Book, pno: int, area: pymupdf.Rect, lines: list[CodeLine]
         bi = min(range(len(blocks)), key=lambda i: dist(brects[i]))
         hs0 = [r for k, r in comp if k == "h"]
         # which side of the graphic is the code on? compare with the first character of the code lines beside it
-        beside = [l.x0 for l in lines if cb.y0 - 6 <= l.baseline - LINE_CENTRE <= cb.y1 + 6] or [l.x0 for l in lines]
+        beside = [l.x0 for l in lines if cb.y0 - 6 <= l.baseline - cfg.line_centre <= cb.y1 + 6] or [l.x0 for l in lines]
         code_on_left = cb.x1 > min(beside) + 1
         if not hs0 and len(cands) > 1:
             # brackets: the text sits beside the bar on the side away from the code

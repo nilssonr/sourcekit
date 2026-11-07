@@ -17,11 +17,22 @@ import difflib
 import re
 import sys
 from collections import Counter
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from .pdf import Book, Span
 from .profile import load as load_profile
-from .styles import HEADER_BAND, is_figure_text
+
+
+@dataclass(frozen=True)
+class VerifyConfig:
+    """What the verifier leaves out of the PDF's word stream (set by the profile)."""
+    header_band: float                        # baselines above this are running headers
+    superscript_max: float                    # smaller text is a superscript (footnote marker)
+    is_figure_text: Callable[[Span], bool]    # figure-label text
+    is_bullet_glyph: Callable[[Span], bool]   # bullet glyphs
+    is_page_number: Callable[[Span], bool]    # a row made only of these is a page number
 
 
 def tokens(s: str) -> list[str]:
@@ -30,13 +41,13 @@ def tokens(s: str) -> list[str]:
     return [t for t in re.split(r"[^a-z0-9]+", s) if t]
 
 
-def page_text(spans: list[Span]) -> str:
-    keep = [s for s in spans if s.baseline >= HEADER_BAND and not is_figure_text(s)
-            and not s.font.startswith(("Wingdings", "ZapfDingbats"))]
+def page_text(spans: list[Span], cfg: VerifyConfig) -> str:
+    keep = [s for s in spans if s.baseline >= cfg.header_band and not cfg.is_figure_text(s)
+            and not cfg.is_bullet_glyph(s)]
     rows: list[tuple[float, list[Span]]] = []
     # full-size text first, then small superscripts (footnote markers) join the row just below them
-    for s in sorted(keep, key=lambda s: (s.size < 6.6, s.baseline, s.x0)):
-        small = s.size < 6.6
+    for s in sorted(keep, key=lambda s: (s.size < cfg.superscript_max, s.baseline, s.x0)):
+        small = s.size < cfg.superscript_max
         for base, fs in rows:
             if (-1.0 <= base - s.baseline <= 5.0) if small else abs(base - s.baseline) <= 2.7:
                 fs.append(s)
@@ -46,8 +57,7 @@ def page_text(spans: list[Span]) -> str:
     text = ""
     for _, fs in sorted(rows, key=lambda r: r[0]):
         fs.sort(key=lambda s: s.x0)
-        if all(s.font.startswith("NewBaskerville-Bold") and s.color == "#000000"
-               and re.fullmatch(r"\s*([0-9]+|[ivxlc]+)\s*", s.text) for s in fs if s.text.strip()):
+        if all(cfg.is_page_number(s) for s in fs if s.text.strip()):
             continue  # page number (foot of an opener page)
         line, prev = "", None
         for s in fs:
@@ -77,12 +87,12 @@ def strip_added(md: str) -> str:
     return md
 
 
-def report(book: Book, md_path: Path, p0: int, p1: int, skip_pages: set[int]) -> str:
+def report(book: Book, md_path: Path, p0: int, p1: int, skip_pages: set[int], cfg: VerifyConfig) -> str:
     lines: list[str] = []
     text = ""
     for p in range(p0, p1 + 1):
         if p not in skip_pages:
-            t = page_text(book.spans(p))
+            t = page_text(book.spans(p), cfg)
             # a hyphen at the end of a page joins the first word of the next page
             text += t.lstrip() if re.search(r"[A-Za-z]-$", text) else " " + t
     expected = tokens(text)
@@ -143,7 +153,7 @@ def main() -> None:
     if missing:
         sys.exit(f"missing in {out}: {' '.join(missing)}")
     for sec in prof.sections.values():
-        rep = report(book, out / sec.file, sec.pages[0], sec.pages[1], prof.skip_pages)
+        rep = report(book, out / sec.file, sec.pages[0], sec.pages[1], prof.skip_pages, prof.verify)
         if rdir:
             (rdir / f"{sec.file}.txt").write_text(rep)
         else:
