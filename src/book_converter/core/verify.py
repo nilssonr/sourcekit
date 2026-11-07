@@ -1,25 +1,31 @@
-"""Verify that a generated Markdown file contains exactly the book's words for its page range.
+"""Verify that the generated Markdown contains exactly the book's words.
 
-Independent of the converter: it rebuilds the word stream from raw spans in reading order
-(rows top to bottom, left to right), minus running headers, page numbers, figure-label text
-and bullet glyphs, and compares it with the Markdown minus the material the converter adds.
+Per file: the word stream is rebuilt from raw spans in reading order (its own rows, top to bottom,
+left to right), minus running headers, page numbers, figure-label text and bullet glyphs, and is
+compared with the Markdown minus the added material listed in the run's manifest.json.
+
+Also: the files' page ranges must match the profile's outline split and be contiguous (coverage),
+and an independent whole-book count compares PyMuPDF's separate word extraction with all files.
 
 Usage: uv run verify --input <pdf> --output <dir> --profile <name|dir> [--report-dir DIR]
 
-Checks every section file of the profile in <dir>. Reports go to stdout, or one file per section
-(<file>.md.txt) in --report-dir.
+Reports go to stdout, or to --report-dir: <file>.md.txt per file, coverage.txt, independent.txt.
+Exits 1 when coverage fails.
 """
 
 from __future__ import annotations
 
 import argparse
 import difflib
+import json
 import re
 import sys
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+
+import pymupdf
 
 from .pdf import Book, Span
 from ..modules.split import outline
@@ -72,23 +78,18 @@ def page_text(spans: list[Span], cfg: VerifyConfig) -> str:
     return text
 
 
-ADDED = [
-    (r"^!\[.*$", ""),
-    (r"^> \*\*Illustration description \(added in conversion, not book text\):\*\*.*$", ""),
-    (r"^\*Callouts \(added in conversion.*$", ""),
-    (r"^- \(lines? [\d–, ]+\) ", ""),
-    (r"^# Chapter \d+: ", "# "),
-    (r"^# Front matter$", ""),
-]
+def without_added(md: str, ranges: list[list]) -> str:
+    """The Markdown with the manifest's added-material ranges [start, end, kind] removed."""
+    out, pos = [], 0
+    for start, end, _ in sorted(ranges):
+        out.append(md[pos:start])
+        pos = end
+    out.append(md[pos:])
+    return "".join(out)
 
 
-def strip_added(md: str) -> str:
-    for pat, rep in ADDED:
-        md = re.sub(pat, rep, md, flags=re.M)
-    return md
-
-
-def report(book: Book, md_path: Path, p0: int, p1: int, skip_pages: set[int], cfg: VerifyConfig) -> str:
+def report(book: Book, book_text: str, p0: int, p1: int, skip_pages: set[int], cfg: VerifyConfig) -> str:
+    """Compare one file's book text (Markdown minus added material) with PDF pages p0-p1."""
     lines: list[str] = []
     text = ""
     for p in range(p0, p1 + 1):
@@ -97,7 +98,7 @@ def report(book: Book, md_path: Path, p0: int, p1: int, skip_pages: set[int], cf
             # a hyphen at the end of a page joins the first word of the next page
             text += t.lstrip() if re.search(r"[A-Za-z]-$", text) else " " + t
     expected = tokens(text)
-    actual = tokens(strip_added(md_path.read_text(encoding="utf-8")))
+    actual = tokens(book_text)
 
     ce, ca = Counter(expected), Counter(actual)
     missing = [f"{k}×{v - ca[k]}" for k, v in ce.items() if ca[k] < v]
@@ -137,6 +138,81 @@ def report(book: Book, md_path: Path, p0: int, p1: int, skip_pages: set[int], cf
     return "\n".join(lines) + "\n"
 
 
+def _excluded_boxes(spans: list[Span], cfg: VerifyConfig) -> list[pymupdf.Rect]:
+    """Boxes of the spans the per-file comparison leaves out: headers, figure labels, bullets, page numbers."""
+    boxes = [pymupdf.Rect(s.x0, s.y0, s.x1, s.y1) for s in spans
+             if s.baseline < cfg.header_band or cfg.is_figure_text(s) or cfg.is_bullet_glyph(s)]
+    rows: list[tuple[float, list[Span]]] = []
+    for s in sorted(spans, key=lambda s: s.baseline):
+        if rows and abs(rows[-1][0] - s.baseline) <= 2.7:
+            rows[-1][1].append(s)
+        else:
+            rows.append((s.baseline, [s]))
+    for _, fs in rows:
+        ink = [s for s in fs if s.text.strip()]
+        if ink and all(cfg.is_page_number(s) for s in ink):
+            boxes += [pymupdf.Rect(s.x0, s.y0, s.x1, s.y1) for s in ink]
+    return boxes
+
+
+def independent(book: Book, pages: list[int], book_text: str, cfg: VerifyConfig) -> str:
+    """Whole-book word multiset from PyMuPDF's own word extraction (not the converter's spans, rows
+    or regions) against all files' book text. Shares only the exclusion predicates."""
+    words: list[tuple[str, bool]] = []   # (word, last on its line)
+    for p in pages:
+        page = book.page(p)
+        boxes = _excluded_boxes(book.spans(p), cfg)
+        ws = page.get_text("words", flags=pymupdf.TEXT_MEDIABOX_CLIP)
+        for k, w in enumerate(ws):
+            c = pymupdf.Point((w[0] + w[2]) / 2, (w[1] + w[3]) / 2)
+            if any(b.contains(c) for b in boxes):
+                continue
+            last = k + 1 == len(ws) or ws[k + 1][5:7] != w[5:7]
+            words.append((w[4], last))
+    # A line-end hyphen joins the next word in PyMuPDF's order; tokens() drops the hyphen itself.
+    # Where a listing or figure interrupts a paragraph, that order is not reading order and the join
+    # pairs the wrong words (known: PDF page 118, "sub-" + "Listing"). Tried and rejected: waiting for
+    # a lower-case word, or joining within PyMuPDF's text blocks; both paired more words wrongly.
+    text: list[str] = []
+    for i, (w, _) in enumerate(words):
+        if text and words[i - 1][1] and re.search(r"[A-Za-z]-$", text[-1]):
+            text[-1] += w
+        else:
+            text.append(w)
+    expected = Counter(tokens(" ".join(text)))
+    actual = Counter(tokens(book_text))
+    missing = sorted(((v - actual[k], k) for k, v in expected.items() if actual[k] < v), reverse=True)
+    extra = sorted(((v - expected[k], k) for k, v in actual.items() if expected[k] < v), reverse=True)
+    matched = sum(min(v, actual[k]) for k, v in expected.items())
+    return (f"independent count: PyMuPDF words on {len(pages)} pages vs all Markdown files minus added material\n"
+            f"(a coarse check of the loading path: line-end hyphens are joined in PyMuPDF's word order, which is\n"
+            f"not reading order where a listing or figure interrupts a paragraph)\n"
+            f"pdf {sum(expected.values())} words, markdown {sum(actual.values())} words, matched {matched}\n"
+            f"missing from markdown ({len(missing)}): {' '.join(f'{k}×{n}' for n, k in missing)}\n"
+            f"extra in markdown ({len(extra)}): {' '.join(f'{k}×{n}' for n, k in extra)}\n")
+
+
+def coverage(files: list[dict], expected: dict[str, tuple[int, int]]) -> tuple[bool, str]:
+    """The manifest's files against the profile's outline split; page ranges contiguous, no overlap."""
+    problems = []
+    got = {f["file"]: tuple(f["pages"]) for f in files}
+    for file, pages in expected.items():
+        if file not in got:
+            problems.append(f"missing file {file} (pages {pages[0]}-{pages[1]})")
+        elif got[file] != pages:
+            problems.append(f"{file}: pages {got[file]} in the manifest, {pages} from the outline")
+    problems += [f"unexpected file {f}" for f in got if f not in expected]
+    ranges = sorted(got.values())
+    for (a0, a1), (b0, b1) in zip(ranges, ranges[1:]):
+        if b0 <= a1:
+            problems.append(f"pages {a0}-{a1} and {b0}-{b1} overlap")
+        elif b0 != a1 + 1:
+            problems.append(f"pages {a1 + 1}-{b0 - 1} are in no file")
+    span = f"{ranges[0][0]}-{ranges[-1][1]}" if ranges else "none"
+    head = f"coverage: {len(got)} files, PDF pages {span}: " + ("OK" if not problems else f"{len(problems)} problems")
+    return not problems, "\n".join([head] + ["  " + p for p in problems]) + "\n"
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(prog="verify", description="Compare converted Markdown with the PDF's words.")
     ap.add_argument("--input", required=True, help="the PDF that was converted")
@@ -150,16 +226,31 @@ def main() -> None:
     rdir = Path(args.report_dir) if args.report_dir else None
     if rdir:
         rdir.mkdir(parents=True, exist_ok=True)
-    sections = outline.sections(book, prof.split)
-    missing = [sec.file for sec in sections.values() if not (out / sec.file).exists()]
-    if missing:
-        sys.exit(f"missing in {out}: {' '.join(missing)}")
-    for sec in sections.values():
-        rep = report(book, out / sec.file, sec.pages[0], sec.pages[1], prof.skip_pages, prof.verify)
+    mpath = out / "manifest.json"
+    if not mpath.exists():
+        sys.exit(f"no manifest.json in {out}")
+    files = json.loads(mpath.read_text())["files"]
+
+    def emit(name: str, title: str, text: str) -> None:
         if rdir:
-            (rdir / f"{sec.file}.txt").write_text(rep)
+            (rdir / name).write_text(text)
         else:
-            sys.stdout.write(f"--- {sec.file} (PDF pages {sec.pages[0]}-{sec.pages[1]})\n{rep}\n")
+            sys.stdout.write(f"--- {title}\n{text}\n")
+
+    expected = {sec.file: sec.pages for sec in outline.sections(book, prof.split).values()}
+    ok, cov = coverage(files, expected)
+    emit("coverage.txt", "coverage", cov)
+    all_text, pages = [], []
+    for f in files:
+        p0, p1 = f["pages"]
+        skip = set(f["skip_pages"])
+        text = without_added((out / f["file"]).read_text(encoding="utf-8"), f["added"])
+        all_text.append(text)
+        pages += [p for p in range(p0, p1 + 1) if p not in skip]
+        emit(f"{f['file']}.txt", f"{f['file']} (PDF pages {p0}-{p1})", report(book, text, p0, p1, skip, prof.verify))
+    emit("independent.txt", "independent count", independent(book, sorted(pages), "\n".join(all_text), prof.verify))
+    if not ok:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
