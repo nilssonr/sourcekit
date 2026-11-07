@@ -14,5 +14,6 @@ from .errors import (
     ValidationError,
 )
 from .ids import ArxivId, is_valid_id, parse_id
+from .query import Q
 
 __version__ = "0.1.0"
