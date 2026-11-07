@@ -4,7 +4,7 @@ Mapped on 2026-11-07 (a Saturday) from the official docs plus about 140 live req
 
 Tags: **[obs]** observed in a live capture · **[doc]** stated in info.arxiv.org docs · **[src]** read in arXiv's open-source code · **[inf]** inference, not verified · **[unmeasured]** tried but no answer, or not tried.
 
-Machine-readable spec for the query API and the feeds: [`../spec/arxiv.openapi.yaml`](../spec/arxiv.openapi.yaml).
+Machine-readable spec for the query API and the feeds: [`arxiv.openapi.yaml`](arxiv.openapi.yaml).
 
 arXiv publishes no OpenAPI spec for any of these interfaces. The only official machine-readable artifact is a small 2007 XSD for the `arxiv:` Atom extension elements (see §5).
 
