@@ -13,10 +13,11 @@ The restructuring plan is in `docs/design.md`.
 
 ```sh
 uv run convert --input <pdf> --output <dir> --profile manning_unit_testing [--sections ID...]
-                                                  # section ids: see src/book_converter/sections.py
-uv run verify  <pdf> <outDir>/<file>.md <firstPage> <lastPage>
+                                                  # section ids: see the profile's SECTIONS
+uv run verify  --input <pdf> --output <dir> --profile manning_unit_testing [--report-dir DIR]
 uv run census  <pdf> <firstPage> <lastPage>       # font/size/color histogram (dev tool)
 uv run python -m unittest discover -s tests -v    # needs the PDF (BOOK_PDF env var or ~/temp default)
+scripts/make_run.sh <pdf> <run dir> <profile>     # convert + verify into a run directory
 scripts/compare_ref.sh <ref dir> <run dir>        # regression check against a saved reference run
 ```
 

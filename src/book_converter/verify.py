@@ -4,18 +4,23 @@ Independent of the converter: it rebuilds the word stream from raw spans in read
 (rows top to bottom, left to right), minus running headers, page numbers, figure-label text
 and bullet glyphs, and compares it with the Markdown minus the material the converter adds.
 
-Usage: uv run verify <pdf> <markdown> <firstPage> <lastPage>
+Usage: uv run verify --input <pdf> --output <dir> --profile <name|dir> [--report-dir DIR]
+
+Checks every section file of the profile in <dir>. Reports go to stdout, or one file per section
+(<file>.md.txt) in --report-dir.
 """
 
 from __future__ import annotations
 
+import argparse
 import difflib
 import re
 import sys
 from collections import Counter
+from pathlib import Path
 
 from .pdf import Book, Span
-from .sections import SKIP_PAGES
+from .profile import load as load_profile
 from .styles import HEADER_BAND, is_figure_text
 
 
@@ -72,30 +77,28 @@ def strip_added(md: str) -> str:
     return md
 
 
-def main() -> None:
-    pdf, md_path, a, b = sys.argv[1:5]
-    p0, p1 = int(a), int(b)
-    book = Book(pdf)
+def report(book: Book, md_path: Path, p0: int, p1: int, skip_pages: set[int]) -> str:
+    lines: list[str] = []
     text = ""
     for p in range(p0, p1 + 1):
-        if p not in SKIP_PAGES:
+        if p not in skip_pages:
             t = page_text(book.spans(p))
             # a hyphen at the end of a page joins the first word of the next page
             text += t.lstrip() if re.search(r"[A-Za-z]-$", text) else " " + t
     expected = tokens(text)
-    actual = tokens(strip_added(open(md_path, encoding="utf-8").read()))
+    actual = tokens(strip_added(md_path.read_text(encoding="utf-8")))
 
     ce, ca = Counter(expected), Counter(actual)
     missing = [f"{k}×{v - ca[k]}" for k, v in ce.items() if ca[k] < v]
     extra = [f"{k}×{v - ce[k]}" for k, v in ca.items() if ce[k] < v]
     matched = sum(min(v, ca[k]) for k, v in ce.items())
-    print(f"expected {len(expected)} words, markdown {len(actual)} words, matched {matched}")
-    print(f"missing from markdown ({len(missing)}): {' '.join(missing)}")
-    print(f"extra in markdown ({len(extra)}): {' '.join(extra)}")
+    lines.append(f"expected {len(expected)} words, markdown {len(actual)} words, matched {matched}")
+    lines.append(f"missing from markdown ({len(missing)}): {' '.join(missing)}")
+    lines.append(f"extra in markdown ({len(extra)}): {' '.join(extra)}")
 
     sm = difflib.SequenceMatcher(None, expected, actual, autojunk=False)
     hunks = [op for op in sm.get_opcodes() if op[0] != "equal"]
-    print(f"order: {len(hunks)} differing stretches")
+    lines.append(f"order: {len(hunks)} differing stretches")
 
     # Pair moves: every stretch taken out of one place must reappear as part of a stretch put in elsewhere.
     outs = [Counter(expected[i1:i2]) for t, i1, i2, j1, j2 in hunks if i2 > i1]
@@ -111,15 +114,40 @@ def main() -> None:
             home.subtract(o)
     leftover_in = [c for c in ins if +c]
     moved = len(out_ops) - len(unpaired)
-    print(f"moves: {moved} stretches reappear elsewhere; unexplained: {len(unpaired)} out, {len(leftover_in)} in")
+    lines.append(f"moves: {moved} stretches reappear elsewhere; unexplained: {len(unpaired)} out, {len(leftover_in)} in")
     for tag, i1, i2, j1, j2 in unpaired:
-        print(f"  UNPAIRED {tag} pdf[{i1}:{i2}]: {' '.join(expected[i1:i2])[:140]}")
+        lines.append(f"  UNPAIRED {tag} pdf[{i1}:{i2}]: {' '.join(expected[i1:i2])[:140]}")
     for c in leftover_in:
-        print(f"  UNPAIRED in md: {' '.join(sorted((+c).elements()))[:140]}")
+        lines.append(f"  UNPAIRED in md: {' '.join(sorted((+c).elements()))[:140]}")
     for tag, i1, i2, j1, j2 in hunks[:60]:
-        print(f"  {tag} pdf[{i1}:{i2}] md[{j1}:{j2}]")
-        print(f"    pdf: {' '.join(expected[i1:i2])[:140] or '(none)'}")
-        print(f"    md : {' '.join(actual[j1:j2])[:140] or '(none)'}")
+        lines.append(f"  {tag} pdf[{i1}:{i2}] md[{j1}:{j2}]")
+        lines.append(f"    pdf: {' '.join(expected[i1:i2])[:140] or '(none)'}")
+        lines.append(f"    md : {' '.join(actual[j1:j2])[:140] or '(none)'}")
+    return "\n".join(lines) + "\n"
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(prog="verify", description="Compare converted Markdown with the PDF's words.")
+    ap.add_argument("--input", required=True, help="the PDF that was converted")
+    ap.add_argument("--output", required=True, help="the conversion's output directory")
+    ap.add_argument("--profile", required=True, help="profile name (under profiles/) or directory")
+    ap.add_argument("--report-dir", help="write one report per section file here instead of to stdout")
+    args = ap.parse_args()
+    prof = load_profile(args.profile)
+    book = Book(args.input)
+    out = Path(args.output)
+    rdir = Path(args.report_dir) if args.report_dir else None
+    if rdir:
+        rdir.mkdir(parents=True, exist_ok=True)
+    missing = [sec.file for sec in prof.sections.values() if not (out / sec.file).exists()]
+    if missing:
+        sys.exit(f"missing in {out}: {' '.join(missing)}")
+    for sec in prof.sections.values():
+        rep = report(book, out / sec.file, sec.pages[0], sec.pages[1], prof.skip_pages)
+        if rdir:
+            (rdir / f"{sec.file}.txt").write_text(rep)
+        else:
+            sys.stdout.write(f"--- {sec.file} (PDF pages {sec.pages[0]}-{sec.pages[1]})\n{rep}\n")
 
 
 if __name__ == "__main__":

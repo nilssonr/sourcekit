@@ -21,12 +21,11 @@ from .hyphens import Resolver
 from .listings import (Callout, CodeLine, hexrgb, code_lines, fmt_lines, listing_bars, listing_parts, map_callouts,
                        with_blank_lines)
 from .pdf import Book, Span
-from .sections import PAGE_FIGURES, SECTIONS, SKIP_PAGES, Section
+from .profile import Profile, load as load_profile
+from .sections import Section
 from .styles import (BLUE, HEADER_BAND, SIDEBAR_BG, column_left, column_right, is_bullet, is_callout, is_caption_font,
                      is_code_block, is_figure_text, is_fn_marker, is_fn_start_marker, is_list_number,
                      is_listing_head, is_ws, near)
-
-REPO = Path(__file__).resolve().parents[2]
 
 ROW_TOL = 2.7
 
@@ -363,8 +362,9 @@ class Listing:
 
 
 class Converter:
-    def __init__(self, book: Book, out_dir: Path, descriptions: dict[str, str]):
+    def __init__(self, book: Book, out_dir: Path, descriptions: dict[str, str], profile: Profile):
         self.book = book
+        self.prof = profile
         self.out = out_dir
         self.desc = descriptions
         self.figure_labels: dict[str, list[str]] = {}
@@ -456,7 +456,7 @@ class Converter:
             flush_para()
 
         for p in range(p0, p1 + 1):
-            if p in SKIP_PAGES:
+            if p in self.prof.skip_pages:
                 continue
             pf = self.book.spans(p)
             sidebar_boxes = [d["rect"] for d in self.book.drawings(p)
@@ -465,7 +465,8 @@ class Converter:
             items: list[tuple[float, str, object]] = []
 
             # figures
-            page_figs = [figmod.page_figure(self.book, p, *PAGE_FIGURES[p])] if p in PAGE_FIGURES else []
+            pf_ = self.prof.page_figures
+            page_figs = [figmod.page_figure(self.book, p, *pf_[p])] if p in pf_ else []
             for fig in page_figs + figmod.detect(self.book, p, self.warn):
                 for s in fig.labels + fig.caption:
                     used.add(id(s))
@@ -778,7 +779,7 @@ class Converter:
 
     def footnotes(self, sec: Section) -> list[str]:
         p0, p1 = sec.pages
-        spans = [s for p in range(p0, p1 + 1) if p not in SKIP_PAGES for s in self.book.spans(p)
+        spans = [s for p in range(p0, p1 + 1) if p not in self.prof.skip_pages for s in self.book.spans(p)
                  if not is_figure_text(s) and not is_code_block(s) and not is_listing_head(s) and not is_callout(s)]
         out: list[str] = []
         cur: dict | None = None
@@ -803,16 +804,6 @@ class Converter:
         return out
 
 
-def profile_dir(name: str) -> Path:
-    """A profile given by path, or by name under <repo>/profiles/."""
-    p = Path(name).expanduser()
-    if not p.is_dir():
-        p = REPO / "profiles" / name
-    if not p.is_dir():
-        sys.exit(f"profile not found: {name} (looked for a directory, then {p})")
-    return p
-
-
 def main() -> None:
     global CTX
     ap = argparse.ArgumentParser(prog="convert", description="Convert a PDF into Markdown using a profile.")
@@ -821,20 +812,20 @@ def main() -> None:
     ap.add_argument("--profile", required=True, help="profile name (under profiles/) or directory")
     ap.add_argument("--sections", nargs="+", metavar="ID", help="section ids to convert (default: all)")
     args = ap.parse_args()
-    wanted = args.sections or list(SECTIONS)
-    unknown = [s for s in wanted if s not in SECTIONS]
+    prof = load_profile(args.profile)
+    wanted = args.sections or list(prof.sections)
+    unknown = [s for s in wanted if s not in prof.sections]
     if unknown:
-        sys.exit(f"unknown section ids: {' '.join(unknown)} (known: {' '.join(SECTIONS)})")
-    data = profile_dir(args.profile) / "data"
+        sys.exit(f"unknown section ids: {' '.join(unknown)} (known: {' '.join(prof.sections)})")
     out = Path(args.output)
     (out / "illustrations").mkdir(parents=True, exist_ok=True)
     book = Book(args.input)
     CTX = Ctx(Resolver(book.all_spans(1, book.page_count)))  # whole book, incl. figure labels and index
-    dpath = data / "descriptions.json"
+    dpath = prof.data_dir / "descriptions.json"
     desc = json.loads(dpath.read_text()) if dpath.exists() else {}
-    conv = Converter(book, out, desc)
+    conv = Converter(book, out, desc, prof)
     for sid in wanted:
-        sec = SECTIONS[sid]
+        sec = prof.sections[sid]
         blocks = conv.convert(sec)
         (out / sec.file).write_text("\n\n".join(blocks) + "\n")
         print(f"wrote {sec.file} ({len(blocks)} blocks)")
