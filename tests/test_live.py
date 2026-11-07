@@ -1,15 +1,19 @@
-"""Opt-in live smoke test. Skipped unless ARXIV_LIVE=1.
+"""Opt-in live smoke tests. Skipped unless ARXIV_LIVE=1.
 
-Sends exactly 3 requests, spaced at least 3 s apart (15 s before the PDF, per robots.txt):
-one search page, one announcement feed, one PDF download.
+Sends exactly 5 requests. The request gate spaces them at least 3 s apart, and the PDF
+waits an extra 15 s (robots.txt): one search page, one announcement feed, one PDF
+download, then a two-query batch through the CLI.
 """
 
+import io
+import json
 import os
 import tempfile
 import time
 import unittest
 
 from arxiv_client import ArxivClient, Q
+from arxiv_client.__main__ import main
 
 LIVE = os.environ.get("ARXIV_LIVE") == "1"
 
@@ -23,8 +27,7 @@ class LiveSmokeTest(unittest.TestCase):
         self.assertGreaterEqual(page.total_results or 0, 1)
         self.assertTrue(any(p.id == "1706.03762" for p in page.papers), [p.id for p in page.papers])
 
-        time.sleep(3.5)
-        feed = client.feed("cs.AI")
+        feed = client.feed("cs.AI")  # no sleep: the request gate spaces this call
         # Weekends and holidays legitimately return zero items.
         for item in feed.items:
             self.assertTrue(item.id)
@@ -36,6 +39,18 @@ class LiveSmokeTest(unittest.TestCase):
             self.assertGreater(result.bytes, 1000)
             with open(result.path, "rb") as f:
                 self.assertEqual(f.read(5), b"%PDF-")
+
+    def test_batch_of_two(self):
+        queries = [
+            {"label": "attention", "title": "attention is all you need", "max": 3},
+            {"label": "design2code", "title": "Design2Code", "any_category": ["cs.CL", "cs.CV"], "max": 3},
+        ]
+        out, err = io.StringIO(), io.StringIO()
+        code = main(["batch", "-"], stdout=out, stderr=err, stdin=io.StringIO(json.dumps(queries)))
+        self.assertEqual(code, 0, err.getvalue())
+        data = json.loads(out.getvalue())
+        self.assertIn("1706.03762", data["queries"][0]["ids"])
+        self.assertIn("2403.03163", data["queries"][1]["ids"])
 
 
 if __name__ == "__main__":
