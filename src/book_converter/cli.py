@@ -1,6 +1,9 @@
-"""Command line: convert a PDF into Markdown with a profile.
+"""Command line.
 
-Usage: uv run convert --input <pdf> --output <dir> --profile <name|dir> [--sections ID...]
+  uv run convert --input <pdf> --output <dir> --profile <name|dir> [--sections ID...]
+  uv run census  --input <pdf> --pages <first>-<last>     font x size x colour histogram (profile authoring)
+
+verify has its own entry point (core/verify.py).
 """
 
 from __future__ import annotations
@@ -8,6 +11,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 from .core import pipeline
@@ -39,3 +43,25 @@ def convert() -> None:
     print(f"warnings: {len(res.warnings)}")
     for w in res.warnings:
         print("  " + w)
+
+
+def census() -> None:
+    ap = argparse.ArgumentParser(prog="census", description="Histogram of font x size x colour, with sample text.")
+    ap.add_argument("--input", required=True, help="the PDF")
+    ap.add_argument("--pages", required=True, help="PDF page range, e.g. 16-296")
+    args = ap.parse_args()
+    m = re.fullmatch(r"(\d+)-(\d+)", args.pages)
+    if not m:
+        sys.exit(f"--pages must look like 16-296, not {args.pages!r}")
+    book = Book(args.input)
+    stats: dict[tuple, list] = defaultdict(lambda: [0, 0, ""])
+    for s in book.all_spans(int(m[1]), int(m[2])):
+        if not s.text.strip():
+            continue
+        st = stats[(s.font, s.size, s.color)]
+        st[0] += 1
+        st[1] += len(s.text)
+        if len(st[2]) < 50:
+            st[2] = (st[2] + " | " + s.text.strip())[:60] if st[2] else s.text.strip()[:60]
+    for (font, size, color), (n, chars, sample) in sorted(stats.items(), key=lambda kv: -kv[1][1]):
+        print(f"{n:5} {chars:6}  {font:28} {size:6.2f} {color}  {sample}")
