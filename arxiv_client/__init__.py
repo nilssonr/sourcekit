@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Robin Nilsson. Full text: LICENSE in this package folder.
 """Standard-library client for arXiv's query API and announcement feeds.
 
 Thank you to arXiv for use of its open access interoperability.

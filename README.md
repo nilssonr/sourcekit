@@ -143,3 +143,7 @@ The suite uses a fake clock and fake sleep, so nothing really waits.
 - The feed item fixtures, and every throttling signal, are synthesised from the doc's descriptions, not taken from live captures. The doc's feed probe ran on a Saturday, when every feed is empty. Re-check the fixtures against a real weekday feed.
 - **Abstract paragraphs:** the doc says a newline followed by indentation starts a paragraph. But arXiv also hard-wraps lines with `\n  `, mid-sentence, which looks identical. The client treats an indented line as a new paragraph only when the previous line ends a sentence. That misreads a hard wrap that happens to follow a full stop.
 - The real `start` limit lies somewhere between 1000 (works) and 10000 (fails). The clamp at 10000 may still be too high.
+
+## License
+
+MIT. See [`LICENSE`](LICENSE). A copy also sits in `arxiv_client/LICENSE`, so the notice travels with the package when it is copied into a skill.
