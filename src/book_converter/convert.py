@@ -1,10 +1,11 @@
 """Convert page ranges of the book PDF into verbatim Markdown.
 
-Usage: uv run convert <pdf> <outDir> <section-id>...   (section ids in sections.py)
+Usage: uv run convert --input <pdf> --output <dir> --profile <name|dir> [--sections ID...]
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -802,14 +803,34 @@ class Converter:
         return out
 
 
+def profile_dir(name: str) -> Path:
+    """A profile given by path, or by name under <repo>/profiles/."""
+    p = Path(name).expanduser()
+    if not p.is_dir():
+        p = REPO / "profiles" / name
+    if not p.is_dir():
+        sys.exit(f"profile not found: {name} (looked for a directory, then {p})")
+    return p
+
+
 def main() -> None:
     global CTX
-    pdf, out_dir, *wanted = sys.argv[1:]
-    out = Path(out_dir)
+    ap = argparse.ArgumentParser(prog="convert", description="Convert a PDF into Markdown using a profile.")
+    ap.add_argument("--input", required=True, help="the PDF to convert")
+    ap.add_argument("--output", required=True, help="directory for everything the run generates")
+    ap.add_argument("--profile", required=True, help="profile name (under profiles/) or directory")
+    ap.add_argument("--sections", nargs="+", metavar="ID", help="section ids to convert (default: all)")
+    args = ap.parse_args()
+    wanted = args.sections or list(SECTIONS)
+    unknown = [s for s in wanted if s not in SECTIONS]
+    if unknown:
+        sys.exit(f"unknown section ids: {' '.join(unknown)} (known: {' '.join(SECTIONS)})")
+    data = profile_dir(args.profile) / "data"
+    out = Path(args.output)
     (out / "illustrations").mkdir(parents=True, exist_ok=True)
-    book = Book(pdf)
+    book = Book(args.input)
     CTX = Ctx(Resolver(book.all_spans(1, book.page_count)))  # whole book, incl. figure labels and index
-    dpath = REPO / "data" / "descriptions.json"
+    dpath = data / "descriptions.json"
     desc = json.loads(dpath.read_text()) if dpath.exists() else {}
     conv = Converter(book, out, desc)
     for sid in wanted:
@@ -817,13 +838,13 @@ def main() -> None:
         blocks = conv.convert(sec)
         (out / sec.file).write_text("\n\n".join(blocks) + "\n")
         print(f"wrote {sec.file} ({len(blocks)} blocks)")
-    lpath = REPO / "data" / "figure-labels.json"
-    labels = json.loads(lpath.read_text()) if lpath.exists() else {}
-    labels.update(conv.figure_labels)
-    lpath.write_text(json.dumps(dict(sorted(labels.items(), key=lambda kv: [int(x) if x.isdigit() else -1
-                                                                             for x in re.split(r"[.-]", kv[0])])),
-                                indent=1, ensure_ascii=False))
-    (REPO / "data" / "hyphen-decisions.json").write_text(json.dumps(CTX.resolver.log_dicts(), indent=1))
+    # generated fresh on every run, never merged with an earlier run
+    labels = conv.figure_labels
+    (out / "figure-labels.json").write_text(
+        json.dumps(dict(sorted(labels.items(), key=lambda kv: [int(x) if x.isdigit() else -1
+                                                                for x in re.split(r"[.-]", kv[0])])),
+                   indent=1, ensure_ascii=False))
+    (out / "hyphen-decisions.json").write_text(json.dumps(CTX.resolver.log_dicts(), indent=1))
     review = [d for d in CTX.resolver.log if re.search("REVIEW|AMBIGUOUS", d.why)]
     print(f"hyphens: {len(CTX.resolver.log)} resolved, {len(review)} flagged")
     for d in review:
