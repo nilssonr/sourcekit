@@ -1,0 +1,409 @@
+openapi: 3.1.0
+info:
+  title: arXiv public APIs (unofficial, empirically derived)
+  version: 0.1.0
+  summary: Query API, OAI-PMH and announcement feeds, as observed on 2026-11-07.
+  description: |
+    Unofficial. arXiv publishes no OpenAPI description. This file was derived from the
+    official docs plus live probing. See docs/arxiv-api.md for evidence, quirks and gaps.
+
+    Rate limit (arXiv terms of use): at most 1 request every 3 seconds and one connection
+    at a time, across all legacy APIs (query, OAI-PMH, RSS) and all of a client's machines.
+
+    All responses are XML. The schemas below model the XML using OpenAPI `xml` hints
+    and are intended as documentation and a codegen starting point. Generic XML
+    validation of Atom is better done with RELAX NG / XSD.
+  license:
+    name: 'arXiv metadata is CC0 1.0; this spec file follows the repository license'
+externalDocs:
+  url: https://info.arxiv.org/help/api/user-manual.html
+
+servers:
+  - url: https://export.arxiv.org
+
+tags:
+  - name: query
+    description: Search and fetch-by-ID (Atom 1.0).
+  - name: oai-pmh
+    description: Metadata harvesting (OAI-PMH 2.0). Very slow on cache misses.
+  - name: feeds
+    description: Daily announcement feeds (RSS 2.0 / Atom 1.0).
+
+paths:
+  /api/query:
+    get:
+      tags: [query]
+      operationId: query
+      summary: Search arXiv or fetch entries by ID
+      description: |
+        At least one of `search_query` or `id_list` is required (else 400).
+        Plain http redirects to https. Unknown parameters are ignored.
+        Responses may be served from a CDN cache (observed Age ≥ 1130 s).
+      parameters:
+        - $ref: '#/components/parameters/search_query'
+        - $ref: '#/components/parameters/id_list'
+        - $ref: '#/components/parameters/start'
+        - $ref: '#/components/parameters/max_results'
+        - $ref: '#/components/parameters/sortBy'
+        - $ref: '#/components/parameters/sortOrder'
+      responses:
+        '200': { $ref: '#/components/responses/QueryFeed' }
+        '400': { $ref: '#/components/responses/QueryError' }
+        '500': { $ref: '#/components/responses/QueryServerError' }
+    post:
+      tags: [query]
+      operationId: queryPost
+      summary: Same as GET, parameters in a form body (for long id_lists)
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: '#/components/schemas/QueryParams' }
+      responses:
+        '200': { $ref: '#/components/responses/QueryFeed' }
+        '400': { $ref: '#/components/responses/QueryError' }
+        '500': { $ref: '#/components/responses/QueryServerError' }
+
+  /oai:
+    servers:
+      - url: https://oaipmh.arxiv.org
+    get:
+      tags: [oai-pmh]
+      operationId: oaiPmh
+      summary: OAI-PMH 2.0 endpoint (all verbs)
+      description: |
+        Errors are HTTP 200 with an OAI `<error code='…'>` element.
+        CDN hits are fast but can be weeks stale (`responseDate` is the cached date);
+        cache misses took 7 s to >120 s. Use a read timeout ≥ 180 s.
+        ListIdentifiers/ListRecords responses were never obtained (all timed out), so their
+        shapes follow the OAI-PMH 2.0 spec and are unverified here.
+      parameters:
+        - name: verb
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [Identify, ListMetadataFormats, ListSets, GetRecord, ListIdentifiers, ListRecords]
+        - name: identifier
+          in: query
+          description: '`oai:arXiv.org:<id>` without version; old-style ids keep the slash (e.g. `oai:arXiv.org:hep-th/9711200`). Required for GetRecord.'
+          schema: { type: string, pattern: '^oai:arXiv\.org:.+$' }
+        - name: metadataPrefix
+          in: query
+          description: Required for GetRecord, ListIdentifiers, ListRecords (unless resumptionToken).
+          schema: { type: string, enum: [oai_dc, arXiv, arXivOld, arXivRaw] }
+        - name: from
+          in: query
+          description: Day granularity (Identify says YYYY-MM-DD).
+          schema: { type: string, format: date }
+        - name: until
+          in: query
+          description: Docs advise not to set it for incremental harvesting.
+          schema: { type: string, format: date }
+        - name: set
+          in: query
+          description: '`group[:archive[:SUB]]`, e.g. `cs:cs:AI`, `math:math:NA`, `physics:hep-th`, `physics:astro-ph:CO`.'
+          schema: { type: string, pattern: '^[a-z-]+(:[a-z-]+(:[A-Za-z-]+)?)?$' }
+        - name: resumptionToken
+          in: query
+          description: Exclusive argument. Per docs, expires daily; has no completeListSize/cursor (unverified).
+          schema: { type: string }
+      responses:
+        '200':
+          description: OAI-PMH response or OAI error, both as XML.
+          content:
+            text/xml:
+              schema: { type: string, description: 'OAI-PMH 2.0 XML. See docs/arxiv-api.md §3 for observed record formats.' }
+
+  /rss/{query}:
+    servers:
+      - url: https://rss.arxiv.org
+    get:
+      tags: [feeds]
+      operationId: rssFeed
+      summary: Today's announcements as RSS 2.0
+      parameters:
+        - $ref: '#/components/parameters/feedQuery'
+        - name: version
+          in: query
+          schema: { type: string, enum: ['2.0'], default: '2.0' }
+      responses:
+        '200': { $ref: '#/components/responses/RssFeed' }
+        '400':
+          description: Invalid query. Body is a valid, EMPTY RSS feed; message in channel/description.
+          content:
+            application/rss+xml: { schema: { type: string } }
+
+  /atom/{query}:
+    servers:
+      - url: https://rss.arxiv.org
+    get:
+      tags: [feeds]
+      operationId: atomFeed
+      summary: Today's announcements as Atom 1.0
+      parameters:
+        - $ref: '#/components/parameters/feedQuery'
+      responses:
+        '200': { $ref: '#/components/responses/AtomAnnouncementFeed' }
+        '400':
+          description: Invalid query. Body is a valid, EMPTY Atom feed; message in feed/subtitle.
+          content:
+            application/atom+xml: { schema: { type: string } }
+
+  /feed/status:
+    servers:
+      - url: https://rss.arxiv.org
+    get:
+      tags: [feeds]
+      operationId: feedStatus
+      summary: Feed service health
+      responses:
+        '200':
+          description: 'e.g. `Status: GOOD Version: 1.1`'
+          content:
+            text/plain: { schema: { type: string } }
+
+components:
+  parameters:
+    search_query:
+      name: search_query
+      in: query
+      description: |
+        Field prefixes: ti au abs co jr cat rn id all. No/unknown prefix → `all:`.
+        Operators AND OR ANDNOT (uppercase only; implicit joiner is OR; lowercase `and` is a term).
+        Supports "phrases", ( ) grouping, trailing `*`.
+        Date filter: `submittedDate:[FROM TO TO]` with YYYYMMDD[HHMM[SS]] in GMT, normalised to 12 digits.
+        `lastUpdatedDate:[…]` is silently treated as submittedDate.
+      schema: { type: string }
+      example: 'cat:cs.LG AND submittedDate:[20230101 TO 20230131]'
+    id_list:
+      name: id_list
+      in: query
+      style: form
+      explode: false
+      description: |
+        Comma-separated arXiv ids, optionally versioned. Unversioned → latest version.
+        Malformed → 400. Valid-but-missing → silently omitted. Duplicates removed.
+        Output order NOT preserved; still paged by max_results.
+        KNOWN BUG: SOME old-style ids with a non-latest version (e.g. `hep-th/9711200v1`) return 500
+        and fail the whole request; others (e.g. `astro-ph/0703001v1`) work. Rule unknown.
+        On 500, retry with old-style ids unversioned. GET URLs with ~650+ ids return 414: chunk.
+        Combined with search_query → intersection.
+      schema:
+        type: array
+        items: { $ref: '#/components/schemas/ArxivId' }
+    start:
+      name: start
+      in: query
+      description: 0-based offset. Negative/non-int → 400. Observed 500 at ≥ 10000 (works at 1000). Past end → 200, 0 entries.
+      schema: { type: integer, minimum: 0, default: 0 }
+    max_results:
+      name: max_results
+      in: query
+      description: |
+        0 → 500 (use 1 for count-only). Negative/non-int → 400. Observed 500 at ≥ 29999.
+        Docs: slices of at most 2000 (not enforced). Recommended 100–200: other clients report
+        intermittent empty/partial pages at large page sizes. Retry an empty page mid-pagination.
+      schema: { type: integer, minimum: 1, maximum: 2000, default: 10 }
+    sortBy:
+      name: sortBy
+      in: query
+      schema: { type: string, enum: [relevance, lastUpdatedDate, submittedDate], default: relevance }
+    sortOrder:
+      name: sortOrder
+      in: query
+      schema: { type: string, enum: [ascending, descending], default: descending }
+    feedQuery:
+      name: query
+      in: path
+      required: true
+      description: Archive (`cs`), category (`cs.AI`), or several joined with `+`. Case-insensitive. Any invalid part → 400 for the whole query.
+      schema: { type: string, pattern: '^[A-Za-z-]+(\.[A-Za-z-]+)?(\+[A-Za-z-]+(\.[A-Za-z-]+)?)*$' }
+      example: cs.AI+q-bio.NC
+
+  responses:
+    QueryFeed:
+      description: Atom feed of results (possibly 0 entries).
+      content:
+        application/atom+xml:
+          schema: { $ref: '#/components/schemas/QueryFeed' }
+    QueryError:
+      description: Validation error, as an Atom feed with one error entry.
+      content:
+        application/atom+xml:
+          schema: { $ref: '#/components/schemas/ErrorFeed' }
+    QueryServerError:
+      description: |
+        Generic internal error feed. Deterministic for: max_results=0, max_results ≥ 29999,
+        start ≥ 10000, old-style non-latest versioned ids. Not worth retrying in those cases.
+      content:
+        application/atom+xml:
+          schema: { $ref: '#/components/schemas/ErrorFeed' }
+    RssFeed:
+      description: |
+        RSS 2.0. Empty on weekends/holidays. Headers: ETag (unquoted sha256), Cache-Control max-age until next midnight America/New_York.
+        Item structure from docs/source, not yet observed live.
+      content:
+        application/rss+xml:
+          schema: { type: string }
+    AtomAnnouncementFeed:
+      description: Atom 1.0 equivalent of the RSS feed. Entries have dc:creator (single string) instead of atom:author.
+      content:
+        application/atom+xml:
+          schema: { type: string }
+
+  schemas:
+    ArxivId:
+      description: New-style (YYMM.NNNN[N]) or old-style (archive[.SC]/YYMMNNN), optional vN.
+      type: string
+      pattern: '^(?:\d{2}(?:0[1-9]|1[0-2])\.\d{4,5}|[a-z]+(?:-[a-z]+)*(?:\.[A-Z]{2})?/\d{2}(?:0[1-9]|1[0-2])\d{3})(?:v[1-9]\d*)?$'
+      examples: ['2301.00001', '1706.03762v7', 'hep-th/9711200', 'math.CA/0611800v2']
+
+    QueryParams:
+      type: object
+      properties:
+        search_query: { type: string }
+        id_list: { type: string, description: Comma-separated ids }
+        start: { type: integer, minimum: 0, default: 0 }
+        max_results: { type: integer, minimum: 1, maximum: 2000, default: 10 }
+        sortBy: { type: string, enum: [relevance, lastUpdatedDate, submittedDate] }
+        sortOrder: { type: string, enum: [ascending, descending] }
+
+    DateTimeZ:
+      type: string
+      pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+
+    QueryFeed:
+      type: object
+      xml: { name: feed, namespace: 'http://www.w3.org/2005/Atom' }
+      required: [id, title, updated, link, itemsPerPage, totalResults, startIndex]
+      properties:
+        id: { type: string, description: 'https://arxiv.org/api/<27-char base64 hash of normalised query>; opaque' }
+        title: { type: string, description: 'arXiv Query: search_query=…&id_list=…&start=N&max_results=N' }
+        updated: { $ref: '#/components/schemas/DateTimeZ' }
+        link:
+          type: object
+          description: No rel attribute.
+          properties:
+            href: { type: string, format: uri, xml: { attribute: true } }
+            type: { const: application/atom+xml, xml: { attribute: true } }
+        itemsPerPage:
+          type: integer
+          description: Echoes requested max_results, NOT the number of entries returned.
+          xml: { prefix: opensearch, namespace: 'http://a9.com/-/spec/opensearch/1.1/' }
+        totalResults:
+          type: integer
+          xml: { prefix: opensearch, namespace: 'http://a9.com/-/spec/opensearch/1.1/' }
+        startIndex:
+          type: integer
+          xml: { prefix: opensearch, namespace: 'http://a9.com/-/spec/opensearch/1.1/' }
+        entry:
+          type: array
+          items: { $ref: '#/components/schemas/Entry' }
+          xml: { wrapped: false }
+
+    Entry:
+      type: object
+      description: |
+        Child order is fixed: id, title, updated, link(alt), link(pdf), summary, category+, published,
+        comment?, primary_category, journal_ref?, author+, (arxiv:doi, link[doi])*.
+      xml: { name: entry }
+      required: [id, title, updated, link, summary, category, published, primary_category, author]
+      properties:
+        id: { type: string, description: 'http://arxiv.org/abs/<id>v<N> (http, always versioned)' }
+        title: { type: string, description: May contain TeX. Normalise whitespace. }
+        updated: { $ref: '#/components/schemas/DateTimeZ', description: Submission time of the returned version. }
+        published: { $ref: '#/components/schemas/DateTimeZ', description: v1 submission time. }
+        summary: { type: string, description: 'Abstract. May have 2 leading spaces and "\n  " hard wraps; trim and normalise.' }
+        link:
+          type: array
+          minItems: 2
+          items: { $ref: '#/components/schemas/Link' }
+          xml: { wrapped: false }
+        category:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Category' }
+          xml: { wrapped: false }
+        primary_category:
+          type: object
+          description: Always equals the first category. No scheme attribute observed.
+          xml: { prefix: arxiv, namespace: 'http://arxiv.org/schemas/atom' }
+          required: [term]
+          properties:
+            term: { type: string, xml: { attribute: true } }
+        comment:
+          type: string
+          xml: { prefix: arxiv, namespace: 'http://arxiv.org/schemas/atom' }
+        journal_ref:
+          type: string
+          xml: { prefix: arxiv, namespace: 'http://arxiv.org/schemas/atom' }
+        doi:
+          type: array
+          description: Bare DOIs (10.x/…), never URLs. 0..n; may contain duplicates.
+          items: { type: string, pattern: '^10\..+/.+$' }
+          xml: { prefix: arxiv, namespace: 'http://arxiv.org/schemas/atom', wrapped: false }
+        author:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Author' }
+          xml: { wrapped: false }
+
+    Link:
+      type: object
+      description: |
+        alternate: rel=alternate, type=text/html, https://arxiv.org/abs/<id>vN
+        pdf: rel=related, title=pdf, type=application/pdf, https://arxiv.org/pdf/<id>vN
+        doi: rel=related, title=doi, NO type, https://doi.org/<doi>
+      required: [href, rel]
+      properties:
+        href: { type: string, format: uri, xml: { attribute: true } }
+        rel: { type: string, enum: [alternate, related], xml: { attribute: true } }
+        type: { type: string, enum: [text/html, application/pdf], xml: { attribute: true } }
+        title: { type: string, enum: [pdf, doi], xml: { attribute: true } }
+
+    Category:
+      type: object
+      required: [term, scheme]
+      properties:
+        term: { type: string, description: 'arXiv category code (e.g. cs.AI, hep-th, or bare archive like cond-mat)', xml: { attribute: true } }
+        scheme: { const: 'http://arxiv.org/schemas/atom', xml: { attribute: true } }
+
+    Author:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, description: May have a leading space or residual TeX; strip. }
+        affiliation:
+          type: array
+          items: { type: string }
+          xml: { prefix: arxiv, namespace: 'http://arxiv.org/schemas/atom', wrapped: false }
+
+    ErrorFeed:
+      type: object
+      description: |
+        id is https://arxiv.org/, title "arXiv Search Results", no link; opensearch values 1/1/0;
+        exactly one ErrorEntry.
+      xml: { name: feed, namespace: 'http://www.w3.org/2005/Atom' }
+      properties:
+        id: { const: 'https://arxiv.org/' }
+        title: { const: arXiv Search Results }
+        updated: { $ref: '#/components/schemas/DateTimeZ' }
+        entry: { $ref: '#/components/schemas/ErrorEntry' }
+
+    ErrorEntry:
+      type: object
+      xml: { name: entry }
+      required: [id, title, summary]
+      properties:
+        id:
+          type: string
+          description: 'https://arxiv.org/api/errors[#slug] or https://arxiv.org/help/api/user-manual#sort'
+          examples: ['https://arxiv.org/api/errors#incorrect_id_format_for_foo']
+        title: { const: Error }
+        updated: { $ref: '#/components/schemas/DateTimeZ' }
+        summary: { type: string, description: Human-readable message. }
+        author:
+          type: object
+          properties:
+            name: { const: arXiv api core }
