@@ -5,10 +5,13 @@ Everything is written under the output directory; the profile's data directory i
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import pymupdf
 
 from ..modules.assemble.flow import Assembler
 from ..modules.regions import figures as figmod
@@ -69,10 +72,16 @@ def convert(book: Book, prof: Profile, out: Path, wanted: list[str] | None = Non
     desc = json.loads(dpath.read_text()) if dpath.exists() else {}
     asm = Assembler(book, prof.flow, text, desc, res.warnings.append)
     md = Markdown(prof.markdown)
+    files = []
     for sid in wanted:
         sec = sections[sid]
         doc = asm.section(sec)
-        (out / sec.file).write_text(md.section(doc))
+        text_md, ranges = md.section(doc)
+        (out / sec.file).write_text(text_md)
+        p0, p1 = sec.pages
+        files.append({"file": sec.file, "pages": [p0, p1],
+                      "skip_pages": sorted(p for p in prof.skip_pages if p0 <= p <= p1),
+                      "added": [list(r) for r in ranges]})
         for img in _images(doc):
             _render(book, prof, img, out / "illustrations" / img.file)
         res.written.append((sec.file, len(doc.blocks) + len(doc.footnotes)))
@@ -83,4 +92,23 @@ def convert(book: Book, prof: Profile, out: Path, wanted: list[str] | None = Non
                                                                 for x in re.split(r"[.-]", kv[0])])),
                    indent=1, ensure_ascii=False))
     (out / "hyphen-decisions.json").write_text(json.dumps(res.resolver.log_dicts(), indent=1))
+    # added ranges are [start, end, kind] in characters (not bytes) of the file's text
+    (out / "manifest.json").write_text(json.dumps({"profile": prof.name, "files": files}, indent=1))
+    (out / "warnings.txt").write_text("".join(w + "\n" for w in res.warnings))
+    (out / "run-info.json").write_text(json.dumps(run_info(book, prof), indent=1))
     return res
+
+
+def _sha256(path: str | Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def run_info(book: Book, prof: Profile) -> dict:
+    """Inputs besides the code that decide the output."""
+    return {"profile": prof.name, "input_sha256": _sha256(book.path), "pymupdf": pymupdf.__version__,
+            "mupdf": pymupdf.VersionFitz, "dictionary": Resolver.DICT_PATH,
+            "dictionary_sha256": _sha256(Resolver.DICT_PATH)}

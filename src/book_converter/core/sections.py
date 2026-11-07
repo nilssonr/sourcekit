@@ -15,3 +15,4 @@ class Section:
     pages: tuple[int, int]
     title: str = ""  # empty: the title is taken from the page itself
     heading_shift: int = 0  # added to every heading level found on the pages (front matter: 1)
+    title_added: str = ""   # leading part of title that is not book text ("Chapter 1: "; all of "Front matter")

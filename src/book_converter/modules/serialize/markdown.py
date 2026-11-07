@@ -1,7 +1,7 @@
 """Markdown output for the document model.
 
 Material the converter adds (figure descriptions, callout headers and line references, image links,
-section title prefixes) is marked so the verifier can tell it from book text.
+section title prefixes) is reported as character ranges, so the verifier can tell it from book text.
 """
 
 from __future__ import annotations
@@ -19,6 +19,42 @@ class MarkdownConfig:
     figure_caption: tuple[str, str]     # e.g. (r"^Figure (\d+\.\d+)\s*", r"**Figure \1** ")
     table_caption: tuple[str, str]
     listing_title: tuple[str, str]      # applied to the plain listing title, which is set in bold
+
+
+# Added material is wrapped as ADD + kind + KIND_END + text + ADD_END while rendering, then turned
+# into ranges. These control characters never occur in book text (checked).
+ADD, KIND_END, ADD_END = "\x00", "\x02", "\x01"
+
+
+def added(kind: str, text: str) -> str:
+    return f"{ADD}{kind}{KIND_END}{text}{ADD_END}"
+
+
+def extract_added(marked: str) -> tuple[str, list[tuple[int, int, str]]]:
+    """Remove the markers: the clean text and the (start, end, kind) character ranges of added material."""
+    out: list[str] = []
+    ranges: list[tuple[int, int, str]] = []
+    pos = n = 0
+    while True:
+        i = marked.find(ADD, pos)
+        if i < 0:
+            rest = marked[pos:]
+            break
+        out.append(marked[pos:i])
+        n += i - pos
+        k = marked.index(KIND_END, i)
+        e = marked.index(ADD_END, k)
+        text = marked[k + 1:e]
+        if ADD in text or KIND_END in text:
+            raise ValueError("nested added-material markers")
+        out.append(text)
+        ranges.append((n, n + len(text), marked[i + 1:k]))
+        n += len(text)
+        pos = e + 1
+    if KIND_END in rest or ADD_END in rest:
+        raise ValueError("unbalanced added-material markers")
+    out.append(rest)
+    return "".join(out), ranges
 
 
 def esc(s: str) -> str:
@@ -92,9 +128,17 @@ class Markdown:
     def __init__(self, cfg: MarkdownConfig):
         self.cfg = cfg
 
-    def section(self, doc: SectionDoc) -> str:
+    def section(self, doc: SectionDoc) -> tuple[str, list[tuple[int, int, str]]]:
+        """The section's Markdown and the character ranges of added material in it."""
+        sec = doc.section
         out = [self.block(b) for b in doc.blocks] + [self.footnote(f) for f in doc.footnotes]
-        return "\n\n".join(out) + "\n"
+        if sec.title and sec.title_added and doc.blocks and isinstance(doc.blocks[0], Heading) and not doc.blocks[0].src:
+            h = doc.blocks[0]
+            rest = sec.title[len(sec.title_added):]
+            tail = render_runs([Run(rest, "")] + h.inlines[1:]) if rest or len(h.inlines) > 1 else ""
+            out[0] = "#" * h.level + " " + added("title", sec.title_added.rstrip() if not tail else sec.title_added) + tail
+        marked = "\n\n".join(out) + "\n"
+        return extract_added(marked)
 
     def block(self, b: Block) -> str:
         match b:
@@ -133,18 +177,19 @@ class Markdown:
             pat, rep = self.cfg.listing_title
             md = f"**{re.sub(pat, rep, b.title)}**\n\n" + md
         if b.callouts:
-            items = [f"- ({fmt_lines(c.lines)}) {render_runs(c.inlines)}"
+            items = [added("callout-lines", f"- ({fmt_lines(c.lines)}) ") + render_runs(c.inlines)
                      for c in sorted(b.callouts, key=lambda c: (min(c.lines) if c.lines else 0, c.top))]
-            md += ("\n\n*Callouts (added in conversion; line numbers count every line of the listing, "
-                   "blank lines included):*\n" + "\n".join(items))
+            md += ("\n\n" + added("callout-header", "*Callouts (added in conversion; line numbers count every line "
+                                     "of the listing, blank lines included):*") + "\n" + "\n".join(items))
         for img in b.images:
             alt = f"Listing {b.lid}" if b.title else f"Code on book page {b.lid[1:]}"
-            md += f"\n\n![{alt} with callouts](illustrations/{img.file})"
+            md += "\n\n" + added("listing-image", f"![{alt} with callouts](illustrations/{img.file})")
         return md
 
     def figure(self, b: Figure) -> str:
-        note = f"> **Illustration description (added in conversion, not book text):** {b.description or 'TODO'}"
-        img = f"![{b.alt}](illustrations/{b.image.file})"
+        note = added("figure-description",
+                     f"> **Illustration description (added in conversion, not book text):** {b.description or 'TODO'}")
+        img = added("figure-image", f"![{b.alt}](illustrations/{b.image.file})")
         if b.caption is None:
             return f"{img}\n\n{note}"
         pat, rep = self.cfg.figure_caption

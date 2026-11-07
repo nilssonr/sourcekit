@@ -23,7 +23,9 @@ class Decision:
 
 
 class Resolver:
-    def __init__(self, spans: list[Span], is_code: Callable[[Span], bool], dict_path: str = "/usr/share/dict/words"):
+    DICT_PATH = "/usr/share/dict/words"
+
+    def __init__(self, spans: list[Span], is_code: Callable[[Span], bool], dict_path: str = DICT_PATH):
         """is_code: code text, which is kept out of the corpus of unbroken words."""
         self.corpus: Counter[str] = Counter()
         for s in spans:

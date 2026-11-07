@@ -14,17 +14,18 @@ from ...core.sections import Section
 @dataclass(frozen=True)
 class SectionRule:
     """Bookmarks at `level` whose title matches `pattern` start a section; `make` builds its
-    (id, file, title) from the match. A title of "" means the heading is taken from the page."""
+    (id, file, title, title_added) from the match. A title of "" means the heading is taken from the
+    page; title_added is the leading part of the title that is not book text."""
     level: int
     pattern: str
-    make: Callable[[re.Match[str]], tuple[str, str, str]]
+    make: Callable[[re.Match[str]], tuple[str, str, str, str]]
 
 
 @dataclass(frozen=True)
 class FrontMatter:
     id: str
     file: str
-    title: str
+    title: str         # all of it is added in conversion
     first_page: int    # the front matter runs from here to the page before the first section
     heading_shift: int = 0
 
@@ -46,7 +47,7 @@ def sections(book: Book, cfg: SplitConfig) -> dict[str, Section]:
     end = next((e.page for e in outline if (e.level, e.title) == cfg.end), None)
     if end is None:
         raise ValueError(f"outline has no level-{cfg.end[0]} bookmark titled {cfg.end[1]!r}")
-    starts: list[tuple[int, str, str, str]] = []
+    starts: list[tuple[int, str, str, str, str]] = []
     for e in outline:
         if e.page >= end:
             continue
@@ -63,10 +64,10 @@ def sections(book: Book, cfg: SplitConfig) -> dict[str, Section]:
     out: dict[str, Section] = {}
     if cfg.front:
         f = cfg.front
-        out[f.id] = Section(f.id, f.file, (f.first_page, starts[0][0] - 1), f.title, f.heading_shift)
-    for i, (page, sid, file, title) in enumerate(starts):
+        out[f.id] = Section(f.id, f.file, (f.first_page, starts[0][0] - 1), f.title, f.heading_shift, f.title)
+    for i, (page, sid, file, title, added) in enumerate(starts):
         last = starts[i + 1][0] - 1 if i + 1 < len(starts) else end - 1
         if sid in out:
             raise ValueError(f"duplicate section id {sid!r}")
-        out[sid] = Section(sid, file, (page, last), title)
+        out[sid] = Section(sid, file, (page, last), title, title_added=added)
     return out
