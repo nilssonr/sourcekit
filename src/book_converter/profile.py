@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -17,6 +18,7 @@ from typing import TYPE_CHECKING
 from .sections import Section
 
 if TYPE_CHECKING:  # annotations only: verify imports this module
+    from .convert import Row
     from .figures import FigureConfig
     from .listings import ListingConfig
     from .tables import TableConfig
@@ -30,6 +32,7 @@ class Profile:
     name: str
     sections: dict[str, Section]
     styles: ModuleType            # style predicates and constants used by convert.py (until step 4 of the plan)
+    role: Callable[[Row], str]    # row -> role name (see the role vocabulary in docs/design.md)
     listings: ListingConfig
     figures: FigureConfig
     tables: TableConfig

@@ -10,6 +10,7 @@ import json
 import re
 import sys
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -28,6 +29,7 @@ from .sections import Section
 ROW_TOL = 2.7
 
 ST: ModuleType  # the profile's styles module; set in main (replaced by explicit config in step 4 of the plan)
+ROLE: Callable[["Row"], str]  # the profile's row role function; set in main (same)
 
 
 # ---------------------------------------------------------------- rows
@@ -73,69 +75,8 @@ def rows_of(spans: list[Span]) -> list[Row]:
         ink = [s for s in r.spans if not is_ws(s) and not ST.is_bullet(s) and not ST.is_list_number(s)] or r.spans
         r.left = min(s.x0 for s in ink)
         r.right = max(_ink_right(s) for s in ink)
-        r.cls = classify(r)
+        r.cls = ROLE(r)
     return sorted(rows, key=lambda r: (r.page, r.top))
-
-
-def classify(r: Row) -> str:
-    al = [s for s in r.spans if not is_ws(s)]
-    if not al:
-        return "blank"
-    k = al[0]
-    f = k.font
-    if r.top < ST.HEADER_BAND:
-        return "header"
-    if all(s.font.startswith("NewBaskerville-Bold") and s.color == "#000000"
-           and re.fullmatch(r"\s*([0-9]+|[ivxlc]+)\s*", s.text) for s in al):
-        return "pagenum"
-    if any(s.font == "FranklinGothic-Demi" and near(s.size, 8.46) and s.color == ST.BLUE
-           and s.text.strip() in ("DEFINITION", "TIP", "NOTE", "IMPORTANT", "WARNING") for s in al):
-        return "note-start"
-    if ST.is_bullet(k) or ST.is_list_number(k):
-        if k.color == ST.BLUE:
-            return "covers-item"
-        txt = next((s for s in al if not ST.is_bullet(s) and not ST.is_list_number(s)), None)
-        return "sidebar-text" if txt and txt.font.startswith("FranklinGothic-Book") else "bullet"
-    if ST.is_fn_start_marker(k):
-        return "footnote"
-    if f.startswith("Courier") and near(k.size, 9.03):
-        # a line that starts with inline code takes its class from the first non-code span
-        nk = next((s for s in al if not s.font.startswith("Courier") and not ST.is_fn_marker(s)), None)
-        if nk is not None:
-            k, f = nk, nk.font
-    if f.startswith("NewBaskerville") and k.size >= 40 and k.color == ST.BLUE:
-        return "dropcap"
-    if f.startswith("NewBaskerville") and near(k.size, 30) and k.color == ST.BLUE:
-        return "title"
-    if f == "FranklinGothic-DemiItal" and near(k.size, 12.0) and k.color == "#000000":
-        return "map-title"
-    if f == "FranklinGothic-DemiItal" and k.color == ST.BLUE:
-        if near(k.size, 12.48):
-            return "h2"
-        if near(k.size, 10.5):
-            return "h3"
-        if near(k.size, 12.0):
-            return "covers-title"
-        if k.text.strip() == "(continued)":
-            return "continued"
-    if f.startswith("FranklinGothic-Book") and k.color == ST.BLUE:
-        return "covers-cont"
-    if f == "FranklinGothic-Demi" and k.color == ST.BLUE and (near(k.size, 7.56) or near(k.size, 9.48)) \
-            and all(re.fullmatch(r"[A-Z’'\- ]+", s.text) for s in al):
-        return "smallcaps"
-    if f == "FranklinGothic-Demi" and k.color == ST.BLUE and near(k.size, 10.5):
-        return "sidebar-title"
-    if f.startswith("FranklinGothic-Book"):
-        return "sidebar-text"
-    if ST.is_caption_font(k):
-        return "caption"
-    if f.startswith("NewBaskerville") and near(k.size, 8.46):
-        return "footnote-cont"
-    if f.startswith("NewBaskerville") and near(k.size, 9.48):
-        return "epigraph"
-    if f.startswith("NewBaskerville") or (f.startswith("Courier") and near(k.size, 9.03)):
-        return "body"
-    return "unknown"
 
 
 # ---------------------------------------------------------------- runs
@@ -157,15 +98,11 @@ def span_run(s: Span) -> Run:
     return Run(s.text, "bi" if i and b else "i" if i else "b" if b else "")
 
 
-def is_note_label(s: Span) -> bool:
-    return s.font == "FranklinGothic-Demi" and near(s.size, 8.46) and s.color == ST.BLUE
-
-
 def row_runs(r: Row, plain: bool = False) -> list[Run]:
     out: list[Run] = []
     prev: Span | None = None
     for s in r.spans:
-        if ST.is_bullet(s) or ST.is_list_number(s) or is_note_label(s):
+        if ST.is_bullet(s) or ST.is_list_number(s) or ST.is_note_label(s):
             continue
         if prev and s.x0 - prev.x1 > 1.0 and not prev.text[-1:].isspace() and not s.text[:1].isspace():
             out.append(Run(" ", ""))
@@ -724,8 +661,8 @@ class Converter:
                     continue
                 if cls == "note-start":
                     close_note()
-                    label = next(s for s in r.spans if is_note_label(s)).text.strip()
-                    st["note"] = {"label": label, "rows": [r], "left": next(s for s in r.spans if is_note_label(s)).x0}
+                    label = next(s for s in r.spans if ST.is_note_label(s)).text.strip()
+                    st["note"] = {"label": label, "rows": [r], "left": next(s for s in r.spans if ST.is_note_label(s)).x0}
                     continue
                 if cls == "bullet":
                     if st["note"]:
@@ -805,7 +742,7 @@ class Converter:
 
 
 def main() -> None:
-    global CTX, ST
+    global CTX, ST, ROLE
     ap = argparse.ArgumentParser(prog="convert", description="Convert a PDF into Markdown using a profile.")
     ap.add_argument("--input", required=True, help="the PDF to convert")
     ap.add_argument("--output", required=True, help="directory for everything the run generates")
@@ -821,6 +758,7 @@ def main() -> None:
     (out / "illustrations").mkdir(parents=True, exist_ok=True)
     book = Book(args.input)
     ST = prof.styles
+    ROLE = prof.role
     CTX = Ctx(Resolver(book.all_spans(1, book.page_count), ST.is_code_font))  # whole book, incl. figure labels and index
     dpath = prof.data_dir / "descriptions.json"
     desc = json.loads(dpath.read_text()) if dpath.exists() else {}
