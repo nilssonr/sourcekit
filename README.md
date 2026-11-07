@@ -42,10 +42,10 @@ python3 -m arxiv_client pdf 2301.00001 --out ./papers
 **Batch:** `batch FILE` runs up to 20 searches in one call.
 - **Input:** `FILE`, or `-` for stdin, holds a JSON list of query objects.
   - Query keys: `title`, `author`, `abstract`, `comment`, `journal_ref`, `category`, `report_number` and `all` (each a string or a list of strings), plus `raw`, `any_category`, `from` and `to`.
-  - Run settings: `label`, `max` (default 10), `sort` (`relevance`, `submitted` or `updated`) and `order`.
+  - Run settings: `label` (unique; default `q1`, `q2`, …), `max` (a positive integer, default 10), `sort` (`relevance`, `submitted` or `updated`) and `order`.
 - **Validation:** every query is checked before any request is sent, and unknown keys are rejected.
 - **Output:** each query's IDs, and every paper once, with `found_by` listing the labels of the queries that returned it.
-- **Errors partway:** if an error stops the batch, stderr carries the usual error JSON, plus `completed` with the queries that finished.
+- **Errors partway:** if an error stops the batch, stderr carries the usual error JSON, plus `completed` with the queries that finished and `papers` with the papers they returned.
 
 ```json
 [
@@ -105,7 +105,7 @@ arXiv's terms allow **at most 1 request every 3 s, and one connection at a time*
 
 **The request gate:**
 - Every request takes an OS file lock on `~/Library/Caches/arxiv_client/request.lock` on macOS (`~/.cache/…` on Linux).
-- The lock is held for the whole connection, so only one request is in flight at a time, even across parallel processes such as Claude Code subagents.
+- The lock is held for the whole connection, so only one request is in flight at a time, even across parallel processes such as Claude Code subagents. It is not held while waiting for pacing, so a PDF waiting out its 15 s doesn't hold up other requests.
 - The file records when the last request started. The next request waits until 3 s have passed since the last request of any kind, and a PDF also waits until 15 s have passed since the last PDF, matching the robots.txt `Crawl-delay: 15`.
 - The OS releases the lock when a process exits, so a crash can't leave it stuck.
 - The gate is released while backing off after a throttling signal.

@@ -5,7 +5,8 @@ processes and all its legacy APIs together (doc section 6.1). Three pieces enfor
 
 - ``Pacer`` lives for one public call and spaces the requests *that call* makes.
 - ``FileGate`` is shared by every call in every process on this machine. It holds an OS
-  file lock for the whole of each request (one connection at a time) and keeps the
+  file lock for the whole of each request (one connection at a time, but not while
+  waiting for pacing) and keeps the
   start time of the last request in that file, so separate calls and parallel
   processes are spaced too. The OS drops the lock when a process exits, so a crash
   can't leave it stuck.
@@ -162,7 +163,8 @@ class MemoryGate:
 
     ``hold(intervals, deadline)`` waits until every lane in ``intervals`` (lane name to
     seconds) is clear, records the request start in those lanes, and holds the gate
-    while the request runs. ``deadline`` is a ``clock()`` value: waiting past it raises
+    while the request runs (in FileGate, the file lock; it is not held while waiting).
+    MemoryGate itself has no lock: the client is not thread-safe. ``deadline`` is a ``clock()`` value: waiting past it raises
     ArxivTimeoutError instead of sending the request.
     """
 
@@ -179,10 +181,29 @@ class MemoryGate:
 
     @contextlib.contextmanager
     def hold(self, intervals: Dict[str, float], deadline: float) -> Iterator[None]:
-        self._lock(deadline)
+        # The lock is released while waiting for pacing, so a long wait (a PDF's 15 s lane)
+        # doesn't block other requests whose lanes are already clear. After each wait the
+        # lanes are read again, because another request may have started meanwhile.
+        waited: Dict[str, float] = {}  # lane timestamps this call has already waited out
+        while True:
+            self._lock(deadline)
+            try:
+                lanes = self._merge(self._read())
+                wait = self._wait_needed(lanes, intervals, waited)
+            except BaseException:
+                self._unlock()
+                raise
+            if wait <= 0:
+                break
+            self._unlock()
+            wait += GATE_MARGIN
+            if self._clock() + wait >= deadline:
+                raise ArxivTimeoutError(
+                    "time budget exhausted: next request would have to wait %.1fs for pacing" % wait
+                )
+            self._sleep(wait)
+            waited = {lane: lanes[lane] for lane in intervals if lane in lanes}
         try:
-            lanes = self._merge(self._read())
-            self._wait(lanes, intervals, deadline)
             start = self._wall()
             for lane in intervals:
                 lanes[lane] = start
@@ -192,22 +213,20 @@ class MemoryGate:
         finally:
             self._unlock()
 
-    def _wait(self, lanes: Dict[str, float], intervals: Dict[str, float], deadline: float) -> None:
+    def _wait_needed(
+        self, lanes: Dict[str, float], intervals: Dict[str, float], waited: Dict[str, float]
+    ) -> float:
         now = self._wall()
         wait = 0.0
         for lane, interval in intervals.items():
             last = lanes.get(lane)
-            if last is None:
+            # Skip a timestamp already waited out: one still in the future after a full
+            # interval would otherwise be waited on again and again.
+            if last is None or waited.get(lane) == last:
                 continue
             # A timestamp in the future (clock change, corruption) never waits longer than one interval.
             wait = max(wait, min(interval, last + interval - now))
-        if wait > 0:
-            wait += GATE_MARGIN
-            if self._clock() + wait >= deadline:
-                raise ArxivTimeoutError(
-                    "time budget exhausted: next request would have to wait %.1fs for pacing" % wait
-                )
-            self._sleep(wait)
+        return wait
 
     def _merge(self, stored: Dict[str, float]) -> Dict[str, float]:
         lanes = dict(self._lanes)

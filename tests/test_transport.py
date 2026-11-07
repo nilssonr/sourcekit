@@ -210,6 +210,25 @@ class GateTests(unittest.TestCase):
         self.assertEqual(events[-1], "unlock")
         self.assertEqual(events.count("lock"), events.count("unlock"))
 
+    def test_active_block_refuses_before_taking_the_gate(self):
+        # A 406 block fails at once: no gate wait, no lock taken, no lane recorded.
+        clock = FakeClock()
+        events = []
+        store = MemoryBlockStore(wall=clock.wall)
+        store.block()
+        gate = RecordingGate(clock, events)
+        gate._lanes = {"any": clock.wall(), "pdf": clock.wall()}  # a wait would be due
+        opener = FakeOpener(clock, [])
+        t = Transport("test-agent/1.0", opener=opener, clock=clock.monotonic, sleep=clock.sleep,
+                      block_store=store, gate=gate)
+        with self.assertRaises(ThrottledError):
+            t.get(URL, pacer(clock))
+        with self.assertRaises(ThrottledError):
+            t.download("https://arxiv.org/pdf/2401.00001", pacer(clock), "/nonexistent", max_bytes=1)
+        self.assertEqual(events, [])
+        self.assertEqual(clock.sleeps, [])
+        self.assertEqual(opener.requests, [])
+
     def test_default_gate_is_a_file_gate(self):
         from arxiv_client import FileGate
         self.assertIsInstance(Transport("test-agent/1.0").gate, FileGate)

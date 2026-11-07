@@ -157,12 +157,22 @@ class BatchAndOutputTests(CliTests):
 
     def test_batch_validates_every_query_before_sending(self):
         for bad in ({"title": "x", "sort": "newest"}, {"title": "x", "colour": "red"}, {"max": 3},
-                    {"title": "x", "max": 0}, {"title": 5}, "not an object"):
+                    {"title": "x", "max": 0}, {"title": 5}, "not an object",
+                    {"title": "x", "max": None}, {"title": "x", "max": "10"}, {"title": "x", "max": True},
+                    {"title": "x", "label": 0}, {"title": "x", "label": ""}, {"title": "x", "label": False},
+                    {"title": "x", "label": "q1"}):  # q1 is the first item's default label
             path = self.batch_file([{"title": "fine"}, bad])
             code, out, err = self.run_cli(["batch", path], [])
             self.assertEqual(code, 2, (bad, err))
             self.assertEqual(json.loads(err)["error"], "validation")
             self.assertEqual(self.opener.requests, [])
+
+    def test_batch_rejects_duplicate_labels(self):
+        path = self.batch_file([{"label": "x", "title": "a"}, {"label": "x", "title": "b"}])
+        code, _, err = self.run_cli(["batch", path], [])
+        self.assertEqual(code, 2)
+        self.assertIn("duplicate label", json.loads(err)["message"])
+        self.assertEqual(self.opener.requests, [])
 
     def test_batch_limits_and_bad_files(self):
         code, _, err = self.run_cli(["batch", self.batch_file([{"title": "x"}] * 21)], [])
@@ -189,6 +199,8 @@ class BatchAndOutputTests(CliTests):
         self.assertEqual(payload["error"], "throttled")
         self.assertEqual([q["label"] for q in payload["completed"]], ["a"])
         self.assertEqual(payload["completed"][0]["ids"], ["2401.00001"])
+        self.assertEqual(payload["papers"]["2401.00001"]["found_by"], ["a"])
+        self.assertIn("title", payload["papers"]["2401.00001"])
 
     def test_batch_compact(self):
         path = self.batch_file([{"label": "a", "title": "x", "max": 1}, {"label": "b", "title": "y"}])

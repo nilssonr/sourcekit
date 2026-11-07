@@ -188,6 +188,30 @@ class GateTests(unittest.TestCase):
             pass
         self.assertAlmostEqual(self.clock.sleeps[-1], 12.0, delta=0.01)  # 15 s since the PDF start
 
+    def test_lock_is_free_while_a_pdf_waits_for_its_lane(self):
+        # A waits 11 s for the 15 s PDF lane; B's API request only needs the 3 s lane and
+        # must get through during that wait instead of polling for the lock until it times out.
+        c = self.clock
+        b = self.gate()
+        b_ran = []
+
+        def sleep_and_let_b_in(seconds):
+            c.sleep(seconds)
+            if not b_ran:
+                b_ran.append(True)
+                with b.hold(API, c.now + 1.0):
+                    b_ran.append(c.now)
+
+        a = FileGate(self.path, clock=c.monotonic, sleep=sleep_and_let_b_in, wall=c.wall)
+        with a.hold(PDF, c.now + 30):
+            pass
+        c.advance(4.0)
+        with a.hold(PDF, c.now + 30):
+            a_start = c.now
+        self.assertEqual(len(b_ran), 2, "B never got the gate")
+        self.assertLessEqual(b_ran[1], a_start)
+        self.assertGreaterEqual(a_start - b_ran[1], 3.0)  # A still spaced 3 s after B
+
     def test_wait_past_deadline_raises_timeout(self):
         gate = self.gate()
         with gate.hold(API, self.clock.now + 30):

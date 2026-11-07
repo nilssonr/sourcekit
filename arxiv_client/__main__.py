@@ -22,7 +22,7 @@ import os
 import sys
 from typing import Any, Callable, Dict, List, Optional, Sequence, TextIO, Tuple
 
-from .client import ArxivClient
+from .client import ArxivClient, _check_int
 from .models import Paper
 from .errors import (
     ArxivError,
@@ -203,10 +203,14 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
     items = _load_batch(args.file, stdin)
     # Build and validate every query before sending any request.
     planned = []
+    labels = set()
     for i, item in enumerate(items):
-        label = item.get("label") or "q%d" % (i + 1)
-        if not isinstance(label, str):
-            raise ValidationError("batch item %d: label must be a string" % (i + 1))
+        label = item.get("label", "q%d" % (i + 1))
+        if not isinstance(label, str) or not label.strip():
+            raise ValidationError("batch item %d: label must be a non-empty string" % (i + 1))
+        if label in labels:
+            raise ValidationError("batch item %d: duplicate label %r" % (i + 1, label))
+        labels.add(label)
         sort = item.get("sort", "relevance")
         if sort not in SORTS:
             raise ValidationError("batch item %d: sort must be one of %s" % (i + 1, ", ".join(sorted(SORTS))))
@@ -214,8 +218,9 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
         if order not in ORDERS:
             raise ValidationError("batch item %d: order must be descending or ascending" % (i + 1))
         try:
+            max_results = _check_int("max", item.get("max", 10), 1)
             q = _build_query(item)
-            results = client.search(q, max_results=item.get("max", 10), sort_by=SORTS[sort], sort_order=order)
+            results = client.search(q, max_results=max_results, sort_by=SORTS[sort], sort_order=order)
         except ValidationError as e:
             raise ValidationError("batch item %d (%s): %s" % (i + 1, label, e)) from None
         planned.append((label, q, results))
@@ -228,6 +233,7 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
             found = list(results)
         except ArxivError as e:
             e.completed_queries = list(queries)  # type: ignore[attr-defined]
+            e.completed_papers = dict(papers)  # type: ignore[attr-defined]
             raise
         ids = []
         lines.append("## %s  [%s]  total=%s%s" % (label, q.expr, results.total_results,
@@ -322,6 +328,7 @@ def main(
         completed_queries = getattr(e, "completed_queries", None)
         if completed_queries:
             payload["completed"] = completed_queries
+            payload["papers"] = getattr(e, "completed_papers", {})
         stderr.write(json.dumps(payload, ensure_ascii=False) + "\n")
         return code
     if getattr(args, "format", "json") == "compact" and compact is not None:

@@ -166,6 +166,7 @@ class Transport:
         deadline = self._clock() + budget
         attempt = 0
         while True:
+            self._raise_if_blocked()  # before waiting for the gate: fail fast during a 406 block
             # The gate is held for the whole connection and released before any backoff sleep.
             with self.gate.hold(self._api_lanes, deadline):
                 raw = self._open(url, pacer, deadline)
@@ -202,6 +203,7 @@ class Transport:
         deadline = self._clock() + budget
         attempt = 0
         while True:
+            self._raise_if_blocked()
             with self.gate.hold(self._pdf_lanes, deadline):
                 raw = self._open(url, pacer, deadline)
                 try:
@@ -223,10 +225,7 @@ class Transport:
             attempt = self._backoff_or_raise(signal, attempt, deadline, headers, url)
 
     # ----- internals ---------------------------------------------------------
-    def _open(self, url: str, pacer: Pacer, deadline: float) -> Any:
-        if not url.lower().startswith("https://"):
-            raise ValidationError("only https URLs are allowed: %s" % url)
-        host = urlsplit(url).hostname or url
+    def _raise_if_blocked(self) -> None:
         blocked = self.block_store.remaining()
         if blocked > 0:
             raise ThrottledError(
@@ -235,6 +234,12 @@ class Transport:
                 retry_after=blocked,
                 kind="406",
             )
+
+    def _open(self, url: str, pacer: Pacer, deadline: float) -> Any:
+        if not url.lower().startswith("https://"):
+            raise ValidationError("only https URLs are allowed: %s" % url)
+        host = urlsplit(url).hostname or url
+        self._raise_if_blocked()  # again: a block may have started while waiting for the gate
         pacer.before_request(deadline)
         remaining = deadline - self._clock()
         if remaining <= 0:
