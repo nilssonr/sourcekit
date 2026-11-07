@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <id>https://arxiv.org/api/abcdEFGH1234+/abcdEFGH1234567</id>
+  <title>arXiv Query: search_query=all:test&amp;id_list=&amp;start=0&amp;max_results=10</title>
+  <updated>2026-11-07T12:00:00Z</updated>
+  <link href="https://arxiv.org/api/query?search_query%3Dall%3Atest%26id_list%3D%26start%3D0%26max_results%3D10" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>10</opensearch:itemsPerPage>
+  <opensearch:totalResults>3</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2301.00001v2</id>
+    <title>A Study of Fréchet Means
+  in Curved Spaces</title>
+    <updated>2023-02-01T10:00:00Z</updated>
+    <link href="https://arxiv.org/abs/2301.00001v2" rel="alternate" type="text/html"/>
+    <link title="pdf" href="https://arxiv.org/pdf/2301.00001v2" rel="related" type="application/pdf"/>
+    <summary>  We study Fréchet means on manifolds. The method extends earlier
+  work on hard-wrapped
+  lines.
+  A second paragraph starts after a full stop and an indented line.
+
+Third paragraph after a blank line.
+</summary>
+    <category term="math.ST" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="stat.TH" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-01-01T09:00:00Z</published>
+    <arxiv:comment>12 pages,   3 figures</arxiv:comment>
+    <arxiv:primary_category term="math.ST"/>
+    <arxiv:journal_ref>J. Stat. 1 (2023) 1-12</arxiv:journal_ref>
+    <author>
+      <name>Ada Lovelace</name>
+      <arxiv:affiliation>Analytical Engine Co.</arxiv:affiliation>
+    </author>
+    <author>
+      <name> The ATLAS Collaboration</name>
+    </author>
+    <author>
+      <name>J. Kova{č}i{ć}</name>
+    </author>
+    <arxiv:doi>10.1234/example.5678</arxiv:doi>
+    <link title="doi" href="https://doi.org/10.1234/example.5678" rel="related"/>
+    <arxiv:doi>10.1234/example.5678</arxiv:doi>
+    <link title="doi" href="https://doi.org/10.1234/example.5678" rel="related"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/hep-th/9901001v3</id>
+    <updated>2001-05-01T00:00:00Z</updated>
+    <link href="https://arxiv.org/abs/hep-th/9901001v3" rel="alternate" type="text/html"/>
+    <link title="pdf" href="https://arxiv.org/pdf/hep-th/9901001v3" rel="related" type="application/pdf"/>
+    <summary>An old paper with no title element.</summary>
+    <category term="hep-th" scheme="http://arxiv.org/schemas/atom"/>
+    <published>1999-01-04T00:00:00Z</published>
+    <arxiv:primary_category term="hep-th"/>
+    <author>
+      <name>Old Author</name>
+    </author>
+  </entry>
+  <entry>
+    <title>An entry with no id, which cannot be parsed</title>
+  </entry>
+</feed>

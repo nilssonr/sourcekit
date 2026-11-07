@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>http://rss.arxiv.org/atom/foo.BAR</id>
+  <title>Feed error for query: foo.BAR</title>
+  <subtitle>Bad archive/category: foo.BAR</subtitle>
+  <updated>2026-11-07T12:00:00Z</updated>
+</feed>

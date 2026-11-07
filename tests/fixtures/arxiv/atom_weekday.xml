@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthesised from docs/arxiv-api.md section 4 (structure from docs/arxiv-feed source, not a live capture). -->
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <id>http://rss.arxiv.org/atom/cs.AI</id>
+  <title>cs.AI updates on arXiv.org</title>
+  <subtitle>cs.AI updates on the arXiv.org e-print archive.</subtitle>
+  <updated>2026-11-09T05:30:00Z</updated>
+  <link href="https://rss.arxiv.org/atom/cs.AI" rel="self" type="application/atom+xml"/>
+  <entry>
+    <id>oai:arXiv.org:2611.01234v1</id>
+    <title>Planning with Language Models</title>
+    <updated>2026-11-09T05:30:00Z</updated>
+    <link href="https://arxiv.org/abs/2611.01234" rel="alternate" type="text/html"/>
+    <summary>arXiv:2611.01234v1 Announce Type: new
+Abstract: We present a planner.</summary>
+    <category term="cs.AI"/>
+    <category term="cs.CL"/>
+    <published>2026-11-09T00:00:00-05:00</published>
+    <arxiv:announce_type>new</arxiv:announce_type>
+    <dc:rights>http://creativecommons.org/licenses/by/4.0/</dc:rights>
+    <dc:creator>Alice Smith (MIT), Carol Wu</dc:creator>
+    <arxiv:DOI>10.1000/abc</arxiv:DOI>
+    <arxiv:journal_reference>Conf. Proc. 2026</arxiv:journal_reference>
+  </entry>
+</feed>

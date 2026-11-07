@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+  <channel>
+    <title>Feed error for query: foo.BAR</title>
+    <link>http://rss.arxiv.org/rss/foo.BAR</link>
+    <description>Bad archive/category: foo.BAR</description>
+    <language>en-us</language>
+  </channel>
+</rss>

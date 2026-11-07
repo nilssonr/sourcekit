@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <id>https://arxiv.org/</id>
+  <title>arXiv Search Results</title>
+  <updated>2026-11-07T12:00:00Z</updated>
+  <opensearch:itemsPerPage>1</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>https://arxiv.org/help/api/user-manual#sort</id>
+    <title>Error</title>
+    <updated>2026-11-07T12:00:00Z</updated>
+    <link href="https://arxiv.org/help/api/user-manual#sort" rel="alternate" type="text/html"/>
+    <summary>sortBy must be in: relevance, lastUpdatedDate, submittedDate</summary>
+    <author><name>arXiv api core</name></author>
+  </entry>
+</feed>
