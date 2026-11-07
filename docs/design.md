@@ -190,3 +190,16 @@ census  --input <pdf> --pages <a>-<b>
 - **D3. Unified heading escaping: measured.** No heading contains an escapable character, so no bytes change.
 - **D4. `--profile` is required.** There is no default until a generic profile exists.
 - **D5. Verifier reports are regenerated once.** In step 5 the user reviews one new report next to the old one. After approval, the verifier part of the reference is regenerated. The converter output reference is not touched.
+
+## 10. Implementation notes (step 4)
+
+Where the code differs from the draft above:
+- **Regions run in a fixed order.** `modules/regions/page.py` (`page_content`) runs figures, figure-text sweep, tables, listing bars, code runs, then rows. The profile doesn't supply an ordered detector list: only one order exists, so a configurable list would have no second consumer (rule 2).
+- **Configs:**
+  - The profile's style predicates and constants reach the code only through `RowConfig`, `PageConfig`, `FlowConfig`, `ListingConfig`, `FigureConfig`, `TableConfig`, `VerifyConfig` and `MarkdownConfig`.
+  - Algorithm tolerances that aren't book styles (e.g. 0.7 pt leader merging, 12 pt callout proximity) stay in the module code.
+- **Roles:** the role function is `RowConfig.role`. Row building and joining live in `core/rows.py` (`Text`).
+- **"(continued)":** it reopens the previous `Sidebar` (more children) or `Note` (`continued`). The Markdown is byte-identical to the old string surgery.
+- **Sub-items:** the "–" marker is removed in assembly, not after rendering.
+- **CLI and pipeline:** `cli.py` (`convert`) and `core/pipeline.py` replace `convert.py`. `verify` keeps its own `main` until step 5.
+- **D1, measured:** the only output difference from the reference is one hyphen-log entry (`WithEmailChanged-|Message`, p246), which moves 13 positions earlier. The entries are the same.

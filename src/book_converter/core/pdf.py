@@ -113,6 +113,14 @@ class Book:
         return out
 
     @functools.lru_cache(maxsize=None)
+    def _span_index(self, pno: int) -> dict[int, int]:
+        return {id(s): i for i, s in enumerate(self.spans(pno))}
+
+    def span_id(self, s: Span) -> tuple[int, int]:
+        """(page, index into spans(page)): a stable id for a span of this Book."""
+        return (s.page, self._span_index(s.page)[id(s)])
+
+    @functools.lru_cache(maxsize=None)
     def drawings(self, pno: int) -> list[dict]:
         return self.page(pno).get_drawings()
 

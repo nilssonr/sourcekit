@@ -293,19 +293,3 @@ def map_callouts(book: Book, pno: int, area: pymupdf.Rect, lines: list[CodeLine]
             warn(f"p{pno}: callout {' '.join(s.text.strip() for s in co.spans)[:40]!r} has no graphic")
         out.append(co)
     return out
-
-
-def fmt_lines(ns: list[int]) -> str:
-    if not ns:
-        return "(no line)"
-    parts: list[str] = []
-    start = prev = ns[0]
-    for n in ns[1:] + [None]:
-        if n is not None and n == prev + 1:
-            prev = n
-            continue
-        parts.append(f"{start}" if start == prev else f"{start}–{prev}")
-        if n is not None:
-            start = prev = n
-    word = "line" if len(ns) == 1 else "lines"
-    return f"{word} {', '.join(parts)}"

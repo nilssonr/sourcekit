@@ -9,14 +9,14 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from types import ModuleType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # annotations only: verify imports this module
-    from ..convert import Row
+    from ..modules.assemble.flow import FlowConfig
+    from ..modules.serialize.markdown import MarkdownConfig
+    from .rows import RowConfig
     from ..modules.split.outline import SplitConfig
     from ..modules.regions.figures import FigureConfig
     from ..modules.regions.listings import ListingConfig
@@ -30,8 +30,9 @@ REPO = Path(__file__).resolve().parents[3]
 class Profile:
     name: str
     split: SplitConfig            # how the PDF's outline becomes output files
-    styles: ModuleType            # style predicates and constants used by convert.py (until step 4 of the plan)
-    role: Callable[[Row], str]    # row -> role name (see the role vocabulary in docs/design.md)
+    rows: RowConfig               # spans -> rows -> runs; includes the row role function
+    flow: FlowConfig              # rows and regions -> blocks
+    markdown: MarkdownConfig      # caption formats
     listings: ListingConfig
     figures: FigureConfig
     tables: TableConfig

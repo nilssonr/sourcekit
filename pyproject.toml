@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [project.scripts]
-convert = "book_converter.convert:main"
+convert = "book_converter.cli:convert"
 verify = "book_converter.core.verify:main"
 census = "book_converter.census:main"
 

@@ -37,16 +37,6 @@ class Table:
     spans: list[Span] = field(default_factory=list)  # every span consumed (caption + cells)
     region: pymupdf.Rect | None = None
 
-    def markdown(self, render) -> str:
-        def cell(spans: list[Span]) -> str:
-            return render(spans).replace("|", "\\|") if spans else ""
-        cap = re.sub(r"^Table (\d+\.\d+)\s*", r"**Table \1** ", render(self.caption)) if self.caption else ""
-        lines = ["| " + " | ".join(cell(c) for c in self.header) + " |",
-                 "|" + "|".join("---" for _ in self.header) + "|"]
-        for r in self.rows:
-            lines.append("| " + " | ".join(cell(c) for c in r) + " |")
-        return (cap + "\n\n" if cap else "") + "\n".join(lines)
-
 
 def _caption(spans: list[Span], start: Span, cfg: TableConfig) -> list[Span]:
     caps = sorted((s for s in spans if cfg.is_caption_font(s) and s.y0 >= start.y0 - 1), key=lambda s: (s.baseline, s.x0))

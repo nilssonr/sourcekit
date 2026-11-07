@@ -107,6 +107,27 @@ class BookTests(unittest.TestCase):
         self.assertEqual(secs["part-2"].title, "")
         self.assertEqual(self.book.page_label(23), "1")
 
+    def test_blocks_record_their_source(self):
+        from book_converter.core.hyphens import Resolver
+        from book_converter.core.model import Heading, Note, Sidebar
+        from book_converter.core.rows import Text
+        from book_converter.modules.assemble.flow import Assembler
+        sec = outline.sections(self.book, self.prof.split)["ch01"]
+        text = Text(self.prof.rows, Resolver(self.book.all_spans(1, self.book.page_count), self.prof.rows.is_code_font))
+        doc = Assembler(self.book, self.prof.flow, text, {}, lambda w: None).section(sec)
+        blocks = list(doc.blocks[1:]) + list(doc.footnotes)    # doc.blocks[0]: the section title (added)
+        self.assertIsInstance(doc.blocks[0], Heading)
+        self.assertEqual(doc.blocks[0].src, [])
+        for b in list(blocks):
+            blocks += b.children if isinstance(b, Sidebar) else b.continued if isinstance(b, Note) else []
+        for b in blocks:
+            self.assertTrue(b.src, f"no source: {b!r:.80}")
+            for ref in b.src:
+                self.assertTrue(sec.pages[0] <= ref.page <= sec.pages[1])
+                for page, i in ref.spans:
+                    self.assertEqual(page, ref.page)
+                    self.assertLess(i, len(self.book.spans(page)))
+
     def test_table_6_1(self):
         t = tables.detect(self.book, 150, lambda w: None, self.prof.tables)
         self.assertEqual(len(t), 1)

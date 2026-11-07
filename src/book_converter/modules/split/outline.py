@@ -26,6 +26,7 @@ class FrontMatter:
     file: str
     title: str
     first_page: int    # the front matter runs from here to the page before the first section
+    heading_shift: int = 0
 
 
 @dataclass(frozen=True)
@@ -62,7 +63,7 @@ def sections(book: Book, cfg: SplitConfig) -> dict[str, Section]:
     out: dict[str, Section] = {}
     if cfg.front:
         f = cfg.front
-        out[f.id] = Section(f.id, f.file, (f.first_page, starts[0][0] - 1), f.title)
+        out[f.id] = Section(f.id, f.file, (f.first_page, starts[0][0] - 1), f.title, f.heading_shift)
     for i, (page, sid, file, title) in enumerate(starts):
         last = starts[i + 1][0] - 1 if i + 1 < len(starts) else end - 1
         if sid in out:
