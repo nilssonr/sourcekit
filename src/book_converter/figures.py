@@ -29,7 +29,8 @@ class Figure:
 
     @property
     def label_texts(self) -> list[str]:
-        return [s.text.strip() for s in self.labels if s.text.strip()]
+        # one span can hold several labels separated by a run of spaces
+        return [t for s in self.labels for t in re.split(r"\s{2,}", s.text.strip()) if t]
 
 
 def caption_block(spans: list[Span], start: Span) -> list[Span]:

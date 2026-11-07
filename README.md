@@ -23,6 +23,14 @@ uv run python -m unittest discover -s tests -v    # needs the PDF (BOOK_PDF env 
   arrow or bracket points to, measured from the vector graphics; plus `![Listing …](…)` images
 - `# Chapter N:` prefixes on chapter titles, and `# Front matter`
 
+A listing that continues onto another page gets one image per page part that has callouts:
+`listing-6.10.png` (first page), `listing-6.10-2.png` (second page). Code blocks with callouts but no
+listing title are rendered like listings, as `code-p<book page>.png`.
+
+Line-end hyphens are resolved from the book's own unbroken words (whole book, including figure labels
+and the index), then the system dictionary; `data/hyphen-decisions.json` logs every decision with its
+reason. The verifier ignores hyphens, so review the `compound`, `AMBIGUOUS` and `REVIEW` entries there.
+
 Dropped on purpose: running headers, page numbers, the "(continued)" sidebar labels, the copyright page,
 the table of contents and the index.
 

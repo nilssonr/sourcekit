@@ -21,6 +21,7 @@ class CodeLine:
     text: str
     baseline: float
     page: int
+    x0: float = 0.0  # x of the first non-space character
 
 
 @dataclass
@@ -97,7 +98,8 @@ def code_lines(spans: list[Span], warn) -> list[CodeLine]:
     out = []
     for k in sorted(keys):
         row = rows[k]
-        out.append(CodeLine("".join(row.get(i, " ") for i in range(max(row) + 1)).rstrip(), k[1], k[0]))
+        out.append(CodeLine("".join(row.get(i, " ") for i in range(max(row) + 1)).rstrip(), k[1], k[0],
+                            bases[k[0]] + min(row) * CODE_CW))
     return out
 
 
@@ -206,13 +208,14 @@ def map_callouts(book: Book, pno: int, area: pymupdf.Rect, lines: list[CodeLine]
         cands = [i for i in range(len(blocks)) if dist(brects[i]) <= 12]
         bi = min(range(len(blocks)), key=lambda i: dist(brects[i]))
         hs0 = [r for k, r in comp if k == "h"]
-        code_left = column_left(pno) - 1
+        # which side of the graphic is the code on? compare with the first character of the code lines beside it
+        beside = [l.x0 for l in lines if cb.y0 - 6 <= l.baseline - LINE_CENTRE <= cb.y1 + 6] or [l.x0 for l in lines]
+        code_on_left = cb.x1 > min(beside) + 1
         if not hs0 and len(cands) > 1:
             # brackets: the text sits beside the bar on the side away from the code
             vs0 = [r for k, r in comp if k == "s" and r.width < 0.7 and r.height > 3]
             if vs0:
-                right_of_code = cb.x0 > code_left
-                edge = max(r.x0 for r in vs0) if right_of_code else min(r.x0 for r in vs0)
+                edge = max(r.x0 for r in vs0) if code_on_left else min(r.x0 for r in vs0)
                 tr = pymupdf.Rect()
                 for r in vs0:
                     if abs(r.x0 - edge) < 1.0:
@@ -243,7 +246,7 @@ def map_callouts(book: Book, pno: int, area: pymupdf.Rect, lines: list[CodeLine]
             warn(f"p{pno}: callout graphic at {tuple(round(v) for v in cb)} has no text block near it")
             continue
         tb = brects[bi]
-        text_right = cb.x0 > code_left  # graphic right of the code column start -> code is on its left
+        text_right = code_on_left
         co = results[bi]
         hs = [r for k, r in comp if k == "h"]
         if hs:

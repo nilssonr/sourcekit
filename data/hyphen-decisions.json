@@ -58,8 +58,8 @@
  {
   "a": "down",
   "b": "load",
-  "keep": true,
-  "why": "compound",
+  "keep": false,
+  "why": "book-joined",
   "where": "p19"
  },
  {
@@ -521,7 +521,7 @@
   "a": "production",
   "b": "ready",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p47"
  },
  {
@@ -815,7 +815,7 @@
   "a": "over",
   "b": "specification",
   "keep": true,
-  "why": "AMBIGUOUS book has both (joined 1, hyphenated 2)",
+  "why": "AMBIGUOUS book has both (joined 2, hyphenated 2)",
   "where": "p62"
  },
  {
@@ -1423,8 +1423,8 @@
  {
   "a": "slight",
   "b": "est",
-  "keep": true,
-  "why": "compound",
+  "keep": false,
+  "why": "dictionary-joined",
   "where": "p96"
  },
  {
@@ -1578,7 +1578,7 @@
   "a": "to",
   "b": "end",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p103"
  },
  {
@@ -1718,7 +1718,7 @@
   "a": "of",
   "b": "process",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p111"
  },
  {
@@ -1837,7 +1837,7 @@
   "a": "to",
   "b": "end",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p113"
  },
  {
@@ -1942,7 +1942,7 @@
   "a": "over",
   "b": "specification",
   "keep": true,
-  "why": "AMBIGUOUS book has both (joined 1, hyphenated 2)",
+  "why": "AMBIGUOUS book has both (joined 2, hyphenated 2)",
   "where": "p118"
  },
  {
@@ -2348,7 +2348,7 @@
   "a": "of",
   "b": "process",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p137"
  },
  {
@@ -2376,7 +2376,7 @@
   "a": "production",
   "b": "ready",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p138"
  },
  {
@@ -2957,7 +2957,7 @@
   "a": "man",
   "b": "ager",
   "keep": false,
-  "why": "dictionary-joined",
+  "why": "book-joined",
   "where": "p170"
  },
  {
@@ -3335,7 +3335,7 @@
   "a": "of",
   "b": "process",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p182"
  },
  {
@@ -3356,7 +3356,7 @@
   "a": "of",
   "b": "process",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p183"
  },
  {
@@ -3377,7 +3377,7 @@
   "a": "of",
   "b": "process",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p183"
  },
  {
@@ -3433,7 +3433,7 @@
   "a": "of",
   "b": "process",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p189"
  },
  {
@@ -3635,8 +3635,8 @@
  {
   "a": "over",
   "b": "complicating",
-  "keep": true,
-  "why": "compound",
+  "keep": false,
+  "why": "dictionary-joined",
   "where": "p198"
  },
  {
@@ -3762,7 +3762,7 @@
   "a": "of",
   "b": "process",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p203"
  },
  {
@@ -3916,7 +3916,7 @@
   "a": "of",
   "b": "process",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p212"
  },
  {
@@ -4035,7 +4035,7 @@
   "a": "to",
   "b": "end",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p218"
  },
  {
@@ -4196,7 +4196,7 @@
   "a": "of",
   "b": "process",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p224"
  },
  {
@@ -4462,14 +4462,14 @@
   "a": "of",
   "b": "process",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p237"
  },
  {
   "a": "of",
   "b": "process",
   "keep": true,
-  "why": "book-hyphenated",
+  "why": "compound-chain",
   "where": "p237"
  },
  {
@@ -4825,8 +4825,8 @@
  {
   "a": "to",
   "b": "production",
-  "keep": false,
-  "why": "REVIEW unknown, joined by default",
+  "keep": true,
+  "why": "compound-chain",
   "where": "p256"
  },
  {

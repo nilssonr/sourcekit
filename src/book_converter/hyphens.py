@@ -8,7 +8,6 @@ from collections import Counter
 from dataclasses import dataclass, asdict
 
 from .pdf import Span
-from .styles import is_figure_text
 
 WORD = re.compile(r"[A-Za-z][A-Za-z'’-]*[A-Za-z]|[A-Za-z]")
 
@@ -26,7 +25,7 @@ class Resolver:
     def __init__(self, spans: list[Span], dict_path: str = "/usr/share/dict/words"):
         self.corpus: Counter[str] = Counter()
         for s in spans:
-            if is_figure_text(s) or s.font.startswith("Courier"):
+            if s.font.startswith("Courier"):
                 continue
             t = re.sub(r"[A-Za-z]+-\s*$", "", s.text)  # drop a trailing broken word
             for w in WORD.findall(t):
@@ -38,17 +37,29 @@ class Resolver:
             w.lower() for sp in spans if sp.font.startswith("Courier")
             for w in re.findall(r"[A-Za-z]+-[A-Za-z]+", sp.text))
 
-    def _is_word(self, w: str) -> bool:
+    @staticmethod
+    def _stems(w: str) -> list[str]:
         w = w.lower()
-        stems = [w, re.sub(r"ies$", "y", w), re.sub(r"es$", "", w), re.sub(r"s$", "", w), re.sub(r"ed$", "", w),
-                 re.sub(r"ed$", "e", w), re.sub(r"ing$", "", w), re.sub(r"ing$", "e", w), re.sub(r"ly$", "", w)]
-        return any(s in self.dict or self.corpus[s] > 0 for s in stems)
+        return [w, re.sub(r"ies$", "y", w), re.sub(r"es$", "", w), re.sub(r"s$", "", w), re.sub(r"ed$", "", w),
+                re.sub(r"ed$", "e", w), re.sub(r"ing$", "", w), re.sub(r"ing$", "e", w), re.sub(r"ly$", "", w),
+                re.sub(r"est$", "", w)]
 
-    def resolve(self, a: str, b: str, where: str) -> bool:
-        """True = keep the hyphen, False = join the halves."""
+    def _is_word(self, w: str) -> bool:
+        if not hasattr(self, "_corpus_stems"):
+            # stems of every unbroken word in the book, so "overcomplicating" matches "overcomplicated"
+            self._corpus_stems = {st for c in self.corpus for st in self._stems(c) if len(st) >= 4}
+        return any(s in self.dict or self.corpus[s] > 0 or s in self._corpus_stems for s in self._stems(w))
+
+    def resolve(self, a: str, b: str, where: str, chain: bool = False) -> bool:
+        """True = keep the hyphen, False = join the halves.
+
+        chain: the broken word is itself the end of a hyphenated compound ("close-to-|production").
+        """
         j, h = (a + b).lower(), (a + "-" + b).lower()
         jc, hc = self.corpus[j], self.corpus[h]
-        if jc and not hc:
+        if chain and not jc:
+            keep, why = True, "compound-chain"
+        elif jc and not hc:
             keep, why = False, "book-joined"
         elif hc and not jc:
             keep, why = True, "book-hyphenated"

@@ -489,7 +489,8 @@
   "Input"
  ],
  "6.5": [
-  "public         CalculateDiscount",
+  "public",
+  "CalculateDiscount",
   "decimal",
   "(Product[] products)",
   "Method signature",

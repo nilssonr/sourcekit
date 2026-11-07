@@ -67,6 +67,26 @@ class BookTests(unittest.TestCase):
         hit = [v for k, v in c.items() if k.startswith("Simultaneously asserts")]
         self.assertEqual(hit, [[12, 13]])
 
+    def test_listing_6_10_left_bracket_inside_code_column(self):
+        c = self.callouts(160, index=1)
+        self.assertEqual(c["The new interface in action"], [3, 4, 12, 13])
+
+    def test_listing_10_3_continuation_bracket(self):
+        # p260 holds the middle part of listing 10.3 (no title bar); check its bracket on the page's own lines
+        warns: list[str] = []
+        code = [s for s in self.book.spans(260) if is_code_block(s)]
+        lines = code_lines(code, warns.append)
+        _, pos = with_blank_lines(lines)
+        text, _ = with_blank_lines(lines)
+        calls = [s for s in self.book.spans(260) if is_callout(s)]
+        got = map_callouts(self.book, 260, pymupdf.Rect(0, 40, 1000, 640), lines, pos, calls, warns.append)
+        hit = [c for c in got if " ".join(s.text.strip() for s in c.spans).startswith("Uses the repositories")]
+        self.assertEqual(len(hit), 1)
+        covered = [text[n - 1].strip() for n in hit[0].lines]
+        self.assertEqual(covered, ["object[] userData = _userRepository", ".GetUserById(userId);",
+                                   "object[] companyData = _companyRepository", ".GetCompany();",
+                                   "_companyRepository.SaveCompany(company);", "_userRepository.SaveUser(user);"])
+
     def test_table_6_1(self):
         t = tables.detect(self.book, 150, lambda w: None)
         self.assertEqual(len(t), 1)

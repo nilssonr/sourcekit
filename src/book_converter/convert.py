@@ -212,7 +212,8 @@ def join_rows(rows: list[Row], plain: bool = False) -> list[Run]:
                 fc.t = fc.t.lstrip()
             elif m and n:
                 last.t = last.t.rstrip()
-                if not CTX.resolver.resolve(m.group(1), n.group(1), f"p{r.page}"):
+                chain = re.search(r"[A-Za-z]-[A-Za-z]+-\s*$", last.t) is not None
+                if not CTX.resolver.resolve(m.group(1), n.group(1), f"p{r.page}", chain):
                     last.t = last.t[:-1]
                 fr = next((x for x in rs if x.t.strip()), None)
                 if fr:
@@ -338,6 +339,7 @@ class Listing:
     callouts: list[Callout] = field(default_factory=list)
     images: list[str] = field(default_factory=list)
     last_page: int = 0
+    parts: int = 1  # page parts so far
 
     def render(self) -> str:
         md = fence(self.text)
@@ -574,15 +576,15 @@ class Converter:
                         text, pos = with_blank_lines(lines)
                         prev.text.extend([""] * sep + text)
                         prev.last_page = p
+                        prev.parts += 1
                         self.warn(f"listing {prev.lid} continued across pages {p - 1}-{p}")
                         if calls:
                             area = pymupdf.Rect(0, min(s.y0 for s in ink) - 6, self.book.page(p).rect.x1,
                                                 max(s.y1 for s in ink + calls) + 3)
                             prev.callouts += map_callouts(self.book, p, area, lines, [base + i for i in pos],
                                                           calls, self.warn)
-                            k = len(prev.images) + 1
                             prev.images.append(self._listing_image(p, ink + calls, area,
-                                                                   f"listing-{prev.lid}-{k}.png"))
+                                                                   f"listing-{prev.lid}-{prev.parts}.png"))
                     elif st["sidebar"] and not calls and any(b.contains(pymupdf.Point(ink[0].x0 + 1, ink[0].cy))
                                                              for b in sidebar_boxes):
                         sidebar_flush_inner()
@@ -806,7 +808,7 @@ def main() -> None:
     out = Path(out_dir)
     (out / "illustrations").mkdir(parents=True, exist_ok=True)
     book = Book(pdf)
-    CTX = Ctx(Resolver(book.all_spans(16, 296)))
+    CTX = Ctx(Resolver(book.all_spans(1, book.page_count)))  # whole book, incl. figure labels and index
     dpath = REPO / "data" / "descriptions.json"
     desc = json.loads(dpath.read_text()) if dpath.exists() else {}
     conv = Converter(book, out, desc)
