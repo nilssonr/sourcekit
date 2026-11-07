@@ -76,10 +76,13 @@ def main() -> None:
     pdf, md_path, a, b = sys.argv[1:5]
     p0, p1 = int(a), int(b)
     book = Book(pdf)
-    expected: list[str] = []
+    text = ""
     for p in range(p0, p1 + 1):
         if p not in SKIP_PAGES:
-            expected += tokens(page_text(book.spans(p)))
+            t = page_text(book.spans(p))
+            # a hyphen at the end of a page joins the first word of the next page
+            text += t.lstrip() if re.search(r"[A-Za-z]-$", text) else " " + t
+    expected = tokens(text)
     actual = tokens(strip_added(open(md_path, encoding="utf-8").read()))
 
     ce, ca = Counter(expected), Counter(actual)
@@ -93,7 +96,27 @@ def main() -> None:
     sm = difflib.SequenceMatcher(None, expected, actual, autojunk=False)
     hunks = [op for op in sm.get_opcodes() if op[0] != "equal"]
     print(f"order: {len(hunks)} differing stretches")
-    for tag, i1, i2, j1, j2 in hunks[:40]:
+
+    # Pair moves: every stretch taken out of one place must reappear as part of a stretch put in elsewhere.
+    outs = [Counter(expected[i1:i2]) for t, i1, i2, j1, j2 in hunks if i2 > i1]
+    ins = [Counter(actual[j1:j2]) for t, i1, i2, j1, j2 in hunks if j2 > j1]
+    out_ops = [h for h in hunks if h[2] > h[1]]
+    unpaired = []
+    for k in sorted(range(len(outs)), key=lambda k: -sum(outs[k].values())):
+        o = outs[k]
+        home = next((c for c in ins if all(c[w] >= n for w, n in o.items())), None)
+        if home is None:
+            unpaired.append(out_ops[k])
+        else:
+            home.subtract(o)
+    leftover_in = [c for c in ins if +c]
+    moved = len(out_ops) - len(unpaired)
+    print(f"moves: {moved} stretches reappear elsewhere; unexplained: {len(unpaired)} out, {len(leftover_in)} in")
+    for tag, i1, i2, j1, j2 in unpaired:
+        print(f"  UNPAIRED {tag} pdf[{i1}:{i2}]: {' '.join(expected[i1:i2])[:140]}")
+    for c in leftover_in:
+        print(f"  UNPAIRED in md: {' '.join(sorted((+c).elements()))[:140]}")
+    for tag, i1, i2, j1, j2 in hunks[:60]:
         print(f"  {tag} pdf[{i1}:{i2}] md[{j1}:{j2}]")
         print(f"    pdf: {' '.join(expected[i1:i2])[:140] or '(none)'}")
         print(f"    md : {' '.join(actual[j1:j2])[:140] or '(none)'}")

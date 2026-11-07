@@ -10,7 +10,7 @@ import pymupdf
 
 from .listings import hexrgb
 from .pdf import Book, Span
-from .styles import is_caption_font, is_caption_start, is_figure_text
+from .styles import BLUE, is_caption_font, is_caption_start, is_figure_text
 
 ROW_GAP = 13.0
 
@@ -24,17 +24,17 @@ class Table:
     header: list[list[Span]]           # one span list per column
     rows: list[list[list[Span]]]       # rows -> columns -> spans
     spans: list[Span] = field(default_factory=list)  # every span consumed (caption + cells)
+    region: pymupdf.Rect | None = None
 
     def markdown(self, render) -> str:
         def cell(spans: list[Span]) -> str:
             return render(spans).replace("|", "\\|") if spans else ""
-        cap = render(self.caption)
-        cap = re.sub(r"^Table (\d+\.\d+)\s*", r"**Table \1** ", cap)
+        cap = re.sub(r"^Table (\d+\.\d+)\s*", r"**Table \1** ", render(self.caption)) if self.caption else ""
         lines = ["| " + " | ".join(cell(c) for c in self.header) + " |",
                  "|" + "|".join("---" for _ in self.header) + "|"]
         for r in self.rows:
             lines.append("| " + " | ".join(cell(c) for c in r) + " |")
-        return cap + "\n\n" + "\n".join(lines)
+        return (cap + "\n\n" if cap else "") + "\n".join(lines)
 
 
 def _caption(spans: list[Span], start: Span) -> list[Span]:
@@ -47,45 +47,64 @@ def _caption(spans: list[Span], start: Span) -> list[Span]:
     return out
 
 
+def _rules(book: Book, pno: int):
+    draws = book.drawings(pno)
+    black = [d["rect"] for d in draws if d["type"] == "f" and hexrgb(d.get("fill")) == "#000000"]
+    hrules = sorted((r for r in black if r.width > 100 and r.height < 1.0), key=lambda r: r.y0)
+    vrules = [r for r in black if r.width < 0.6 and r.height > 10]
+    heads = sorted((d["rect"] for d in draws if d["type"] == "f" and hexrgb(d.get("fill")) == BLUE
+                    and d["rect"].height > 10), key=lambda r: (r.y0, r.x0))
+    return hrules, vrules, heads
+
+
+def regions(book: Book, pno: int) -> list[tuple[pymupdf.Rect, float, list[float]]]:
+    """Table regions: (rect, header bottom y, inner column rule xs). A table starts at a rule with
+    a blue header band directly below it."""
+    hrules, vrules, heads = _rules(book, pno)
+    out = []
+    seen: list[float] = []
+    for h in heads:
+        if any(abs(h.y0 - y) < 1 for y in seen):
+            continue
+        seen.append(h.y0)
+        band = [x for x in heads if abs(x.y0 - h.y0) < 1]
+        x0, x1 = min(x.x0 for x in band), max(x.x1 for x in band)
+        top = next((r for r in hrules if abs(r.y0 - h.y0) < 1.5 and abs(r.x0 - x0) < 2), None)
+        if top is None:
+            continue
+        chain = [r for r in hrules if r.y0 >= top.y0 and abs(r.x0 - top.x0) < 2 and abs(r.x1 - top.x1) < 2]
+        vs = sorted({round(r.x0, 1) for r in vrules if abs(r.y0 - top.y0) < 2 and top.x0 + 2 < r.x0 < top.x1 - 2})
+        if vs:
+            bottom = max(r.y1 for r in vrules if abs(r.y0 - top.y0) < 2 and round(r.x0, 1) in vs)
+        else:
+            bottom = chain[1].y1 if len(chain) > 1 else top.y1
+            for r in chain[1:]:
+                if r.y0 - bottom > 60:
+                    break
+                bottom = r.y1
+        out.append((pymupdf.Rect(top.x0, top.y0, top.x1, bottom), max(x.y1 for x in band), vs))
+    return out
+
+
 def detect(book: Book, pno: int, warn) -> list[Table]:
     spans = book.spans(pno)
     starts = [s for s in spans if is_caption_start(s) and s.text.strip().startswith("Table")]
     out = []
-    draws = book.drawings(pno)
-    hrules = sorted((d["rect"] for d in draws if d["type"] == "f" and hexrgb(d.get("fill")) == "#000000"
-                     and d["rect"].width > 300 and d["rect"].height < 1.0), key=lambda r: r.y0)
-    vrules = [d["rect"] for d in draws if d["type"] == "f" and hexrgb(d.get("fill")) == "#000000"
-              and d["rect"].width < 0.6 and d["rect"].height > 10]
-    for st in starts:
-        tid = re.search(r"\d+\.\d+", st.text).group(0)
-        cap = _caption(spans, st)
-        cap_bottom = max(s.y1 for s in cap)
-        hs = [r for r in hrules if r.y0 > cap_bottom - 1]
-        if len(hs) < 2:
-            warn(f"p{pno}: table {tid}: fewer than two rules below the caption")
-            continue
-        top = hs[0]
-        # bottom: last rule before a big gap
-        chain = [top]
-        for r in hs[1:]:
-            if r.y0 - chain[-1].y1 > 200:
-                break
-            chain.append(r)
-        vs = sorted({round(r.x0, 1) for r in vrules if r.y0 < top.y1 + 2 and r.y1 > top.y1 + 5})
-        if vs:
-            bottom_y = max(r.y1 for r in vrules if round(r.x0, 1) in vs)
-            chain = [r for r in chain if r.y0 <= bottom_y + 1]
-        if len(chain) < 2:
-            warn(f"p{pno}: table {tid}: cannot find its bottom rule")
-            continue
-        region = pymupdf.Rect(top.x0, top.y0, top.x1, chain[-1].y1)
-        head_bottom = chain[1].y0
+    used_caps: set[int] = set()
+    for region, head_bottom, vs in regions(book, pno):
+        st = next((s for s in starts if region.y0 - 40 < s.y0 < region.y0), None)
+        if st is not None:
+            used_caps.add(id(st))
+            cap = _caption(spans, st)
+            tid = re.search(r"\d+\.\d+", st.text).group(0)
+        else:
+            cap, tid = [], f"uncaptioned-p{pno}"
+            warn(f"p{pno}: table without a caption at y={region.y0:.0f}")
         if not vs:
             warn(f"p{pno}: table {tid}: no vertical rules; columns from header text")
-            head_spans = [s for s in spans if region.contains(pymupdf.Point(s.cx, s.cy)) and s.cy < head_bottom
-                          and s.text.strip()]
-            vs = sorted({round((a.x1 + b.x0) / 2, 1) for a, b in
-                         zip(sorted(head_spans, key=lambda s: s.x0), sorted(head_spans, key=lambda s: s.x0)[1:])})
+            hsp = sorted((s for s in spans if region.contains(pymupdf.Point(s.cx, s.cy)) and s.cy < head_bottom
+                          and s.text.strip()), key=lambda s: s.x0)
+            vs = [round((a.x1 + b.x0) / 2, 1) for a, b in zip(hsp, hsp[1:]) if b.x0 - a.x1 > 8]
         edges = [region.x0] + vs + [region.x1]
         ncol = len(edges) - 1
 
@@ -96,7 +115,7 @@ def detect(book: Book, pno: int, warn) -> list[Table]:
             return ncol - 1
 
         cells = [s for s in spans if region.contains(pymupdf.Point(s.cx, s.cy)) and not is_figure_text(s)]
-        header = [[] for _ in range(ncol)]
+        header: list[list[Span]] = [[] for _ in range(ncol)]
         body = []
         for s in cells:
             if not s.text.strip():
@@ -110,10 +129,12 @@ def detect(book: Book, pno: int, warn) -> list[Table]:
             if last_base is None or s.baseline > last_base:
                 last_base = s.baseline
             rows[-1][col_of(s)].append(s)
-        # sanity: a span must not straddle a column edge
         for s in body:
             for e in vs:
                 if s.x0 < e - 1 and s.x1 > e + 1:
                     warn(f"p{pno}: table {tid}: cell text crosses a column rule: {s.text.strip()[:40]!r}")
-        out.append(Table(tid, pno, st.y0, cap, header, rows, cap + cells))
+        out.append(Table(tid, pno, (cap[0].y0 if cap else region.y0), cap, header, rows, cap + cells, region))
+    for s in starts:
+        if id(s) not in used_caps:
+            warn(f"p{pno}: table caption without a table: {s.text.strip()!r}")
     return out

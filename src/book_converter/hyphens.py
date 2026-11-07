@@ -34,6 +34,9 @@ class Resolver:
         with open(dict_path, encoding="utf-8", errors="replace") as f:
             self.dict = {w.strip().lower() for w in f}
         self.log: list[Decision] = []
+        self.code_hyphenated = Counter(
+            w.lower() for sp in spans if sp.font.startswith("Courier")
+            for w in re.findall(r"[A-Za-z]+-[A-Za-z]+", sp.text))
 
     def _is_word(self, w: str) -> bool:
         w = w.lower()
@@ -58,6 +61,12 @@ class Resolver:
         else:
             keep, why = False, "REVIEW unknown, joined by default"
         self.log.append(Decision(a, b, keep, why, where))
+        return keep
+
+    def resolve_code(self, a: str, b: str, where: str) -> bool:
+        """Inline code broken at a line end: join unless the book's code has the hyphenated form."""
+        keep = self.code_hyphenated[(a + "-" + b).lower()] > 0
+        self.log.append(Decision(a, b, keep, "code-hyphenated" if keep else "code-joined", where))
         return keep
 
     def log_dicts(self) -> list[dict]:

@@ -35,5 +35,9 @@ SECTIONS: dict[str, Section] = {s.id: s for s in [
     Section("ch11", "chapter-11-unit-testing-anti-patterns.md", (281, 296), "Chapter 11: Unit testing anti-patterns"),
 ]}
 
+# Uncaptioned figures that fill a page: PDF page -> (figure id, clockwise rotation for reading).
+# The id is also the description key and the file name.
+PAGE_FIGURES = {2: ("chapter-map", 90)}
+
 # Pages inside a section's range that are not converted.
 SKIP_PAGES = {3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}

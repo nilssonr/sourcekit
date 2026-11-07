@@ -67,8 +67,18 @@ def code_lines(spans: list[Span], warn) -> list[CodeLine]:
     """Rebuild code lines from Courier character positions on the 4.788 pt grid."""
     rows: dict[tuple[int, float], dict[int, str]] = {}
     keys: list[tuple[int, float]] = []
+    # grid origin: the text column, unless the block sits off that grid (e.g. padded inside a sidebar)
+    bases: dict[int, float] = {}
+    for pg in {s.page for s in spans}:
+        xs = [c.x0 for s in spans if s.page == pg for c in s.chars if c.c.strip()]
+        base = column_left(pg)
+        if xs:
+            off = (min(xs) - base) / CODE_CW
+            if abs(off - round(off)) > 0.3:
+                base = min(xs)
+        bases[pg] = base
     for s in spans:
-        base = column_left(s.page)
+        base = bases[s.page]
         for c in s.chars:
             if not c.c.strip():
                 continue
@@ -107,7 +117,7 @@ def with_blank_lines(lines: list[CodeLine]) -> tuple[list[str], list[int]]:
 def _blocks(callouts: list[Span]) -> list[list[Span]]:
     """Group callout spans into text blocks: vertically adjacent and left- or right-aligned."""
     blocks: list[list[Span]] = []
-    for s in sorted((s for s in callouts if s.text.strip()), key=lambda s: (s.y0, s.x0)):
+    for s in sorted((s for s in callouts if s.text.strip()), key=lambda s: (round(s.baseline, 1), s.x0)):
         for b in blocks:
             last = b[-1]
             if 0 < s.baseline - last.baseline < 12 and (abs(s.x0 - last.x0) < 2.5 or abs(s.x1 - last.x1) < 2.5
@@ -193,12 +203,47 @@ def map_callouts(book: Book, pno: int, area: pymupdf.Rect, lines: list[CodeLine]
             dy = max(tb.y0 - cb.y1, cb.y0 - tb.y1, 0)
             return (dx * dx + dy * dy) ** 0.5
 
+        cands = [i for i in range(len(blocks)) if dist(brects[i]) <= 12]
         bi = min(range(len(blocks)), key=lambda i: dist(brects[i]))
+        hs0 = [r for k, r in comp if k == "h"]
+        code_left = column_left(pno) - 1
+        if not hs0 and len(cands) > 1:
+            # brackets: the text sits beside the bar on the side away from the code
+            vs0 = [r for k, r in comp if k == "s" and r.width < 0.7 and r.height > 3]
+            if vs0:
+                right_of_code = cb.x0 > code_left
+                edge = max(r.x0 for r in vs0) if right_of_code else min(r.x0 for r in vs0)
+                tr = pymupdf.Rect()
+                for r in vs0:
+                    if abs(r.x0 - edge) < 1.0:
+                        tr |= r
+                saved = cb
+                cb = tr
+                bi = min(cands, key=lambda i: dist(brects[i]))
+                cb = saved
+        if hs0 and len(cands) > 1:
+            # several text blocks are close: the text belongs to the tail, the leader end farthest from the heads
+            ends = []
+            for k, r in comp:
+                if k == "h":
+                    continue
+                if r.width >= r.height:
+                    ends += [pymupdf.Point(r.x0, (r.y0 + r.y1) / 2), pymupdf.Point(r.x1, (r.y0 + r.y1) / 2)]
+                else:
+                    ends += [pymupdf.Point((r.x0 + r.x1) / 2, r.y0), pymupdf.Point((r.x0 + r.x1) / 2, r.y1)]
+            hc = [pymupdf.Point((h.x0 + h.x1) / 2, (h.y0 + h.y1) / 2) for h in hs0]
+            if ends:
+                tail = max(ends, key=lambda pt: min(abs(pt - c) for c in hc))
+                tr = pymupdf.Rect(tail, tail)
+                saved = cb
+                cb = tr
+                bi = min(cands, key=lambda i: dist(brects[i]))
+                cb = saved
         if dist(brects[bi]) > 12:
             warn(f"p{pno}: callout graphic at {tuple(round(v) for v in cb)} has no text block near it")
             continue
         tb = brects[bi]
-        text_right = tb.x0 >= cb.x0  # text block is on the right of the graphic -> code is on the left
+        text_right = cb.x0 > code_left  # graphic right of the code column start -> code is on its left
         co = results[bi]
         hs = [r for k, r in comp if k == "h"]
         if hs:

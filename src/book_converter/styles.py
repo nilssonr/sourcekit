@@ -44,7 +44,7 @@ def is_ws(s: Span) -> bool:
 def is_figure_text(s: Span) -> bool:
     """Text that belongs to figure art (labels), never book prose."""
     if s.font.startswith(("Arial", "Helvetica")):
-        return True
+        return s.color != CALLOUT_GRAY  # Helvetica in callout gray is part of callout text
     if s.color in FIGURE_COLORS:
         return True
     if s.font.startswith("HumanistMann"):
@@ -61,7 +61,7 @@ def is_inline_code(s: Span) -> bool:
 
 
 def is_callout(s: Span) -> bool:
-    return s.font.startswith("Humanist521") and s.color == CALLOUT_GRAY
+    return s.font.startswith(("Humanist521", "Helvetica")) and s.color == CALLOUT_GRAY
 
 
 def is_listing_head(s: Span) -> bool:

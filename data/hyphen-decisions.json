@@ -1,5 +1,117 @@
 [
  {
+  "a": "proj",
+  "b": "ects",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p16"
+ },
+ {
+  "a": "main",
+  "b": "tainable",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p16"
+ },
+ {
+  "a": "Man",
+  "b": "ning",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p17"
+ },
+ {
+  "a": "var",
+  "b": "ious",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p17"
+ },
+ {
+  "a": "differ",
+  "b": "entiate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p19"
+ },
+ {
+  "a": "pro",
+  "b": "vides",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p19"
+ },
+ {
+  "a": "com",
+  "b": "mon",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p19"
+ },
+ {
+  "a": "mainte",
+  "b": "nance",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p19"
+ },
+ {
+  "a": "down",
+  "b": "load",
+  "keep": true,
+  "why": "compound",
+  "where": "p19"
+ },
+ {
+  "a": "sug",
+  "b": "gest",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p20"
+ },
+ {
+  "a": "stu",
+  "b": "dents",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p21"
+ },
+ {
+  "a": "vari",
+  "b": "ous",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p22"
+ },
+ {
+  "a": "col",
+  "b": "lection",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p22"
+ },
+ {
+  "a": "lan",
+  "b": "guages",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p22"
+ },
+ {
+  "a": "conti",
+  "b": "nents",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p22"
+ },
+ {
+  "a": "cele",
+  "b": "brates",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p22"
+ },
+ {
   "a": "dis",
   "b": "agreement",
   "keep": false,
@@ -306,5 +418,5024 @@
   "keep": true,
   "why": "book-hyphenated",
   "where": "p41"
+ },
+ {
+  "a": "defini",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p42"
+ },
+ {
+  "a": "dis",
+  "b": "pute",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p43"
+ },
+ {
+  "a": "mea",
+  "b": "sure",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p43"
+ },
+ {
+  "a": "classi",
+  "b": "cist",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p43"
+ },
+ {
+  "a": "Object",
+  "b": "Oriented",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p43"
+ },
+ {
+  "a": "isola",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p43"
+ },
+ {
+  "a": "release",
+  "b": "intended",
+  "keep": true,
+  "why": "compound",
+  "where": "p44"
+ },
+ {
+  "a": "Mesza",
+  "b": "ros",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p44"
+ },
+ {
+  "a": "Lon",
+  "b": "don",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p43"
+ },
+ {
+  "a": "dependen",
+  "b": "cies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p45"
+ },
+ {
+  "a": "inven",
+  "b": "tory",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p45"
+ },
+ {
+  "a": "prod",
+  "b": "uct",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p45"
+ },
+ {
+  "a": "cor",
+  "b": "rectly",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p47"
+ },
+ {
+  "a": "dou",
+  "b": "bles",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p47"
+ },
+ {
+  "a": "production",
+  "b": "ready",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p47"
+ },
+ {
+  "a": "collabora",
+  "b": "tor",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p47"
+ },
+ {
+  "a": "inven",
+  "b": "tory",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p48"
+ },
+ {
+  "a": "collabora",
+  "b": "tors",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p48"
+ },
+ {
+  "a": "Remove",
+  "b": "Inventory",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p49"
+ },
+ {
+  "a": "con",
+  "b": "stitutes",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p49"
+ },
+ {
+  "a": "interfer",
+  "b": "ence",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p49"
+ },
+ {
+  "a": "recom",
+  "b": "mend",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p51"
+ },
+ {
+  "a": "depen",
+  "b": "dency",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p51"
+ },
+ {
+  "a": "num",
+  "b": "ber",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p51"
+ },
+ {
+  "a": "depen",
+  "b": "dencies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p51"
+ },
+ {
+  "a": "depen",
+  "b": "dencies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p51"
+ },
+ {
+  "a": "ran",
+  "b": "dom",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p51"
+ },
+ {
+  "a": "depen",
+  "b": "dency",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p52"
+ },
+ {
+  "a": "Remove",
+  "b": "Inventory",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p53"
+ },
+ {
+  "a": "corol",
+  "b": "lary",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p53"
+ },
+ {
+  "a": "mod",
+  "b": "ify",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p55"
+ },
+ {
+  "a": "orga",
+  "b": "nization",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p55"
+ },
+ {
+  "a": "in",
+  "b": "process",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p55"
+ },
+ {
+  "a": "chap",
+  "b": "ter",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p56"
+ },
+ {
+  "a": "elimi",
+  "b": "nated",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p56"
+ },
+ {
+  "a": "sin",
+  "b": "gle",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p57"
+ },
+ {
+  "a": "prepara",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p57"
+ },
+ {
+  "a": "pre",
+  "b": "dicts",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p57"
+ },
+ {
+  "a": "regu",
+  "b": "larly",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p58"
+ },
+ {
+  "a": "spec",
+  "b": "ify",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p58"
+ },
+ {
+  "a": "classi",
+  "b": "cal",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p59"
+ },
+ {
+  "a": "isola",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p59"
+ },
+ {
+  "a": "inte",
+  "b": "gration",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p59"
+ },
+ {
+  "a": "integra",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p59"
+ },
+ {
+  "a": "fol",
+  "b": "lower",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p59"
+ },
+ {
+  "a": "inte",
+  "b": "gration",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p60"
+ },
+ {
+  "a": "gen",
+  "b": "eral",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p60"
+ },
+ {
+  "a": "data",
+  "b": "base",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p60"
+ },
+ {
+  "a": "pay",
+  "b": "ment",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p60"
+ },
+ {
+  "a": "automati",
+  "b": "cally",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p61"
+ },
+ {
+  "a": "depen",
+  "b": "dencies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p62"
+ },
+ {
+  "a": "dou",
+  "b": "bles",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p62"
+ },
+ {
+  "a": "test",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p62"
+ },
+ {
+  "a": "func",
+  "b": "tionality",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p62"
+ },
+ {
+  "a": "intro",
+  "b": "duce",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p62"
+ },
+ {
+  "a": "fail",
+  "b": "ure",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p62"
+ },
+ {
+  "a": "over",
+  "b": "specification",
+  "keep": true,
+  "why": "AMBIGUOUS book has both (joined 1, hyphenated 2)",
+  "where": "p62"
+ },
+ {
+  "a": "Test",
+  "b": "Driven",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p62"
+ },
+ {
+  "a": "Object",
+  "b": "Oriented",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p62"
+ },
+ {
+  "a": "compet",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p63"
+ },
+ {
+  "a": "work",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p64"
+ },
+ {
+  "a": "pat",
+  "b": "tern",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p64"
+ },
+ {
+  "a": "dependen",
+  "b": "cies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p65"
+ },
+ {
+  "a": "dependen",
+  "b": "cies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p65"
+ },
+ {
+  "a": "meth",
+  "b": "ods",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p65"
+ },
+ {
+  "a": "non",
+  "b": "programmers",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p65"
+ },
+ {
+  "a": "asser",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p65"
+ },
+ {
+  "a": "sec",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p65"
+ },
+ {
+  "a": "integra",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p66"
+ },
+ {
+  "a": "sev",
+  "b": "eral",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p66"
+ },
+ {
+  "a": "some",
+  "b": "times",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p66"
+ },
+ {
+  "a": "pur",
+  "b": "chase",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p67"
+ },
+ {
+  "a": "well",
+  "b": "designed",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p67"
+ },
+ {
+  "a": "con",
+  "b": "tains",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p67"
+ },
+ {
+  "a": "sur",
+  "b": "face",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p68"
+ },
+ {
+  "a": "acquisi",
+  "b": "tion",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p68"
+ },
+ {
+  "a": "inconsis",
+  "b": "tency",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p68"
+ },
+ {
+  "a": "cus",
+  "b": "tomer",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p68"
+ },
+ {
+  "a": "cor",
+  "b": "rupted",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p68"
+ },
+ {
+  "a": "exam",
+  "b": "ple",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p68"
+ },
+ {
+  "a": "main",
+  "b": "taining",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p69"
+ },
+ {
+  "a": "infrastruc",
+  "b": "ture",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p69"
+ },
+ {
+  "a": "bet",
+  "b": "ter",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p69"
+ },
+ {
+  "a": "inte",
+  "b": "gration",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p69"
+ },
+ {
+  "a": "Calcu",
+  "b": "lator",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p69"
+ },
+ {
+  "a": "framework",
+  "b": "related",
+  "keep": true,
+  "why": "compound",
+  "where": "p71"
+ },
+ {
+  "a": "sys",
+  "b": "tem",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p72"
+ },
+ {
+  "a": "sec",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p72"
+ },
+ {
+  "a": "Test",
+  "b": "Fixture",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p72"
+ },
+ {
+  "a": "con",
+  "b": "structor",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p73"
+ },
+ {
+  "a": "sec",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p73"
+ },
+ {
+  "a": "modifica",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p74"
+ },
+ {
+  "a": "chang",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p74"
+ },
+ {
+  "a": "there",
+  "b": "fore",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p74"
+ },
+ {
+  "a": "con",
+  "b": "tained",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p74"
+ },
+ {
+  "a": "fix",
+  "b": "tures",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p74"
+ },
+ {
+  "a": "meth",
+  "b": "ods",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p75"
+ },
+ {
+  "a": "fix",
+  "b": "ture",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p76"
+ },
+ {
+  "a": "connec",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p76"
+ },
+ {
+  "a": "under",
+  "b": "stand",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p76"
+ },
+ {
+  "a": "conven",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p76"
+ },
+ {
+  "a": "MethodUnder",
+  "b": "Test",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p77"
+ },
+ {
+  "a": "unin",
+  "b": "formed",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p77"
+ },
+ {
+  "a": "every",
+  "b": "one",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p77"
+ },
+ {
+  "a": "sev",
+  "b": "eral",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p78"
+ },
+ {
+  "a": "guide",
+  "b": "lines",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p78"
+ },
+ {
+  "a": "behav",
+  "b": "ior",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p79"
+ },
+ {
+  "a": "auxil",
+  "b": "iary",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p79"
+ },
+ {
+  "a": "consid",
+  "b": "ered",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p80"
+ },
+ {
+  "a": "men",
+  "b": "tioned",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p80"
+ },
+ {
+  "a": "partic",
+  "b": "ular",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p80"
+ },
+ {
+  "a": "func",
+  "b": "tionality",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p80"
+ },
+ {
+  "a": "compro",
+  "b": "mise",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p82"
+ },
+ {
+  "a": "trans",
+  "b": "form",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p82"
+ },
+ {
+  "a": "read",
+  "b": "ability",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p82"
+ },
+ {
+  "a": "behav",
+  "b": "ior",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p82"
+ },
+ {
+  "a": "nega",
+  "b": "tive",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p82"
+ },
+ {
+  "a": "Unfortu",
+  "b": "nately",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p82"
+ },
+ {
+  "a": "list",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p83"
+ },
+ {
+  "a": "sev",
+  "b": "eral",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p84"
+ },
+ {
+  "a": "asser",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p84"
+ },
+ {
+  "a": "mul",
+  "b": "tiple",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p85"
+ },
+ {
+  "a": "sec",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p85"
+ },
+ {
+  "a": "foun",
+  "b": "dation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p87"
+ },
+ {
+  "a": "qual",
+  "b": "ity",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p87"
+ },
+ {
+  "a": "pro",
+  "b": "vide",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p87"
+ },
+ {
+  "a": "pro",
+  "b": "gramming",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p90"
+ },
+ {
+  "a": "out",
+  "b": "come",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p90"
+ },
+ {
+  "a": "sys",
+  "b": "tems",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p91"
+ },
+ {
+  "a": "nonfunc",
+  "b": "tional",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p91"
+ },
+ {
+  "a": "exam",
+  "b": "ples",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p91"
+ },
+ {
+  "a": "every",
+  "b": "thing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p91"
+ },
+ {
+  "a": "func",
+  "b": "tionality",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p91"
+ },
+ {
+  "a": "test",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p92"
+ },
+ {
+  "a": "develop",
+  "b": "ers",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p93"
+ },
+ {
+  "a": "regres",
+  "b": "sions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p92"
+ },
+ {
+  "a": "devel",
+  "b": "opers",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p93"
+ },
+ {
+  "a": "veri",
+  "b": "fication",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p93"
+ },
+ {
+  "a": "docu",
+  "b": "ment",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p94"
+ },
+ {
+  "a": "algo",
+  "b": "rithm",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p94"
+ },
+ {
+  "a": "Message",
+  "b": "Renderer",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p95"
+ },
+ {
+  "a": "Message",
+  "b": "Renderer",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p95"
+ },
+ {
+  "a": "alter",
+  "b": "native",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p95"
+ },
+ {
+  "a": "slight",
+  "b": "est",
+  "keep": true,
+  "why": "compound",
+  "where": "p96"
+ },
+ {
+  "a": "tak",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p96"
+ },
+ {
+  "a": "resis",
+  "b": "tance",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p96"
+ },
+ {
+  "a": "list",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p97"
+ },
+ {
+  "a": "out",
+  "b": "come",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p97"
+ },
+ {
+  "a": "mes",
+  "b": "sage",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p97"
+ },
+ {
+  "a": "Message",
+  "b": "Renderer",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p98"
+ },
+ {
+  "a": "parame",
+  "b": "ter",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p98"
+ },
+ {
+  "a": "con",
+  "b": "tribute",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p98"
+ },
+ {
+  "a": "infer",
+  "b": "ence",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p98"
+ },
+ {
+  "a": "work",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p98"
+ },
+ {
+  "a": "bet",
+  "b": "ter",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p100"
+ },
+ {
+  "a": "proj",
+  "b": "ect",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p100"
+ },
+ {
+  "a": "refactor",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p101"
+ },
+ {
+  "a": "cry",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p101"
+ },
+ {
+  "a": "posi",
+  "b": "tives",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p101"
+ },
+ {
+  "a": "discour",
+  "b": "age",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p101"
+ },
+ {
+  "a": "qual",
+  "b": "ity",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p102"
+ },
+ {
+  "a": "attri",
+  "b": "butes",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p102"
+ },
+ {
+  "a": "analy",
+  "b": "sis",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p102"
+ },
+ {
+  "a": "sustain",
+  "b": "ing",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p102"
+ },
+ {
+  "a": "cre",
+  "b": "ate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p102"
+ },
+ {
+  "a": "to",
+  "b": "end",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p103"
+ },
+ {
+  "a": "exam",
+  "b": "ple",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p106"
+ },
+ {
+  "a": "varia",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p106"
+ },
+ {
+  "a": "mul",
+  "b": "tiplication",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p106"
+ },
+ {
+  "a": "excep",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p107"
+ },
+ {
+  "a": "addi",
+  "b": "tional",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p107"
+ },
+ {
+  "a": "par",
+  "b": "tial",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p107"
+ },
+ {
+  "a": "pro",
+  "b": "tection",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p107"
+ },
+ {
+  "a": "gain",
+  "b": "ing",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p107"
+ },
+ {
+  "a": "out",
+  "b": "ages",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p108"
+ },
+ {
+  "a": "web",
+  "b": "site",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p108"
+ },
+ {
+  "a": "sce",
+  "b": "nario",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p109"
+ },
+ {
+  "a": "protec",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p110"
+ },
+ {
+  "a": "inte",
+  "b": "gration",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p110"
+ },
+ {
+  "a": "con",
+  "b": "cede",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p110"
+ },
+ {
+  "a": "feed",
+  "b": "back",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p110"
+ },
+ {
+  "a": "addi",
+  "b": "tional",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p110"
+ },
+ {
+  "a": "any",
+  "b": "thing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p111"
+ },
+ {
+  "a": "usu",
+  "b": "ally",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p111"
+ },
+ {
+  "a": "inte",
+  "b": "gration",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p111"
+ },
+ {
+  "a": "of",
+  "b": "process",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p111"
+ },
+ {
+  "a": "oppo",
+  "b": "site",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p112"
+ },
+ {
+  "a": "refac",
+  "b": "toring",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p112"
+ },
+ {
+  "a": "black",
+  "b": "box",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p112"
+ },
+ {
+  "a": "indi",
+  "b": "cation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p112"
+ },
+ {
+  "a": "algorith",
+  "b": "mic",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p112"
+ },
+ {
+  "a": "meth",
+  "b": "ods",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p112"
+ },
+ {
+  "a": "devastat",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p112"
+ },
+ {
+  "a": "los",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p113"
+ },
+ {
+  "a": "imple",
+  "b": "mentation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p113"
+ },
+ {
+  "a": "posi",
+  "b": "tives",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p113"
+ },
+ {
+  "a": "import",
+  "b": "ant",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p113"
+ },
+ {
+  "a": "read",
+  "b": "able",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p113"
+ },
+ {
+  "a": "attri",
+  "b": "butes",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p113"
+ },
+ {
+  "a": "attri",
+  "b": "butes",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p113"
+ },
+ {
+  "a": "refactor",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p113"
+ },
+ {
+  "a": "attri",
+  "b": "bute",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p113"
+ },
+ {
+  "a": "to",
+  "b": "end",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p113"
+ },
+ {
+  "a": "feed",
+  "b": "back",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p113"
+ },
+ {
+  "a": "isolat",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p115"
+ },
+ {
+  "a": "compro",
+  "b": "mise",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p115"
+ },
+ {
+  "a": "exam",
+  "b": "ine",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p115"
+ },
+ {
+  "a": "inter",
+  "b": "action",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p116"
+ },
+ {
+  "a": "inter",
+  "b": "action",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p116"
+ },
+ {
+  "a": "frame",
+  "b": "work",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p116"
+ },
+ {
+  "a": "partici",
+  "b": "pate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p116"
+ },
+ {
+  "a": "ratio",
+  "b": "nale",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p116"
+ },
+ {
+  "a": "circum",
+  "b": "stances",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p116"
+ },
+ {
+  "a": "Send",
+  "b": "GreetingsEmail",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p117"
+ },
+ {
+  "a": "interac",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p118"
+ },
+ {
+  "a": "incom",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p118"
+ },
+ {
+  "a": "out",
+  "b": "come",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p118"
+ },
+ {
+  "a": "over",
+  "b": "specification",
+  "keep": true,
+  "why": "AMBIGUOUS book has both (joined 1, hyphenated 2)",
+  "where": "p118"
+ },
+ {
+  "a": "interac",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p118"
+ },
+ {
+  "a": "sub",
+  "b": "ject",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p119"
+ },
+ {
+  "a": "vio",
+  "b": "lated",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p119"
+ },
+ {
+  "a": "princi",
+  "b": "ple",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p119"
+ },
+ {
+  "a": "main",
+  "b": "tains",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p120"
+ },
+ {
+  "a": "clas",
+  "b": "sical",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p120"
+ },
+ {
+  "a": "GetNumberOf",
+  "b": "Users",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p120"
+ },
+ {
+  "a": "cor",
+  "b": "responding",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p120"
+ },
+ {
+  "a": "con",
+  "b": "nection",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p121"
+ },
+ {
+  "a": "attri",
+  "b": "butes",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p121"
+ },
+ {
+  "a": "pos",
+  "b": "sible",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p121"
+ },
+ {
+  "a": "pub",
+  "b": "lic",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p121"
+ },
+ {
+  "a": "mem",
+  "b": "ber",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p121"
+ },
+ {
+  "a": "cli",
+  "b": "ent",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p121"
+ },
+ {
+  "a": "behav",
+  "b": "ior",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p122"
+ },
+ {
+  "a": "opera",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p123"
+ },
+ {
+  "a": "con",
+  "b": "nection",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p123"
+ },
+ {
+  "a": "well",
+  "b": "designed",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p124"
+ },
+ {
+  "a": "prop",
+  "b": "erty",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p124"
+ },
+ {
+  "a": "imple",
+  "b": "mentation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p125"
+ },
+ {
+  "a": "inconsis",
+  "b": "tencies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p125"
+ },
+ {
+  "a": "invari",
+  "b": "ant",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p125"
+ },
+ {
+  "a": "soft",
+  "b": "ware",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p126"
+ },
+ {
+  "a": "represen",
+  "b": "tation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p126"
+ },
+ {
+  "a": "illus",
+  "b": "trate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p127"
+ },
+ {
+  "a": "implementa",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p127"
+ },
+ {
+  "a": "result",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p127"
+ },
+ {
+  "a": "well",
+  "b": "designed",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p127"
+ },
+ {
+  "a": "cli",
+  "b": "ent",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p127"
+ },
+ {
+  "a": "hexago",
+  "b": "nal",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p128"
+ },
+ {
+  "a": "com",
+  "b": "munication",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p128"
+ },
+ {
+  "a": "applica",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p128"
+ },
+ {
+  "a": "hexa",
+  "b": "gon",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p128"
+ },
+ {
+  "a": "applica",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p128"
+ },
+ {
+  "a": "appli",
+  "b": "cation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p129"
+ },
+ {
+  "a": "busi",
+  "b": "ness",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p129"
+ },
+ {
+  "a": "applica",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p129"
+ },
+ {
+  "a": "pre",
+  "b": "serves",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p131"
+ },
+ {
+  "a": "behav",
+  "b": "ior",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p131"
+ },
+ {
+  "a": "exter",
+  "b": "nal",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p131"
+ },
+ {
+  "a": "ver",
+  "b": "ify",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p131"
+ },
+ {
+  "a": "require",
+  "b": "ments",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p131"
+ },
+ {
+  "a": "inter",
+  "b": "system",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p132"
+ },
+ {
+  "a": "appli",
+  "b": "cations",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p132"
+ },
+ {
+  "a": "appli",
+  "b": "cation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p132"
+ },
+ {
+  "a": "applica",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p132"
+ },
+ {
+  "a": "sys",
+  "b": "tem",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p132"
+ },
+ {
+  "a": "communica",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p133"
+ },
+ {
+  "a": "third",
+  "b": "party",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p134"
+ },
+ {
+  "a": "gate",
+  "b": "way",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p134"
+ },
+ {
+  "a": "cus",
+  "b": "tomer",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p135"
+ },
+ {
+  "a": "applica",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p136"
+ },
+ {
+  "a": "intra",
+  "b": "system",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p136"
+ },
+ {
+  "a": "substitut",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p136"
+ },
+ {
+  "a": "pro",
+  "b": "gram",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p137"
+ },
+ {
+  "a": "sequen",
+  "b": "tially",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p137"
+ },
+ {
+  "a": "instanti",
+  "b": "ate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p137"
+ },
+ {
+  "a": "of",
+  "b": "process",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p137"
+ },
+ {
+  "a": "data",
+  "b": "base",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p138"
+ },
+ {
+  "a": "proce",
+  "b": "dure",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p138"
+ },
+ {
+  "a": "depen",
+  "b": "dency",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p138"
+ },
+ {
+  "a": "production",
+  "b": "ready",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p138"
+ },
+ {
+  "a": "substi",
+  "b": "tute",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p139"
+ },
+ {
+  "a": "ver",
+  "b": "sus",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p139"
+ },
+ {
+  "a": "oper",
+  "b": "ation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p139"
+ },
+ {
+  "a": "cur",
+  "b": "rent",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p139"
+ },
+ {
+  "a": "hexa",
+  "b": "gons",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p139"
+ },
+ {
+  "a": "inter",
+  "b": "face",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p139"
+ },
+ {
+  "a": "commu",
+  "b": "nications",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p140"
+ },
+ {
+  "a": "sys",
+  "b": "tems",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p140"
+ },
+ {
+  "a": "Mock",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p140"
+ },
+ {
+  "a": "commu",
+  "b": "nications",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p140"
+ },
+ {
+  "a": "attri",
+  "b": "butes",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p141"
+ },
+ {
+  "a": "communication",
+  "b": "based",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p141"
+ },
+ {
+  "a": "pro",
+  "b": "gramming",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p142"
+ },
+ {
+  "a": "understand",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p142"
+ },
+ {
+  "a": "sec",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p142"
+ },
+ {
+  "a": "sec",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p142"
+ },
+ {
+  "a": "sys",
+  "b": "tem",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p142"
+ },
+ {
+  "a": "Price",
+  "b": "Engine",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p142"
+ },
+ {
+  "a": "collec",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p143"
+ },
+ {
+  "a": "Calculate",
+  "b": "Discount",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p143"
+ },
+ {
+  "a": "com",
+  "b": "plete",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p143"
+ },
+ {
+  "a": "communication",
+  "b": "based",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p145"
+ },
+ {
+  "a": "output",
+  "b": "based",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p145"
+ },
+ {
+  "a": "com",
+  "b": "plexity",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p146"
+ },
+ {
+  "a": "communication",
+  "b": "based",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p146"
+ },
+ {
+  "a": "gen",
+  "b": "erate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p146"
+ },
+ {
+  "a": "implemen",
+  "b": "tation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p146"
+ },
+ {
+  "a": "speak",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p146"
+ },
+ {
+  "a": "interac",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p147"
+ },
+ {
+  "a": "communication",
+  "b": "based",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p147"
+ },
+ {
+  "a": "communication",
+  "b": "based",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p147"
+ },
+ {
+  "a": "depen",
+  "b": "dencies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p147"
+ },
+ {
+  "a": "main",
+  "b": "tainable",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p147"
+ },
+ {
+  "a": "con",
+  "b": "tains",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p148"
+ },
+ {
+  "a": "pollut",
+  "b": "ing",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p149"
+ },
+ {
+  "a": "anti",
+  "b": "patterns",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p149"
+ },
+ {
+  "a": "tech",
+  "b": "niques",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p149"
+ },
+ {
+  "a": "dou",
+  "b": "bles",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p149"
+ },
+ {
+  "a": "main",
+  "b": "tain",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p149"
+ },
+ {
+  "a": "lan",
+  "b": "guages",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p150"
+ },
+ {
+  "a": "collaboration",
+  "b": "based",
+  "keep": true,
+  "why": "compound",
+  "where": "p150"
+ },
+ {
+  "a": "sec",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p150"
+ },
+ {
+  "a": "transi",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p150"
+ },
+ {
+  "a": "out",
+  "b": "put",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p150"
+ },
+ {
+  "a": "pro",
+  "b": "gramming",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p150"
+ },
+ {
+  "a": "mathemati",
+  "b": "cal",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p150"
+ },
+ {
+  "a": "dis",
+  "b": "count",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p151"
+ },
+ {
+  "a": "func",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p151"
+ },
+ {
+  "a": "corre",
+  "b": "sponding",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p151"
+ },
+ {
+  "a": "Mathe",
+  "b": "matical",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p152"
+ },
+ {
+  "a": "pro",
+  "b": "gram",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p152"
+ },
+ {
+  "a": "cur",
+  "b": "rent",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p152"
+ },
+ {
+  "a": "func",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p152"
+ },
+ {
+  "a": "busi",
+  "b": "ness",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p154"
+ },
+ {
+  "a": "impos",
+  "b": "sible",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p155"
+ },
+ {
+  "a": "conse",
+  "b": "quence",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p155"
+ },
+ {
+  "a": "mov",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p155"
+ },
+ {
+  "a": "exten",
+  "b": "sively",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p155"
+ },
+ {
+  "a": "sepa",
+  "b": "ration",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p155"
+ },
+ {
+  "a": "func",
+  "b": "tional",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p156"
+ },
+ {
+  "a": "architec",
+  "b": "ture",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p156"
+ },
+ {
+  "a": "archi",
+  "b": "tecture",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p156"
+ },
+ {
+  "a": "busi",
+  "b": "ness",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p156"
+ },
+ {
+  "a": "output",
+  "b": "based",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p157"
+ },
+ {
+  "a": "archi",
+  "b": "tecture",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p157"
+ },
+ {
+  "a": "communication",
+  "b": "based",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p157"
+ },
+ {
+  "a": "file",
+  "b": "system",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p158"
+ },
+ {
+  "a": "filesys",
+  "b": "tem",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p159"
+ },
+ {
+  "a": "soft",
+  "b": "ware",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p162"
+ },
+ {
+  "a": "Audit",
+  "b": "Manager",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p162"
+ },
+ {
+  "a": "filesys",
+  "b": "tem",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p162"
+ },
+ {
+  "a": "func",
+  "b": "tional",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p163"
+ },
+ {
+  "a": "File",
+  "b": "Content",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p164"
+ },
+ {
+  "a": "filesys",
+  "b": "tem",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p164"
+ },
+ {
+  "a": "com",
+  "b": "mands",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p165"
+ },
+ {
+  "a": "applica",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p165"
+ },
+ {
+  "a": "ver",
+  "b": "ifying",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p166"
+ },
+ {
+  "a": "ver",
+  "b": "sion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p167"
+ },
+ {
+  "a": "compar",
+  "b": "ison",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p167"
+ },
+ {
+  "a": "architec",
+  "b": "ture",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p168"
+ },
+ {
+  "a": "Add",
+  "b": "Record",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p169"
+ },
+ {
+  "a": "uncondi",
+  "b": "tionally",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p169"
+ },
+ {
+  "a": "man",
+  "b": "ager",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p170"
+ },
+ {
+  "a": "hid",
+  "b": "den",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p170"
+ },
+ {
+  "a": "max",
+  "b": "EntriesPerFile",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p170"
+ },
+ {
+  "a": "col",
+  "b": "laborator",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p170"
+ },
+ {
+  "a": "collabo",
+  "b": "rator",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p170"
+ },
+ {
+  "a": "pre",
+  "b": "cludes",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p170"
+ },
+ {
+  "a": "perspec",
+  "b": "tive",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p171"
+ },
+ {
+  "a": "func",
+  "b": "tional",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p171"
+ },
+ {
+  "a": "output",
+  "b": "based",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p171"
+ },
+ {
+  "a": "cou",
+  "b": "ple",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p171"
+ },
+ {
+  "a": "state",
+  "b": "based",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p171"
+ },
+ {
+  "a": "maintain",
+  "b": "able",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p171"
+ },
+ {
+  "a": "brittle",
+  "b": "ness",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p171"
+ },
+ {
+  "a": "bound",
+  "b": "ary",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p171"
+ },
+ {
+  "a": "busi",
+  "b": "ness",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p172"
+ },
+ {
+  "a": "treat",
+  "b": "ment",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p172"
+ },
+ {
+  "a": "Func",
+  "b": "tional",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p172"
+ },
+ {
+  "a": "architec",
+  "b": "ture",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p172"
+ },
+ {
+  "a": "main",
+  "b": "tainability",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p173"
+ },
+ {
+  "a": "resis",
+  "b": "tance",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p173"
+ },
+ {
+  "a": "refac",
+  "b": "tored",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p174"
+ },
+ {
+  "a": "spec",
+  "b": "trum",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p174"
+ },
+ {
+  "a": "underly",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p174"
+ },
+ {
+  "a": "con",
+  "b": "nected",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p174"
+ },
+ {
+  "a": "com",
+  "b": "prehensive",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p174"
+ },
+ {
+  "a": "cyclo",
+  "b": "matic",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p174"
+ },
+ {
+  "a": "condi",
+  "b": "tional",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p174"
+ },
+ {
+  "a": "pred",
+  "b": "icates",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p174"
+ },
+ {
+  "a": "con",
+  "b": "ditional",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p175"
+ },
+ {
+  "a": "depen",
+  "b": "dencies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p175"
+ },
+ {
+  "a": "algo",
+  "b": "rithm",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p175"
+ },
+ {
+  "a": "parameter",
+  "b": "less",
+  "keep": true,
+  "why": "compound",
+  "where": "p175"
+ },
+ {
+  "a": "business",
+  "b": "critical",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p175"
+ },
+ {
+  "a": "overarch",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p176"
+ },
+ {
+  "a": "rea",
+  "b": "sons",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p176"
+ },
+ {
+  "a": "implemen",
+  "b": "tation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p176"
+ },
+ {
+  "a": "tech",
+  "b": "niques",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p177"
+ },
+ {
+  "a": "Refac",
+  "b": "toring",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p177"
+ },
+ {
+  "a": "depen",
+  "b": "dency",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p177"
+ },
+ {
+  "a": "sep",
+  "b": "aration",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p178"
+ },
+ {
+  "a": "com",
+  "b": "munications",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p178"
+ },
+ {
+  "a": "depen",
+  "b": "dencies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p178"
+ },
+ {
+  "a": "respon",
+  "b": "sibility",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p179"
+ },
+ {
+  "a": "princi",
+  "b": "ples",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p179"
+ },
+ {
+  "a": "func",
+  "b": "tional",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p179"
+ },
+ {
+  "a": "them",
+  "b": "selves",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p179"
+ },
+ {
+  "a": "communica",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p179"
+ },
+ {
+  "a": "per",
+  "b": "sonally",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p180"
+ },
+ {
+  "a": "Hum",
+  "b": "ble",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p180"
+ },
+ {
+  "a": "subse",
+  "b": "quent",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p180"
+ },
+ {
+  "a": "valida",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p181"
+ },
+ {
+  "a": "col",
+  "b": "laborators",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p181"
+ },
+ {
+  "a": "overcom",
+  "b": "plicated",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p181"
+ },
+ {
+  "a": "separa",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p182"
+ },
+ {
+  "a": "of",
+  "b": "process",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p182"
+ },
+ {
+  "a": "depen",
+  "b": "dencies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p182"
+ },
+ {
+  "a": "com",
+  "b": "munications",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p182"
+ },
+ {
+  "a": "of",
+  "b": "process",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p183"
+ },
+ {
+  "a": "imple",
+  "b": "mentation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p183"
+ },
+ {
+  "a": "applica",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p183"
+ },
+ {
+  "a": "of",
+  "b": "process",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p183"
+ },
+ {
+  "a": "read",
+  "b": "able",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p185"
+ },
+ {
+  "a": "hid",
+  "b": "den",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p186"
+ },
+ {
+  "a": "company",
+  "b": "related",
+  "keep": true,
+  "why": "compound",
+  "where": "p186"
+ },
+ {
+  "a": "IsEmail",
+  "b": "Corporate",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p187"
+ },
+ {
+  "a": "reconstruc",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p187"
+ },
+ {
+  "a": "corpo",
+  "b": "rate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p188"
+ },
+ {
+  "a": "com",
+  "b": "plexity",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p188"
+ },
+ {
+  "a": "of",
+  "b": "process",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p189"
+ },
+ {
+  "a": "dependen",
+  "b": "cies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p189"
+ },
+ {
+  "a": "pat",
+  "b": "tern",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p189"
+ },
+ {
+  "a": "cost",
+  "b": "benefit",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p189"
+ },
+ {
+  "a": "mainte",
+  "b": "nance",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p189"
+ },
+ {
+  "a": "parameter",
+  "b": "ized",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p190"
+ },
+ {
+  "a": "pos",
+  "b": "sible",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p191"
+ },
+ {
+  "a": "pre",
+  "b": "conditions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p191"
+ },
+ {
+  "a": "precon",
+  "b": "ditions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p191"
+ },
+ {
+  "a": "follow",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p191"
+ },
+ {
+  "a": "busi",
+  "b": "ness",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p191"
+ },
+ {
+  "a": "depen",
+  "b": "dency",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p192"
+ },
+ {
+  "a": "Writ",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p192"
+ },
+ {
+  "a": "collabora",
+  "b": "tors",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p193"
+ },
+ {
+  "a": "branch",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p193"
+ },
+ {
+  "a": "per",
+  "b": "formance",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p193"
+ },
+ {
+  "a": "dia",
+  "b": "gram",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p193"
+ },
+ {
+  "a": "com",
+  "b": "plex",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p194"
+ },
+ {
+  "a": "com",
+  "b": "plexity",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p194"
+ },
+ {
+  "a": "Can",
+  "b": "Execute",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p194"
+ },
+ {
+  "a": "con",
+  "b": "troller",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p196"
+ },
+ {
+  "a": "CanChange",
+  "b": "Email",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p196"
+ },
+ {
+  "a": "chang",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p196"
+ },
+ {
+  "a": "valida",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p196"
+ },
+ {
+  "a": "real",
+  "b": "world",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p196"
+ },
+ {
+  "a": "mean",
+  "b": "ingful",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p197"
+ },
+ {
+  "a": "import",
+  "b": "ant",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p197"
+ },
+ {
+  "a": "responsibil",
+  "b": "ity",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p197"
+ },
+ {
+  "a": "implemen",
+  "b": "tation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p197"
+ },
+ {
+  "a": "over",
+  "b": "complicating",
+  "keep": true,
+  "why": "compound",
+  "where": "p198"
+ },
+ {
+  "a": "uncondi",
+  "b": "tionally",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p199"
+ },
+ {
+  "a": "dif",
+  "b": "ference",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p199"
+ },
+ {
+  "a": "com",
+  "b": "munications",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p199"
+ },
+ {
+  "a": "uncondi",
+  "b": "tionally",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p199"
+ },
+ {
+  "a": "collec",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p199"
+ },
+ {
+  "a": "communi",
+  "b": "cations",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p200"
+ },
+ {
+  "a": "fragmenta",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p200"
+ },
+ {
+  "a": "with",
+  "b": "out",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p200"
+ },
+ {
+  "a": "test",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p201"
+ },
+ {
+  "a": "implementa",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p201"
+ },
+ {
+  "a": "exter",
+  "b": "nal",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p201"
+ },
+ {
+  "a": "immedi",
+  "b": "ate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p202"
+ },
+ {
+  "a": "test",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p202"
+ },
+ {
+  "a": "col",
+  "b": "laborators",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p203"
+ },
+ {
+  "a": "num",
+  "b": "ber",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p203"
+ },
+ {
+  "a": "busi",
+  "b": "ness",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p203"
+ },
+ {
+  "a": "sepa",
+  "b": "rates",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p203"
+ },
+ {
+  "a": "of",
+  "b": "process",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p203"
+ },
+ {
+  "a": "collabora",
+  "b": "tors",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p203"
+ },
+ {
+  "a": "perfor",
+  "b": "mance",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p203"
+ },
+ {
+  "a": "compo",
+  "b": "nents",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p205"
+ },
+ {
+  "a": "exclu",
+  "b": "sively",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p207"
+ },
+ {
+  "a": "inte",
+  "b": "gration",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p207"
+ },
+ {
+  "a": "integra",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p208"
+ },
+ {
+  "a": "iso",
+  "b": "lation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p209"
+ },
+ {
+  "a": "control",
+  "b": "lers",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p209"
+ },
+ {
+  "a": "sce",
+  "b": "nario",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p209"
+ },
+ {
+  "a": "pyr",
+  "b": "amid",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p209"
+ },
+ {
+  "a": "num",
+  "b": "ber",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p209"
+ },
+ {
+  "a": "Regard",
+  "b": "less",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p209"
+ },
+ {
+  "a": "commu",
+  "b": "nications",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p210"
+ },
+ {
+  "a": "CanChange",
+  "b": "Email",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p210"
+ },
+ {
+  "a": "applica",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p211"
+ },
+ {
+  "a": "precon",
+  "b": "dition",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p211"
+ },
+ {
+  "a": "unex",
+  "b": "pected",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p211"
+ },
+ {
+  "a": "expen",
+  "b": "sive",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p211"
+ },
+ {
+  "a": "precondi",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p212"
+ },
+ {
+  "a": "config",
+  "b": "uration",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p212"
+ },
+ {
+  "a": "appli",
+  "b": "cation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p212"
+ },
+ {
+  "a": "of",
+  "b": "process",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p212"
+ },
+ {
+  "a": "Exter",
+  "b": "nal",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p212"
+ },
+ {
+  "a": "unman",
+  "b": "aged",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p212"
+ },
+ {
+  "a": "com",
+  "b": "patibility",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p212"
+ },
+ {
+  "a": "mat",
+  "b": "ters",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p213"
+ },
+ {
+  "a": "addi",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p213"
+ },
+ {
+  "a": "develop",
+  "b": "ment",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p213"
+ },
+ {
+  "a": "any",
+  "b": "thing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p213"
+ },
+ {
+  "a": "mes",
+  "b": "sage",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p214"
+ },
+ {
+  "a": "depen",
+  "b": "dency",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p214"
+ },
+ {
+  "a": "assum",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p215"
+ },
+ {
+  "a": "cov",
+  "b": "ered",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p215"
+ },
+ {
+  "a": "non",
+  "b": "corporate",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p216"
+ },
+ {
+  "a": "control",
+  "b": "ler",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p216"
+ },
+ {
+  "a": "pur",
+  "b": "pose",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p217"
+ },
+ {
+  "a": "sce",
+  "b": "nario",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p217"
+ },
+ {
+  "a": "ver",
+  "b": "sion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p217"
+ },
+ {
+  "a": "to",
+  "b": "end",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p218"
+ },
+ {
+  "a": "behav",
+  "b": "ior",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p218"
+ },
+ {
+  "a": "applica",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p218"
+ },
+ {
+  "a": "improve",
+  "b": "ments",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p219"
+ },
+ {
+  "a": "dis",
+  "b": "covery",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p220"
+ },
+ {
+  "a": "abstrac",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p220"
+ },
+ {
+  "a": "exist",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p220"
+ },
+ {
+  "a": "function",
+  "b": "ality",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p220"
+ },
+ {
+  "a": "func",
+  "b": "tionality",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p220"
+ },
+ {
+  "a": "imme",
+  "b": "diate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p220"
+ },
+ {
+  "a": "bet",
+  "b": "ter",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p220"
+ },
+ {
+  "a": "enterprise",
+  "b": "craftsmanship",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p220"
+ },
+ {
+  "a": "practi",
+  "b": "cal",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p221"
+ },
+ {
+  "a": "implementa",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p221"
+ },
+ {
+  "a": "mock",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p221"
+ },
+ {
+  "a": "depen",
+  "b": "dencies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p221"
+ },
+ {
+  "a": "integra",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p222"
+ },
+ {
+  "a": "control",
+  "b": "lers",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p222"
+ },
+ {
+  "a": "sin",
+  "b": "gle",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p222"
+ },
+ {
+  "a": "applica",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p222"
+ },
+ {
+  "a": "signifi",
+  "b": "cant",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p223"
+ },
+ {
+  "a": "regres",
+  "b": "sions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p224"
+ },
+ {
+  "a": "control",
+  "b": "lers",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p224"
+ },
+ {
+  "a": "of",
+  "b": "process",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p224"
+ },
+ {
+  "a": "CheckOut",
+  "b": "Service",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p225"
+ },
+ {
+  "a": "tre",
+  "b": "mendous",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p225"
+ },
+ {
+  "a": "interdepen",
+  "b": "dent",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p225"
+ },
+ {
+  "a": "inter",
+  "b": "faces",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p225"
+ },
+ {
+  "a": "behav",
+  "b": "ior",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p225"
+ },
+ {
+  "a": "depen",
+  "b": "dency",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p225"
+ },
+ {
+  "a": "interdepen",
+  "b": "dent",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p226"
+ },
+ {
+  "a": "behav",
+  "b": "ior",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p226"
+ },
+ {
+  "a": "provi",
+  "b": "sioned",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p227"
+ },
+ {
+  "a": "end",
+  "b": "to",
+  "keep": true,
+  "why": "compound",
+  "where": "p227"
+ },
+ {
+  "a": "benefi",
+  "b": "cial",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p227"
+ },
+ {
+  "a": "interac",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p227"
+ },
+ {
+  "a": "inte",
+  "b": "gration",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p227"
+ },
+ {
+  "a": "applica",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p228"
+ },
+ {
+  "a": "obvi",
+  "b": "ous",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p228"
+ },
+ {
+  "a": "cli",
+  "b": "ents",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p228"
+ },
+ {
+  "a": "observ",
+  "b": "able",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p228"
+ },
+ {
+  "a": "dependen",
+  "b": "cies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p229"
+ },
+ {
+  "a": "spe",
+  "b": "cific",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p230"
+ },
+ {
+  "a": "post",
+  "b": "processing",
+  "keep": true,
+  "why": "compound",
+  "where": "p230"
+ },
+ {
+  "a": "com",
+  "b": "putes",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p230"
+ },
+ {
+  "a": "Domain",
+  "b": "Logger",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p232"
+ },
+ {
+  "a": "Email",
+  "b": "ChangedEvent",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p232"
+ },
+ {
+  "a": "Chan",
+  "b": "geEmail",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p233"
+ },
+ {
+  "a": "log",
+  "b": "ging",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p234"
+ },
+ {
+  "a": "acquisi",
+  "b": "tion",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p234"
+ },
+ {
+  "a": "con",
+  "b": "text",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p234"
+ },
+ {
+  "a": "indi",
+  "b": "rection",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p235"
+ },
+ {
+  "a": "imple",
+  "b": "mentation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p235"
+ },
+ {
+  "a": "feed",
+  "b": "back",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p235"
+ },
+ {
+  "a": "exter",
+  "b": "nally",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p236"
+ },
+ {
+  "a": "com",
+  "b": "munications",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p236"
+ },
+ {
+  "a": "observ",
+  "b": "able",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p236"
+ },
+ {
+  "a": "unman",
+  "b": "aged",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p236"
+ },
+ {
+  "a": "depen",
+  "b": "dency",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p236"
+ },
+ {
+  "a": "depen",
+  "b": "dency",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p236"
+ },
+ {
+  "a": "inter",
+  "b": "faces",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p236"
+ },
+ {
+  "a": "of",
+  "b": "process",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p237"
+ },
+ {
+  "a": "of",
+  "b": "process",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p237"
+ },
+ {
+  "a": "devel",
+  "b": "opers",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p237"
+ },
+ {
+  "a": "implementa",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p237"
+ },
+ {
+  "a": "pro",
+  "b": "cess",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p237"
+ },
+ {
+  "a": "con",
+  "b": "structor",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p237"
+ },
+ {
+  "a": "emu",
+  "b": "late",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p238"
+ },
+ {
+  "a": "inte",
+  "b": "gration",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p238"
+ },
+ {
+  "a": "sam",
+  "b": "ple",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p239"
+ },
+ {
+  "a": "chang",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p239"
+ },
+ {
+  "a": "IDomain",
+  "b": "Logger",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p239"
+ },
+ {
+  "a": "control",
+  "b": "ler",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p240"
+ },
+ {
+  "a": "out",
+  "b": "of",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p240"
+ },
+ {
+  "a": "interac",
+  "b": "tions",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p241"
+ },
+ {
+  "a": "pro",
+  "b": "vided",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p242"
+ },
+ {
+  "a": "non",
+  "b": "essential",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p242"
+ },
+ {
+  "a": "architec",
+  "b": "ture",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p242"
+ },
+ {
+  "a": "correspond",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p244"
+ },
+ {
+  "a": "Com",
+  "b": "pare",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p244"
+ },
+ {
+  "a": "resis",
+  "b": "tance",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p244"
+ },
+ {
+  "a": "supe",
+  "b": "rior",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p244"
+ },
+ {
+  "a": "differ",
+  "b": "ence",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p245"
+ },
+ {
+  "a": "import",
+  "b": "ant",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p246"
+ },
+ {
+  "a": "mes",
+  "b": "sage",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p246"
+ },
+ {
+  "a": "communi",
+  "b": "cate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p247"
+ },
+ {
+  "a": "con",
+  "b": "trollers",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p247"
+ },
+ {
+  "a": "ver",
+  "b": "ify",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p247"
+ },
+ {
+  "a": "compatibil",
+  "b": "ity",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p248"
+ },
+ {
+  "a": "appli",
+  "b": "cation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p248"
+ },
+ {
+  "a": "depen",
+  "b": "dencies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p249"
+ },
+ {
+  "a": "imple",
+  "b": "mentation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p250"
+ },
+ {
+  "a": "lit",
+  "b": "erals",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p250"
+ },
+ {
+  "a": "pro",
+  "b": "duction",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p250"
+ },
+ {
+  "a": "compati",
+  "b": "bility",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p250"
+ },
+ {
+  "a": "mock",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p250"
+ },
+ {
+  "a": "WithEmailChanged",
+  "b": "Message",
+  "keep": false,
+  "why": "REVIEW unknown, joined by default",
+  "where": "p246"
+ },
+ {
+  "a": "depen",
+  "b": "dencies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p251"
+ },
+ {
+  "a": "ori",
+  "b": "ented",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p252"
+ },
+ {
+  "a": "reg",
+  "b": "ular",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p252"
+ },
+ {
+  "a": "con",
+  "b": "trol",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p252"
+ },
+ {
+  "a": "sys",
+  "b": "tem",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p253"
+ },
+ {
+  "a": "refer",
+  "b": "ence",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p253"
+ },
+ {
+  "a": "refer",
+  "b": "ence",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p253"
+ },
+ {
+  "a": "intro",
+  "b": "duce",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p253"
+ },
+ {
+  "a": "state",
+  "b": "based",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p254"
+ },
+ {
+  "a": "What",
+  "b": "ever",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p254"
+ },
+ {
+  "a": "col",
+  "b": "umns",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p254"
+ },
+ {
+  "a": "pro",
+  "b": "duction",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p256"
+ },
+ {
+  "a": "col",
+  "b": "umns",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p256"
+ },
+ {
+  "a": "com",
+  "b": "parison",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p256"
+ },
+ {
+  "a": "gener",
+  "b": "ating",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p256"
+ },
+ {
+  "a": "pro",
+  "b": "duction",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p256"
+ },
+ {
+  "a": "to",
+  "b": "production",
+  "keep": false,
+  "why": "REVIEW unknown, joined by default",
+  "where": "p256"
+ },
+ {
+  "a": "con",
+  "b": "tinue",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p256"
+ },
+ {
+  "a": "connec",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p257"
+ },
+ {
+  "a": "pro",
+  "b": "vide",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p258"
+ },
+ {
+  "a": "data",
+  "b": "base",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p259"
+ },
+ {
+  "a": "busi",
+  "b": "ness",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p261"
+ },
+ {
+  "a": "decision",
+  "b": "making",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p261"
+ },
+ {
+  "a": "transac",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p261"
+ },
+ {
+  "a": "gener",
+  "b": "ate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p262"
+ },
+ {
+  "a": "your",
+  "b": "self",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p262"
+ },
+ {
+  "a": "list",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p263"
+ },
+ {
+  "a": "inconsisten",
+  "b": "cies",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p263"
+ },
+ {
+  "a": "sophisti",
+  "b": "cated",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p263"
+ },
+ {
+  "a": "pro",
+  "b": "tecting",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p264"
+ },
+ {
+  "a": "com",
+  "b": "pany",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p265"
+ },
+ {
+  "a": "perfor",
+  "b": "mance",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p265"
+ },
+ {
+  "a": "acci",
+  "b": "dentally",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p265"
+ },
+ {
+  "a": "inte",
+  "b": "gration",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p266"
+ },
+ {
+  "a": "con",
+  "b": "tainer",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p266"
+ },
+ {
+  "a": "con",
+  "b": "tainers",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p266"
+ },
+ {
+  "a": "skip",
+  "b": "ping",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p266"
+ },
+ {
+  "a": "unneces",
+  "b": "sary",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p267"
+ },
+ {
+  "a": "refer",
+  "b": "ence",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p267"
+ },
+ {
+  "a": "pro",
+  "b": "duction",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p268"
+ },
+ {
+  "a": "differ",
+  "b": "ences",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p268"
+ },
+ {
+  "a": "protec",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p268"
+ },
+ {
+  "a": "maintainabil",
+  "b": "ity",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p268"
+ },
+ {
+  "a": "cou",
+  "b": "pling",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p268"
+ },
+ {
+  "a": "argu",
+  "b": "ments",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p270"
+ },
+ {
+  "a": "fac",
+  "b": "tory",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p271"
+ },
+ {
+  "a": "sepa",
+  "b": "rate",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p271"
+ },
+ {
+  "a": "intro",
+  "b": "duce",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p272"
+ },
+ {
+  "a": "fol",
+  "b": "lowing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p272"
+ },
+ {
+  "a": "sim",
+  "b": "ilar",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p272"
+ },
+ {
+  "a": "exist",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p272"
+ },
+ {
+  "a": "read",
+  "b": "able",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p273"
+ },
+ {
+  "a": "perfor",
+  "b": "mance",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p274"
+ },
+ {
+  "a": "chang",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p274"
+ },
+ {
+  "a": "protec",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p274"
+ },
+ {
+  "a": "conse",
+  "b": "quences",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p274"
+ },
+ {
+  "a": "exam",
+  "b": "ple",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p275"
+ },
+ {
+  "a": "out",
+  "b": "of",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p275"
+ },
+ {
+  "a": "per",
+  "b": "formed",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p276"
+ },
+ {
+  "a": "other",
+  "b": "wise",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p276"
+ },
+ {
+  "a": "overarch",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p276"
+ },
+ {
+  "a": "refac",
+  "b": "tor",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p277"
+ },
+ {
+  "a": "any",
+  "b": "thing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p277"
+ },
+ {
+  "a": "pre",
+  "b": "populated",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p277"
+ },
+ {
+  "a": "mod",
+  "b": "ify",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p277"
+ },
+ {
+  "a": "under",
+  "b": "lying",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p277"
+ },
+ {
+  "a": "tear",
+  "b": "down",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p277"
+ },
+ {
+  "a": "anti",
+  "b": "patterns",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p279"
+ },
+ {
+  "a": "anti",
+  "b": "patterns",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p281"
+ },
+ {
+  "a": "observ",
+  "b": "able",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p282"
+ },
+ {
+  "a": "implementa",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p282"
+ },
+ {
+  "a": "observ",
+  "b": "able",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p282"
+ },
+ {
+  "a": "extra",
+  "b": "neous",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p282"
+ },
+ {
+  "a": "com",
+  "b": "plex",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p283"
+ },
+ {
+  "a": "implementa",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p284"
+ },
+ {
+  "a": "construc",
+  "b": "tor",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p285"
+ },
+ {
+  "a": "expos",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p285"
+ },
+ {
+  "a": "par",
+  "b": "ticular",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p285"
+ },
+ {
+  "a": "possi",
+  "b": "ble",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p285"
+ },
+ {
+  "a": "sta",
+  "b": "tus",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p286"
+ },
+ {
+  "a": "spe",
+  "b": "cial",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p286"
+ },
+ {
+  "a": "admit",
+  "b": "tedly",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p286"
+ },
+ {
+  "a": "algo",
+  "b": "rithms",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p287"
+ },
+ {
+  "a": "posi",
+  "b": "tives",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p287"
+ },
+ {
+  "a": "dupli",
+  "b": "cation",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p288"
+ },
+ {
+  "a": "applica",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p288"
+ },
+ {
+  "a": "imple",
+  "b": "mentations",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p289"
+ },
+ {
+  "a": "acci",
+  "b": "dentally",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p290"
+ },
+ {
+  "a": "alterna",
+  "b": "tive",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p290"
+ },
+ {
+  "a": "sig",
+  "b": "nificant",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p290"
+ },
+ {
+  "a": "list",
+  "b": "ing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p290"
+ },
+ {
+  "a": "fol",
+  "b": "lowing",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p291"
+ },
+ {
+  "a": "Statistics",
+  "b": "Calculator",
+  "keep": false,
+  "why": "code-joined",
+  "where": "p291"
+ },
+ {
+  "a": "transi",
+  "b": "tioned",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p293"
+ },
+ {
+  "a": "func",
+  "b": "tionality",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p293"
+ },
+ {
+  "a": "stabi",
+  "b": "lizing",
+  "keep": false,
+  "why": "dictionary-joined",
+  "where": "p293"
+ },
+ {
+  "a": "con",
+  "b": "text",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p293"
+ },
+ {
+  "a": "anti",
+  "b": "pattern",
+  "keep": true,
+  "why": "book-hyphenated",
+  "where": "p294"
+ },
+ {
+  "a": "tran",
+  "b": "sitioning",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p294"
+ },
+ {
+  "a": "compro",
+  "b": "mise",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p295"
+ },
+ {
+  "a": "unittesting",
+  "b": "course",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p295"
+ },
+ {
+  "a": "produc",
+  "b": "tion",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p296"
+ },
+ {
+  "a": "function",
+  "b": "ality",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p296"
+ },
+ {
+  "a": "communi",
+  "b": "cating",
+  "keep": false,
+  "why": "book-joined",
+  "where": "p296"
  }
 ]

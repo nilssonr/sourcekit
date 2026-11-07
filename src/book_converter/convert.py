@@ -17,11 +17,11 @@ import pymupdf
 from . import figures as figmod
 from . import tables as tabmod
 from .hyphens import Resolver
-from .listings import (Callout, CodeLine, code_lines, fmt_lines, listing_bars, listing_parts, map_callouts,
+from .listings import (Callout, CodeLine, hexrgb, code_lines, fmt_lines, listing_bars, listing_parts, map_callouts,
                        with_blank_lines)
 from .pdf import Book, Span
-from .sections import SECTIONS, SKIP_PAGES, Section
-from .styles import (BLUE, HEADER_BAND, column_left, column_right, is_bullet, is_callout, is_caption_font,
+from .sections import PAGE_FIGURES, SECTIONS, SKIP_PAGES, Section
+from .styles import (BLUE, HEADER_BAND, SIDEBAR_BG, column_left, column_right, is_bullet, is_callout, is_caption_font,
                      is_code_block, is_figure_text, is_fn_marker, is_fn_start_marker, is_list_number,
                      is_listing_head, is_ws, near)
 
@@ -98,10 +98,17 @@ def classify(r: Row) -> str:
         return "sidebar-text" if txt and txt.font.startswith("FranklinGothic-Book") else "bullet"
     if is_fn_start_marker(k):
         return "footnote"
+    if f.startswith("Courier") and near(k.size, 9.03):
+        # a line that starts with inline code takes its class from the first non-code span
+        nk = next((s for s in al if not s.font.startswith("Courier") and not is_fn_marker(s)), None)
+        if nk is not None:
+            k, f = nk, nk.font
     if f.startswith("NewBaskerville") and k.size >= 40 and k.color == BLUE:
         return "dropcap"
     if f.startswith("NewBaskerville") and near(k.size, 30) and k.color == BLUE:
         return "title"
+    if f == "FranklinGothic-DemiItal" and near(k.size, 12.0) and k.color == "#000000":
+        return "map-title"
     if f == "FranklinGothic-DemiItal" and k.color == BLUE:
         if near(k.size, 12.48):
             return "h2"
@@ -195,7 +202,15 @@ def join_rows(rows: list[Row], plain: bool = False) -> list[Run]:
             first_text = runs_text(rs).lstrip()
             m = re.search(r"([A-Za-z]+)-\s*$", last.t) if last and last.s != "code" else None
             n = re.match(r"([A-Za-z]+)", first_text)
-            if m and n:
+            fc = next((x for x in rs if x.t.strip()), None)
+            cm = re.search(r"([A-Za-z]+)-\s*$", last.t) if last and last.s == "code" else None
+            if cm and fc and fc.s == "code" and re.match(r"[A-Za-z]", fc.t.lstrip()):
+                if CTX.resolver.resolve_code(cm.group(1), re.match(r"[A-Za-z]+", fc.t.lstrip()).group(0), f"p{r.page}"):
+                    last.t = last.t.rstrip()
+                else:
+                    last.t = last.t.rstrip()[:-1]
+                fc.t = fc.t.lstrip()
+            elif m and n:
                 last.t = last.t.rstrip()
                 if not CTX.resolver.resolve(m.group(1), n.group(1), f"p{r.page}"):
                     last.t = last.t[:-1]
@@ -285,6 +300,25 @@ def rel_left(page: int, x: float) -> float:
     return x - column_left(page)
 
 
+def item_text_lefts(item: list[Row]) -> list[float]:
+    """Left edges a continuation line of this list item may align with: the item's text,
+    and the text after the dash of any "–" sub-item row."""
+    tl = next(s for s in item[0].spans if not is_bullet(s) and not is_list_number(s) and not is_ws(s))
+    lefts = [rel_left(tl.page, tl.x0)]
+    for r in item:
+        for s in r.spans:
+            if s.text.lstrip().startswith("–"):
+                after = [c for c in s.chars if c.c.strip()][1:2]
+                if after:
+                    lefts.append(rel_left(r.page, after[0].x0))
+                else:
+                    nxt = [t for t in r.spans if t.x0 > s.x1 - 0.5 and not is_ws(t)]
+                    if nxt:
+                        lefts.append(rel_left(r.page, nxt[0].x0))
+                break
+    return lefts
+
+
 # ---------------------------------------------------------------- listings
 
 
@@ -306,7 +340,9 @@ class Listing:
     last_page: int = 0
 
     def render(self) -> str:
-        md = f"**{re.sub(r'^(Listing \d+\.\d+)\s*', r'\1 ', self.title)}**\n\n{fence(self.text)}"
+        md = fence(self.text)
+        if self.title:
+            md = f"**{re.sub(r'^(Listing \d+\.\d+)\s*', r'\1 ', self.title)}**\n\n" + md
         if self.callouts:
             items = []
             for c in sorted(self.callouts, key=lambda c: (min(c.lines) if c.lines else 0, c.top)):
@@ -315,7 +351,8 @@ class Listing:
             md += ("\n\n*Callouts (added in conversion; line numbers count every line of the listing, "
                    "blank lines included):*\n" + "\n".join(items))
         for img in self.images:
-            md += f"\n\n![Listing {self.lid} with callouts](illustrations/{img})"
+            alt = f"Listing {self.lid}" if self.title else f"Code on book page {self.lid[1:]}"
+            md += f"\n\n![{alt} with callouts](illustrations/{img})"
         return md
 
 
@@ -354,6 +391,9 @@ class Converter:
         def full_right(r: Row, ctx: str) -> bool:
             off = 9.0 if r.page % 2 == 1 else 0.0
             right = {"sidebar": 453.3, "note": 441.3}.get(ctx, 465.3)
+            if ctx == "sidebar":
+                # quote blocks inside sidebars are indented on both sides
+                right -= max(0.0, rel_left(r.page, r.left) - 12.0)
             return r.right >= right + off - 9.3
 
         def push(md) -> None:
@@ -416,14 +456,18 @@ class Converter:
             if p in SKIP_PAGES:
                 continue
             pf = self.book.spans(p)
+            sidebar_boxes = [d["rect"] for d in self.book.drawings(p)
+                             if d["type"] == "f" and hexrgb(d.get("fill")) == SIDEBAR_BG and d["rect"].height > 20]
             used: set[int] = set()
             items: list[tuple[float, str, object]] = []
 
             # figures
-            for fig in figmod.detect(self.book, p, self.warn):
+            page_figs = [figmod.page_figure(self.book, p, *PAGE_FIGURES[p])] if p in PAGE_FIGURES else []
+            for fig in page_figs + figmod.detect(self.book, p, self.warn):
                 for s in fig.labels + fig.caption:
                     used.add(id(s))
-                items.append((fig.box.y0, "fig", fig))
+                # a page figure has no caption; it follows its heading
+                items.append((fig.box.y0 if fig.caption else fig.box.y1, "fig", fig))
             for s in pf:
                 if is_figure_text(s) and id(s) not in used and s.text.strip():
                     self.warn(f"figure-font text outside any figure p{p}: {s.text.strip()!r}")
@@ -462,7 +506,7 @@ class Converter:
                 ink = [s for s in run if not is_ws(s)]
                 if not ink:
                     continue
-                y0, y1 = min(s.y0 for s in ink) - 6, max(s.y1 for s in ink) + 6
+                y0, y1 = min(s.y0 for s in ink) - 15, max(s.y1 for s in ink) + 15
                 calls = [s for s in rest if is_callout(s) and id(s) not in used and y0 <= s.cy <= y1]
                 for s in calls:
                     used.add(id(s))
@@ -475,16 +519,21 @@ class Converter:
             for top, kind, obj in items:
                 if kind == "fig":
                     fig: figmod.Figure = obj
-                    name = f"figure-{fig.id}.png"
-                    figmod.render(self.book, p, fig.box, is_figure_text, str(self.out / "illustrations" / name))
+                    key = fig.id if not fig.caption else f"figure-{fig.id}"
+                    name = f"{key}.png"
+                    figmod.render(self.book, p, fig.box, is_figure_text, str(self.out / "illustrations" / name),
+                                  fig.rotate)
                     self.figure_labels[fig.id] = fig.label_texts
-                    cap = render_runs(join_rows(rows_of(fig.caption), plain=True))
-                    cap = re.sub(r"^Figure (\d+\.\d+)\s*", r"**Figure \1** ", cap)
-                    desc = self.desc.get(f"figure-{fig.id}")
+                    desc = self.desc.get(key)
                     if not desc:
-                        self.warn(f"no description for figure {fig.id}")
-                    md = (f"![Figure {fig.id}](illustrations/{name})\n\n{cap}\n\n"
-                          f"> **Illustration description (added in conversion, not book text):** {desc or 'TODO'}")
+                        self.warn(f"no description for {key}")
+                    note = f"> **Illustration description (added in conversion, not book text):** {desc or 'TODO'}"
+                    if fig.caption:
+                        cap = render_runs(join_rows(rows_of(fig.caption), plain=True))
+                        cap = re.sub(r"^Figure (\d+\.\d+)\s*", r"**Figure \1** ", cap)
+                        md = f"![Figure {fig.id}](illustrations/{name})\n\n{cap}\n\n{note}"
+                    else:
+                        md = f"![{fig.id.replace('-', ' ').capitalize()}](illustrations/{name})\n\n{note}"
                     if st["para"] or st["sidebar"]:
                         st["pending"].append(md)
                     else:
@@ -534,12 +583,25 @@ class Converter:
                             k = len(prev.images) + 1
                             prev.images.append(self._listing_image(p, ink + calls, area,
                                                                    f"listing-{prev.lid}-{k}.png"))
+                    elif st["sidebar"] and not calls and any(b.contains(pymupdf.Point(ink[0].x0 + 1, ink[0].cy))
+                                                             for b in sidebar_boxes):
+                        sidebar_flush_inner()
+                        st["sidebar"]["parts"].append(fence(with_blank_lines(lines)[0]))
                     else:
-                        if calls:
-                            self.warn(f"p{p}: callouts next to a code block that is not a listing: "
-                                      f"{' '.join(s.text.strip() for s in calls)[:50]!r}")
                         close_all()
-                        push(fence(with_blank_lines(lines)[0]))
+                        if calls:
+                            text, pos = with_blank_lines(lines)
+                            lst = Listing("", f"p{p - 22}", text, last_page=p)
+                            area = pymupdf.Rect(0, min(s.y0 for s in ink + calls) - 3, self.book.page(p).rect.x1,
+                                                max(s.y1 for s in ink + calls) + 3)
+                            lst.callouts = map_callouts(self.book, p, area, lines, pos, calls, self.warn)
+                            n = sum(1 for b in blocks if isinstance(b, Listing) and b.lid.startswith(f"p{p - 22}"))
+                            if n:
+                                lst.lid = f"p{p - 22}-{n + 1}"
+                            lst.images.append(self._listing_image(p, ink + calls, area, f"code-{lst.lid}.png"))
+                            push(lst)
+                        else:
+                            push(fence(with_blank_lines(lines)[0]))
                     continue
 
                 r: Row = obj
@@ -548,9 +610,16 @@ class Converter:
                     if cls == "caption":
                         self.warn(f"stray caption row p{p}: {runs_text(row_runs(r))[:60]!r}")
                     continue
+                if cls == "map-title":
+                    close_all()
+                    push("## " + runs_text(row_runs(r, plain=True)).strip())
+                    continue
                 if cls == "title":
                     t = runs_text(row_runs(r, plain=True)).strip()
-                    if not sec.title:
+                    if sec.id == "front":
+                        close_all()
+                        push(f"## {t}")
+                    elif not sec.title:
                         if len(blocks) == 1 and isinstance(blocks[0], str) and blocks[0].startswith("# "):
                             blocks[0] += f": {t}"
                         else:
@@ -563,11 +632,17 @@ class Converter:
                 if cls in ("h2", "h3"):
                     close_all()
                     t = render_runs(row_runs(r, plain=True))
-                    lvl = "##" if cls == "h2" else "###"
+                    lvl = ("##" if cls == "h2" else "###") + ("#" if sec.id == "front" else "")
                     prev = blocks[-1] if blocks else None
                     if (isinstance(prev, str) and prev.startswith(lvl + " ") and not re.match(r"^\d", t)
                             and st["last_head_top"] is not None and 0 < r.top - st["last_head_top"] < 18):
-                        blocks[-1] += " " + t
+                        hm = re.search(r"([A-Za-z]+)-$", blocks[-1])
+                        tm = re.match(r"([A-Za-z]+)", t)
+                        if hm and tm:
+                            keep = CTX.resolver.resolve(hm.group(1), tm.group(1), f"p{r.page}")
+                            blocks[-1] = (blocks[-1] if keep else blocks[-1][:-1]) + t
+                        else:
+                            blocks[-1] += " " + t
                     else:
                         push(f"{lvl} {t}")
                     st["last_head_top"] = r.top
@@ -631,16 +706,15 @@ class Converter:
                     if sb["list"]:
                         last = sb["list"][-1]
                         lr = last[-1]
-                        tl = next(s for s in last[0].spans if not is_bullet(s) and not is_list_number(s)
-                                  and not is_ws(s))
-                        if abs(rel_left(r.page, r.left) - rel_left(tl.page, tl.x0)) < 4 and \
+                        if any(abs(rel_left(r.page, r.left) - x) < 4 for x in item_text_lefts(last)) and \
                                 (r.page != lr.page or r.top - lr.top < 14.7):
                             last.append(r)
                             continue
                         sidebar_flush_inner()
                     pr = sb["para"][-1] if sb["para"] else None
                     if pr and ((not full_right(pr, "sidebar")) if pr.page != r.page
-                               else (r.top - pr.top > 14.7 or not full_right(pr, "sidebar"))):
+                               else (r.top - pr.top > 14.7 or not full_right(pr, "sidebar")
+                                     or abs(rel_left(r.page, r.left) - rel_left(pr.page, pr.left)) > 4)):
                         sidebar_flush_inner()
                     sb["para"] = (sb["para"] or []) + [r]
                     continue
@@ -670,9 +744,7 @@ class Converter:
                     if st["list"] and st["list"]["ctx"] == "body":
                         last = st["list"]["items"][-1]
                         lr = last[-1]
-                        tl = next(s for s in last[0].spans if not is_bullet(s) and not is_list_number(s)
-                                  and not is_ws(s))
-                        if abs(rel_left(r.page, r.left) - rel_left(tl.page, tl.x0)) < 4 and \
+                        if any(abs(rel_left(r.page, r.left) - x) < 4 for x in item_text_lefts(last)) and \
                                 (r.page != lr.page or r.top - lr.top < 16):
                             last.append(r)
                             continue
@@ -746,7 +818,8 @@ def main() -> None:
     lpath = REPO / "data" / "figure-labels.json"
     labels = json.loads(lpath.read_text()) if lpath.exists() else {}
     labels.update(conv.figure_labels)
-    lpath.write_text(json.dumps(dict(sorted(labels.items(), key=lambda kv: [int(x) for x in kv[0].split(".")])),
+    lpath.write_text(json.dumps(dict(sorted(labels.items(), key=lambda kv: [int(x) if x.isdigit() else -1
+                                                                             for x in re.split(r"[.-]", kv[0])])),
                                 indent=1, ensure_ascii=False))
     (REPO / "data" / "hyphen-decisions.json").write_text(json.dumps(CTX.resolver.log_dicts(), indent=1))
     review = [d for d in CTX.resolver.log if re.search("REVIEW|AMBIGUOUS", d.why)]

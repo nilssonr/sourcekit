@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 import pymupdf
 
+from . import tables as tabmod
 from .listings import hexrgb, listing_bars
 from .pdf import Book, Span
 from .styles import (BLUE, HEADER_BAND, LISTING_BAR, SIDEBAR_BG, is_caption_font, is_caption_start,
@@ -24,6 +25,7 @@ class Figure:
     box: pymupdf.Rect
     caption: list[Span]
     labels: list[Span] = field(default_factory=list)
+    rotate: int = 0
 
     @property
     def label_texts(self) -> list[str]:
@@ -114,7 +116,7 @@ def detect(book: Book, pno: int, warn) -> list[Figure]:
     starts = [s for s in spans if is_caption_start(s) and s.text.strip().startswith("Figure")]
     if not starts:
         return []
-    excl = listing_areas(book, pno)
+    excl = listing_areas(book, pno) + [r for r, _, _ in tabmod.regions(book, pno)]
     caps = {id(st): caption_block(spans, st) for st in starts}
     cap_rects = []
     for st in starts:
@@ -170,7 +172,18 @@ def detect(book: Book, pno: int, warn) -> list[Figure]:
     return figs
 
 
-def render(book: Book, pno: int, box: pymupdf.Rect, keep, dest: str) -> None:
+def page_figure(book: Book, pno: int, fid: str, rotate: int = 0) -> Figure:
+    """A figure without a caption that fills its page (the inside-cover chapter map)."""
+    box = None
+    for c in _clusters(_ink(book, pno, [])):
+        if c.width * c.height > 60:
+            box = c if box is None else box | c
+    box = (box + (-3, -3, 3, 3)) & book.page(pno).rect
+    labels = [s for s in book.spans(pno) if is_figure_text(s) and box.contains(pymupdf.Point(s.cx, s.cy))]
+    return Figure(fid, pno, box, [], labels, rotate)
+
+
+def render(book: Book, pno: int, box: pymupdf.Rect, keep, dest: str, rotate: int = 0) -> None:
     """Render `box` at 216 dpi after removing the glyphs of every span inside it that `keep` rejects."""
     tmp = pymupdf.open()
     tmp.insert_pdf(book.doc, from_page=pno - 1, to_page=pno - 1)
@@ -187,5 +200,6 @@ def render(book: Book, pno: int, box: pymupdf.Rect, keep, dest: str) -> None:
     if n:
         page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE,
                               text=pymupdf.PDF_REDACT_TEXT_REMOVE)
-    page.get_pixmap(clip=box, dpi=DPI).save(dest)
+    m = pymupdf.Matrix(DPI / 72, DPI / 72).prerotate(rotate)
+    page.get_pixmap(matrix=m, clip=box).save(dest)
     tmp.close()
