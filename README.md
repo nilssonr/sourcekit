@@ -24,7 +24,9 @@ Run it from the folder that contains `arxiv_client/`:
 python3 -m arxiv_client search --title "attention is all you need" --max 5
 python3 -m arxiv_client search --all "protein folding" --category q-bio.BM --sort submitted --max 20
 python3 -m arxiv_client search --author Hinton --from 20230101 --to 20231231
-python3 -m arxiv_client fetch 1706.03762 hep-th/9901001v1
+python3 -m arxiv_client search --abstract homogenization --any-category cs.HC --any-category cs.CL --format compact
+python3 -m arxiv_client batch queries.json --format compact   # or - to read the list from stdin
+python3 -m arxiv_client fetch 1706.03762 hep-th/9901001v1 --abstract-chars 300
 python3 -m arxiv_client get 2301.00001
 python3 -m arxiv_client feed cs.AI cs.LG          # add --rss for the RSS feed
 python3 -m arxiv_client pdf 2301.00001 --out ./papers
@@ -33,10 +35,31 @@ python3 -m arxiv_client pdf 2301.00001 --out ./papers
 **Search filters:**
 - Field flags (`--title`, `--author`, `--abstract`, `--comment`, `--journal-ref`, `--category`, `--report-number`) can be repeated. Their text becomes a quoted phrase when it has more than one word.
 - `--all` is free text. Its words are joined with `AND`, and `"quoted"` parts stay phrases.
+- `--any-category` can be repeated. Its values are joined with `OR`, so `--any-category cs.HC --any-category cs.CV` matches papers in either. (`--category` values are joined with `AND`, like the other field flags.)
 - `--raw` is passed through verbatim.
 - All filters are joined with `AND`.
 
-**Output and errors:** JSON goes to stdout. Errors go to stderr as `{"error": kind, "message": …}`, with `retry_after` added when arXiv throttled the request.
+**Batch:** `batch FILE` runs up to 20 searches in one call.
+- **Input:** `FILE`, or `-` for stdin, holds a JSON list of query objects.
+  - Query keys: `title`, `author`, `abstract`, `comment`, `journal_ref`, `category`, `report_number` and `all` (each a string or a list of strings), plus `raw`, `any_category`, `from` and `to`.
+  - Run settings: `label`, `max` (default 10), `sort` (`relevance`, `submitted` or `updated`) and `order`.
+- **Validation:** every query is checked before any request is sent, and unknown keys are rejected.
+- **Output:** each query's IDs, and every paper once, with `found_by` listing the labels of the queries that returned it.
+- **Errors partway:** if an error stops the batch, stderr carries the usual error JSON, plus `completed` with the queries that finished.
+
+```json
+[
+  {"label": "homogenization", "abstract": ["homogenization", "web design"], "any_category": ["cs.HC", "cs.CL"]},
+  {"label": "mode collapse", "raw": "ti:\"mode collapse\" OR ti:\"output diversity\"", "max": 25, "sort": "submitted"}
+]
+```
+
+**Lighter output:**
+- `--format compact` (for `search`, `fetch` and `batch`) prints one line per paper: `id | published date | primary category | title`. In `batch` it prints a header per query, marks a paper's first appearance with `*`, and ends with the unique count. Errors stay JSON on stderr.
+- `--abstract-chars N` (JSON only) cuts each abstract to N characters; `0` drops it.
+- JSON output leaves out empty author affiliation lists. An author with no affiliations is just `{"name": …}`.
+
+**Output and errors:** JSON (or compact text) goes to stdout. Errors go to stderr as `{"error": kind, "message": …}`, with `retry_after` added when arXiv throttled the request.
 
 | Exit | `error` | Meaning |
 |---|---|---|
@@ -76,21 +99,26 @@ client.download_pdf("2301.00001", "./papers")
 
 There is no `lastUpdatedDate` filter, because arXiv silently rewrites it to `submittedDate`. Use `client.scan_revisions(query, known)` instead. It pages through `sortBy=lastUpdatedDate` and stops after N pages with nothing new.
 
-## Pacing: who is responsible for what
+## Pacing
 
-arXiv's terms allow **at most 1 request every 3 s, and one connection at a time**. The limit covers all your machines and all of arXiv's legacy APIs together.
+arXiv's terms allow **at most 1 request every 3 s, and one connection at a time**. The limit covers all your machines and all of arXiv's legacy APIs together. The client enforces it across every call and process on this machine, so callers don't need to sleep between calls.
 
-**What the library does:**
-- Within one call, it spaces its own requests at least 3 s apart, measured from request start. That covers search pages, ID chunks of 100, retries and the old-style fallback.
-- PDFs in one `download_pdfs` call are spaced 15 s apart, matching the robots.txt `Crawl-delay: 15`.
-- Each HTTP fetch gets a 30 s total budget, including pacing and retries. Per-request timeouts are 10 s.
+**The request gate:**
+- Every request takes an OS file lock on `~/Library/Caches/arxiv_client/request.lock` on macOS (`~/.cache/…` on Linux).
+- The lock is held for the whole connection, so only one request is in flight at a time, even across parallel processes such as Claude Code subagents.
+- The file records when the last request started. The next request waits until 3 s have passed since the last request of any kind, and a PDF also waits until 15 s have passed since the last PDF, matching the robots.txt `Crawl-delay: 15`.
+- The OS releases the lock when a process exits, so a crash can't leave it stuck.
+- The gate is released while backing off after a throttling signal.
+- If the file can't be opened, the client warns once on stderr and spaces only its own process's requests.
 
-**What the caller (the skill) must do:**
-- Space *separate* calls at least 3 s apart.
-- Never run calls in parallel.
-- After a `throttled` error, wait `retry_after` seconds.
+**Time budget:**
+- Each HTTP fetch gets a 30 s total budget, including waiting for the gate, pacing and retries. Per-request timeouts are 10 s.
+- When the gate is busy for longer than the budget allows, the call fails with `timeout` (exit 6) instead of hanging.
+- OS locks aren't first-come-first-served. With more than about 9 processes queued at once, the later ones may time out. Retry them.
 
-**The one state shared between calls:** a 406 means a roughly 10-minute IP block, and retrying extends it. So a 406 writes a marker file to `~/Library/Caches/arxiv_client/blocked_until` on macOS (`~/.cache/…` on Linux, `%LOCALAPPDATA%\…` on Windows). Every call in every process refuses to send anything until the block expires. If the marker can't be written, the client warns once on stderr and remembers the block in memory for that process only.
+**What the caller must do:** after a `throttled` error, wait `retry_after` seconds.
+
+**The 406 marker:** a 406 means a roughly 10-minute IP block, and retrying extends it. So a 406 writes a marker file, `blocked_until`, next to the gate. Every call in every process refuses to send anything until the block expires. If the marker can't be written, the client warns once on stderr and remembers the block in memory for that process only.
 
 The client isn't thread-safe. Use one call at a time.
 
@@ -122,21 +150,19 @@ The client isn't thread-safe. Use one call at a time.
 
 ## Where it runs
 
-- **Claude Code:** the script runs locally with normal network access. If you enable Claude Code's sandbox, allow `export.arxiv.org`, `rss.arxiv.org` and `arxiv.org`.
-- **claude.ai and Claude Desktop chat:** uploaded skills run in Anthropic's cloud sandbox, and its default network allowlist doesn't include arXiv.
-  - Team/Enterprise owners can add the three hosts.
-  - On Pro/Max, Anthropic's docs don't say whether you can.
-  - Without access, calls fail with exit code 7 (`network_blocked`).
-  - `HTTPS_PROXY` is honoured.
+The client is built for the **Claude Code CLI**. It runs locally with normal network access, and the request gate keeps parallel subagents within arXiv's limits.
+- If you enable Claude Code's sandbox, allow `export.arxiv.org`, `rss.arxiv.org` and `arxiv.org`. Without that, calls fail with exit code 7 (`network_blocked`).
+- `HTTPS_PROXY` is honoured.
+- The cache folder (see [Pacing](#pacing)) must be writable for the gate to work across processes.
 
 ## Tests
 
 ```sh
 python3 -m unittest discover -s tests -t .           # never touches the network
-ARXIV_LIVE=1 python3 -m unittest tests.test_live -v  # 3 live requests, opt-in
+ARXIV_LIVE=1 python3 -m unittest tests.test_live -v  # 5 live requests, opt-in
 ```
 
-The suite uses a fake clock and fake sleep, so nothing really waits.
+The suite uses a fake clock and fake sleep, so almost nothing really waits. The exception is one test that runs two real processes through the gate, which takes about a second.
 
 ## Caveats from the reference doc
 
