@@ -3,6 +3,7 @@
 Thank you to arXiv for use of its open access interoperability.
 """
 
+from .client import ArxivClient, SearchResults
 from .errors import (
     ArxivError,
     ArxivTimeoutError,
@@ -20,3 +21,32 @@ from .query import Q
 from .transport import DEFAULT_USER_AGENT
 
 __version__ = "0.1.0"
+
+__all__ = [
+    "ArxivClient",
+    "SearchResults",
+    "ArxivError",
+    "ArxivTimeoutError",
+    "MalformedResponseError",
+    "NetworkBlockedError",
+    "NotFoundError",
+    "ServerError",
+    "ThrottledError",
+    "ValidationError",
+    "ArxivId",
+    "is_valid_id",
+    "parse_id",
+    "Author",
+    "Feed",
+    "FeedItem",
+    "FetchResult",
+    "Paper",
+    "PdfResult",
+    "SearchPage",
+    "BlockStore",
+    "MemoryBlockStore",
+    "Pacer",
+    "Q",
+    "DEFAULT_USER_AGENT",
+    "__version__",
+]
