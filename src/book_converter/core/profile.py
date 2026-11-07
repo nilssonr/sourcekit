@@ -15,10 +15,9 @@ from pathlib import Path
 from types import ModuleType
 from typing import TYPE_CHECKING
 
-from .sections import Section
-
 if TYPE_CHECKING:  # annotations only: verify imports this module
     from ..convert import Row
+    from ..modules.split.outline import SplitConfig
     from ..modules.regions.figures import FigureConfig
     from ..modules.regions.listings import ListingConfig
     from ..modules.regions.tables import TableConfig
@@ -30,7 +29,7 @@ REPO = Path(__file__).resolve().parents[3]
 @dataclass
 class Profile:
     name: str
-    sections: dict[str, Section]
+    split: SplitConfig            # how the PDF's outline becomes output files
     styles: ModuleType            # style predicates and constants used by convert.py (until step 4 of the plan)
     role: Callable[[Row], str]    # row -> role name (see the role vocabulary in docs/design.md)
     listings: ListingConfig

@@ -23,6 +23,7 @@ from .core.profile import Profile, load as load_profile
 from .core.sections import Section
 from .modules.regions import figures as figmod
 from .modules.regions import tables as tabmod
+from .modules.split import outline
 from .modules.regions.listings import (Callout, CodeLine, hexrgb, code_lines, fmt_lines, listing_bars, listing_parts, map_callouts,
                        with_blank_lines)
 
@@ -532,13 +533,14 @@ class Converter:
                         close_all()
                         if calls:
                             text, pos = with_blank_lines(lines, self.prof.listings)
-                            lst = Listing("", f"p{p - 22}", text, last_page=p)
+                            label = self.book.page_label(p)
+                            lst = Listing("", f"p{label}", text, last_page=p)
                             area = pymupdf.Rect(0, min(s.y0 for s in ink + calls) - 3, self.book.page(p).rect.x1,
                                                 max(s.y1 for s in ink + calls) + 3)
                             lst.callouts = map_callouts(self.book, p, area, lines, pos, calls, self.warn, self.prof.listings)
-                            n = sum(1 for b in blocks if isinstance(b, Listing) and b.lid.startswith(f"p{p - 22}"))
+                            n = sum(1 for b in blocks if isinstance(b, Listing) and b.lid.startswith(f"p{label}"))
                             if n:
-                                lst.lid = f"p{p - 22}-{n + 1}"
+                                lst.lid = f"p{label}-{n + 1}"
                             lst.images.append(self._listing_image(p, ink + calls, area, f"code-{lst.lid}.png"))
                             push(lst)
                         else:
@@ -750,13 +752,14 @@ def main() -> None:
     ap.add_argument("--sections", nargs="+", metavar="ID", help="section ids to convert (default: all)")
     args = ap.parse_args()
     prof = load_profile(args.profile)
-    wanted = args.sections or list(prof.sections)
-    unknown = [s for s in wanted if s not in prof.sections]
+    book = Book(args.input)
+    sections = outline.sections(book, prof.split)
+    wanted = args.sections or list(sections)
+    unknown = [s for s in wanted if s not in sections]
     if unknown:
-        sys.exit(f"unknown section ids: {' '.join(unknown)} (known: {' '.join(prof.sections)})")
+        sys.exit(f"unknown section ids: {' '.join(unknown)} (known: {' '.join(sections)})")
     out = Path(args.output)
     (out / "illustrations").mkdir(parents=True, exist_ok=True)
-    book = Book(args.input)
     ST = prof.styles
     ROLE = prof.role
     CTX = Ctx(Resolver(book.all_spans(1, book.page_count), ST.is_code_font))  # whole book, incl. figure labels and index
@@ -764,7 +767,7 @@ def main() -> None:
     desc = json.loads(dpath.read_text()) if dpath.exists() else {}
     conv = Converter(book, out, desc, prof)
     for sid in wanted:
-        sec = prof.sections[sid]
+        sec = sections[sid]
         blocks = conv.convert(sec)
         (out / sec.file).write_text("\n\n".join(blocks) + "\n")
         print(f"wrote {sec.file} ({len(blocks)} blocks)")

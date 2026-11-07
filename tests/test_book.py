@@ -14,6 +14,7 @@ from pathlib import Path
 import pymupdf
 
 from book_converter.modules.regions import figures, tables
+from book_converter.modules.split import outline
 from book_converter.modules.regions.listings import code_lines, listing_bars, listing_parts, map_callouts, with_blank_lines
 from book_converter.core.pdf import Book
 from book_converter.core.profile import REPO, load as load_profile
@@ -93,6 +94,18 @@ class BookTests(unittest.TestCase):
         self.assertEqual(covered, ["object[] userData = _userRepository", ".GetUserById(userId);",
                                    "object[] companyData = _companyRepository", ".GetCompany();",
                                    "_companyRepository.SaveCompany(company);", "_userRepository.SaveUser(user);"])
+
+    def test_sections_from_outline(self):
+        secs = outline.sections(self.book, self.prof.split)
+        self.assertEqual(len(secs), 16)
+        self.assertEqual(secs["front"].pages, (2, 22))
+        self.assertEqual(secs["part-1"].pages, (23, 24))
+        self.assertEqual(secs["ch01"].pages, (25, 41))
+        self.assertEqual(secs["ch11"].pages, (281, 296))
+        self.assertEqual(secs["ch02"].file, "chapter-02-what-is-a-unit-test.md")
+        self.assertEqual(secs["ch02"].title, "Chapter 2: What is a unit test?")
+        self.assertEqual(secs["part-2"].title, "")
+        self.assertEqual(self.book.page_label(23), "1")
 
     def test_table_6_1(self):
         t = tables.detect(self.book, 150, lambda w: None, self.prof.tables)

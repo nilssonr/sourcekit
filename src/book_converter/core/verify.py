@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .pdf import Book, Span
+from ..modules.split import outline
 from .profile import load as load_profile
 
 
@@ -149,10 +150,11 @@ def main() -> None:
     rdir = Path(args.report_dir) if args.report_dir else None
     if rdir:
         rdir.mkdir(parents=True, exist_ok=True)
-    missing = [sec.file for sec in prof.sections.values() if not (out / sec.file).exists()]
+    sections = outline.sections(book, prof.split)
+    missing = [sec.file for sec in sections.values() if not (out / sec.file).exists()]
     if missing:
         sys.exit(f"missing in {out}: {' '.join(missing)}")
-    for sec in prof.sections.values():
+    for sec in sections.values():
         rep = report(book, out / sec.file, sec.pages[0], sec.pages[1], prof.skip_pages, prof.verify)
         if rdir:
             (rdir / f"{sec.file}.txt").write_text(rep)

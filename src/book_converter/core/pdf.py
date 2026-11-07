@@ -65,6 +65,13 @@ class Span:
         return f"Span(p{self.page} {self.x0:.1f},{self.y0:.1f} {self.font}/{self.size:.2f}/{self.color} {self.text!r})"
 
 
+@dataclass(frozen=True)
+class OutlineEntry:
+    level: int   # 1 = top level
+    title: str
+    page: int    # 1-based PDF page
+
+
 def is_ws(s: Span) -> bool:
     return not s.text.strip()
 
@@ -108,6 +115,14 @@ class Book:
     @functools.lru_cache(maxsize=None)
     def drawings(self, pno: int) -> list[dict]:
         return self.page(pno).get_drawings()
+
+    def page_label(self, pno: int) -> str:
+        """The page's printed label (the PDF's page labels), e.g. "xx" or "1"."""
+        return self.page(pno).get_label()
+
+    def outline(self) -> list[OutlineEntry]:
+        """The PDF's bookmarks in document order."""
+        return [OutlineEntry(level, title, page) for level, title, page in self.doc.get_toc()]
 
     def all_spans(self, p0: int, p1: int) -> list[Span]:
         return [s for p in range(p0, p1 + 1) for s in self.spans(p)]
