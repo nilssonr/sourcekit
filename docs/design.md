@@ -183,14 +183,10 @@ census  --input <pdf> --pages <a>-<b>
 | `verify.ADDED`, `strip_added` | `core/verify.py` | kept for the one-time cross-check in step 5, then removed |
 | `census.py` | `cli.py census` | flags only |
 
-## 9. Decisions for you
+## 9. Decisions (agreed 2026-11-07)
 
-- **D1. Order of the hyphen decision log.** Measured: of 777 logged decisions, 1 is made during callout rendering at section end. None are made in footnotes. With the model, callouts are joined when their listing closes, so that one entry moves earlier in `hyphen-decisions.json`. The content and the Markdown don't change.
-  - **Proposal:** accept this as the one reviewed difference in step 4, shown as a diff.
-  - **Alternative:** make Assemble join callouts at section end to keep the old order. That's contortion for a log file.
-- **D2. Git-ignored profiles take code out of version control.** Even with the assembler moved to `modules/`, the profile holds `classify`, the style predicates and the configs (an estimated ~250 lines, not counted) plus the data.
-  - **Proposal:** `profiles/` is git-ignored by this repo, but is itself a local git repo, so profile history isn't lost.
-  - **Alternative:** ignore only `profiles/*/data/`.
-- **D3. Unified heading escaping (measured, no decision needed).** Today title, map-title and smallcaps headings use raw text, while h2/h3 headings go through `render_runs` (Markdown escaping). Every heading will now go through the serializer. No heading in the reference output contains an escapable character (`\ * _ \``, a leading `- + # >` or `N. `), so the bytes stay the same.
-- **D4. `--profile` is required.** There is no generic profile to default to.
-- **D5. Verifier report format.** It changes in step 5 (manifest, coverage check, independent count). The verifier part of the reference is regenerated after you review one new report.
+- **D1. Hyphen log order: accepted.** Callouts are joined when their listing closes, so one of the 777 entries moves earlier in the log. From step 4 on, `compare_ref.sh` compares `hyphen-decisions.json` as a set of entries. Every other file is compared byte for byte.
+- **D2. Profiles get their own history.** `profiles/` is git-ignored by this repo and is itself a local git repository.
+- **D3. Unified heading escaping: measured.** No heading contains an escapable character, so no bytes change.
+- **D4. `--profile` is required.** There is no default until a generic profile exists.
+- **D5. Verifier reports are regenerated once.** In step 5 the user reviews one new report next to the old one. After approval, the verifier part of the reference is regenerated. The converter output reference is not touched.
