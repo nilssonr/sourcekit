@@ -12,7 +12,7 @@ dependencies = [
 
 [project.scripts]
 convert = "book_converter.convert:main"
-verify = "book_converter.verify:main"
+verify = "book_converter.core.verify:main"
 census = "book_converter.census:main"
 
 [build-system]

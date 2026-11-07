@@ -11,7 +11,7 @@ import pymupdf
 
 from . import tables as tabmod
 from .listings import ListingConfig, hexrgb, listing_bars
-from .pdf import Book, Span
+from ...core.pdf import Book, Span
 
 DPI = 216
 

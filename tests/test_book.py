@@ -13,10 +13,10 @@ from pathlib import Path
 
 import pymupdf
 
-from book_converter import figures, tables
-from book_converter.listings import code_lines, listing_bars, listing_parts, map_callouts, with_blank_lines
-from book_converter.pdf import Book
-from book_converter.profile import REPO, load as load_profile
+from book_converter.modules.regions import figures, tables
+from book_converter.modules.regions.listings import code_lines, listing_bars, listing_parts, map_callouts, with_blank_lines
+from book_converter.core.pdf import Book
+from book_converter.core.profile import REPO, load as load_profile
 
 PDF = os.environ.get("BOOK_PDF", str(Path.home() / "temp/Manning.Unit.Testing.Principles.Practices.and.Patterns.2020.1.pdf"))
 PROFILE_DIR = REPO / "profiles" / "manning_unit_testing"

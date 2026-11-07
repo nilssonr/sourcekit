@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 import pymupdf
 
 from .listings import hexrgb
-from .pdf import Book, Span
+from ...core.pdf import Book, Span
 
 
 @dataclass(frozen=True)

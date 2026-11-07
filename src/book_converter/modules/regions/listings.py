@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 import pymupdf
 
-from .pdf import Book, Span, is_ws
+from ...core.pdf import Book, Span, is_ws
 
 
 @dataclass(frozen=True)

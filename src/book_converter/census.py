@@ -8,7 +8,7 @@ from __future__ import annotations
 import sys
 from collections import defaultdict
 
-from .pdf import Book
+from .core.pdf import Book
 
 
 def main() -> None:

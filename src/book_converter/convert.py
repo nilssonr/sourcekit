@@ -17,14 +17,14 @@ from types import ModuleType
 
 import pymupdf
 
-from . import figures as figmod
-from . import tables as tabmod
-from .hyphens import Resolver
-from .listings import (Callout, CodeLine, hexrgb, code_lines, fmt_lines, listing_bars, listing_parts, map_callouts,
+from .core.hyphens import Resolver
+from .core.pdf import Book, Span, is_ws, near
+from .core.profile import Profile, load as load_profile
+from .core.sections import Section
+from .modules.regions import figures as figmod
+from .modules.regions import tables as tabmod
+from .modules.regions.listings import (Callout, CodeLine, hexrgb, code_lines, fmt_lines, listing_bars, listing_parts, map_callouts,
                        with_blank_lines)
-from .pdf import Book, Span, is_ws, near
-from .profile import Profile, load as load_profile
-from .sections import Section
 
 ROW_TOL = 2.7
 

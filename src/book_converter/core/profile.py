@@ -18,13 +18,13 @@ from typing import TYPE_CHECKING
 from .sections import Section
 
 if TYPE_CHECKING:  # annotations only: verify imports this module
-    from .convert import Row
-    from .figures import FigureConfig
-    from .listings import ListingConfig
-    from .tables import TableConfig
+    from ..convert import Row
+    from ..modules.regions.figures import FigureConfig
+    from ..modules.regions.listings import ListingConfig
+    from ..modules.regions.tables import TableConfig
     from .verify import VerifyConfig
 
-REPO = Path(__file__).resolve().parents[2]
+REPO = Path(__file__).resolve().parents[3]
 
 
 @dataclass
