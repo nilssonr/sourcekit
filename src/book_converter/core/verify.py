@@ -1,7 +1,8 @@
 """Verify that the generated Markdown contains exactly the book's words.
 
 Per file: the word stream is rebuilt from raw spans in reading order (its own rows, top to bottom,
-left to right), minus running headers, page numbers, figure-label text and bullet glyphs, and is
+left to right, split into columns at wide gaps), minus running headers, page numbers, figure-label
+text, bullet glyphs and "(continued)" labels, and is
 compared with the Markdown minus the added material listed in the run's manifest.json.
 
 Also: the files' page ranges must match the profile's outline split and be contiguous (coverage),
@@ -43,6 +44,8 @@ class VerifyConfig:
     is_bullet_glyph: Callable[[Span], bool]   # bullet glyphs
     is_page_number: Callable[[Span], bool]    # a row made only of these is a page number
     is_code_block: Callable[[Span], bool]     # code block text (its bold/italic must survive as <b>/<i>)
+    is_continuation_label: Callable[[Span], bool]  # "(continued)" labels the converter drops on purpose
+    column_gap: float                         # a wider horizontal gap inside a row separates columns
 
 
 def tokens(s: str) -> list[str]:
@@ -51,9 +54,13 @@ def tokens(s: str) -> list[str]:
     return [t for t in re.split(r"[^a-z0-9]+", s) if t]
 
 
+def _excluded(s: Span, cfg: VerifyConfig) -> bool:
+    return (s.baseline < cfg.header_band or cfg.is_figure_text(s) or cfg.is_bullet_glyph(s)
+            or cfg.is_continuation_label(s))
+
+
 def page_text(spans: list[Span], cfg: VerifyConfig) -> str:
-    keep = [s for s in spans if s.baseline >= cfg.header_band and not cfg.is_figure_text(s)
-            and not cfg.is_bullet_glyph(s)]
+    keep = [s for s in spans if not _excluded(s, cfg)]
     rows: list[tuple[float, list[Span]]] = []
     # full-size text first, then small superscripts (footnote markers) join the row just below them
     for s in sorted(keep, key=lambda s: (s.size < cfg.superscript_max, s.baseline, s.x0)):
@@ -64,19 +71,46 @@ def page_text(spans: list[Span], cfg: VerifyConfig) -> str:
                 break
         else:
             rows.append((s.baseline, [s]))
-    text = ""
+    # Each row splits into segments at horizontal gaps wider than cfg.column_gap (code beside a
+    # callout share baselines but are separate columns). Segment: [text, x0, x1], text None once used.
+    seg_rows: list[list[list]] = []
     for _, fs in sorted(rows, key=lambda r: r[0]):
         fs.sort(key=lambda s: s.x0)
         if all(cfg.is_page_number(s) for s in fs if s.text.strip()):
             continue  # page number (foot of an opener page)
-        line, prev = "", None
+        segs: list[list] = []
+        prev = None
         for s in fs:
-            if prev and s.x0 - prev.x1 > 1.0 and not prev.text[-1:].isspace() and not s.text[:1].isspace():
-                line += " "
-            line += s.text
+            if prev is None or s.x0 - prev.x1 > cfg.column_gap:
+                segs.append(["", s.x0, s.x1])
+            elif s.x0 - prev.x1 > 1.0 and not prev.text[-1:].isspace() and not s.text[:1].isspace():
+                segs[-1][0] += " "
+            segs[-1][0] += s.text
+            segs[-1][2] = max(segs[-1][2], s.x1)
             prev = s
-        # a line-end hyphen joins the halves; tokens() drops the hyphen itself
-        text += line.lstrip() if re.search(r"[A-Za-z]-\s*$", text) else " " + line
+        seg_rows.append(segs)
+    # A segment ending in a line-end hyphen joins the segment below it (next row, overlapping
+    # horizontally), repeatedly for words broken over several lines.
+    parts: list[str] = []
+    for i, segs in enumerate(seg_rows):
+        for seg in segs:
+            if seg[0] is None:
+                continue
+            txt, x0, x1 = seg
+            k = i
+            while re.search(r"[A-Za-z]-\s*$", txt) and k + 1 < len(seg_rows):
+                below = next((t for t in seg_rows[k + 1] if t[0] is not None and t[1] < x1 and t[2] > x0), None)
+                if below is None:
+                    break
+                txt = re.sub(r"-\s*$", "-", txt) + below[0].lstrip()
+                x0, x1 = below[1], below[2]
+                below[0] = None
+                k += 1
+            parts.append(txt)
+    text = ""
+    for t in parts:
+        # a hyphen left open (nothing below it) joins the next part; tokens() drops the hyphen itself
+        text += t.lstrip() if re.search(r"[A-Za-z]-\s*$", text) else " " + t
         text = re.sub(r"([A-Za-z])-\s*$", r"\1-", text)
     return text
 
@@ -146,8 +180,7 @@ def report(book: Book, book_text: str, p0: int, p1: int, skip_pages: set[int], c
 
 def _excluded_boxes(spans: list[Span], cfg: VerifyConfig) -> list[pymupdf.Rect]:
     """Boxes of the spans the per-file comparison leaves out: headers, figure labels, bullets, page numbers."""
-    boxes = [pymupdf.Rect(s.x0, s.y0, s.x1, s.y1) for s in spans
-             if s.baseline < cfg.header_band or cfg.is_figure_text(s) or cfg.is_bullet_glyph(s)]
+    boxes = [pymupdf.Rect(s.x0, s.y0, s.x1, s.y1) for s in spans if _excluded(s, cfg)]
     rows: list[tuple[float, list[Span]]] = []
     for s in sorted(spans, key=lambda s: s.baseline):
         if rows and abs(rows[-1][0] - s.baseline) <= 2.7:
