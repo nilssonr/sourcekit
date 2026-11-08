@@ -9,7 +9,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from .hyphens import Resolver
+from .hyphens import LETTER, Resolver
 from .model import Run
 from .pdf import Span, is_ws
 
@@ -118,12 +118,12 @@ class Text:
                     out.pop()
                 last = out[-1] if out else None
                 first_text = runs_text(rs).lstrip()
-                m = re.search(r"([A-Za-z]+)-\s*$", last.t) if last and last.s != "code" else None
-                n = re.match(r"([A-Za-z]+)", first_text)
+                m = re.search(rf"({LETTER}+)-\s*$", last.t) if last and last.s != "code" else None
+                n = re.match(rf"({LETTER}+)", first_text)
                 fc = next((x for x in rs if x.t.strip()), None)
-                cm = re.search(r"([A-Za-z]+)-\s*$", last.t) if last and last.s == "code" else None
-                if cm and fc and fc.s == "code" and re.match(r"[A-Za-z]", fc.t.lstrip()):
-                    if self.resolver.resolve_code(cm.group(1), re.match(r"[A-Za-z]+", fc.t.lstrip()).group(0),
+                cm = re.search(rf"({LETTER}+)-\s*$", last.t) if last and last.s == "code" else None
+                if cm and fc and fc.s == "code" and re.match(rf"{LETTER}", fc.t.lstrip()):
+                    if self.resolver.resolve_code(cm.group(1), re.match(rf"{LETTER}+", fc.t.lstrip()).group(0),
                                                   f"p{r.page}"):
                         last.t = last.t.rstrip()
                     else:
@@ -131,7 +131,7 @@ class Text:
                     fc.t = fc.t.lstrip()
                 elif m and n:
                     last.t = last.t.rstrip()
-                    chain = re.search(r"[A-Za-z]-[A-Za-z]+-\s*$", last.t) is not None
+                    chain = re.search(rf"{LETTER}-{LETTER}+-\s*$", last.t) is not None
                     if not self.resolver.resolve(m.group(1), n.group(1), f"p{r.page}", chain):
                         last.t = last.t[:-1]
                     fr = next((x for x in rs if x.t.strip()), None)

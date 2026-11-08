@@ -11,7 +11,8 @@ from dataclasses import dataclass, asdict
 
 from .pdf import Span
 
-WORD = re.compile(r"[A-Za-z][A-Za-z'’-]*[A-Za-z]|[A-Za-z]")
+LETTER = r"[^\W\d_]"  # one letter in any script; the converter and the verifier share it
+WORD = re.compile(rf"{LETTER}(?:{LETTER}|['’-])*{LETTER}|{LETTER}")
 
 
 @dataclass
@@ -32,7 +33,7 @@ class Resolver:
         for s in spans:
             if is_code(s):
                 continue
-            t = re.sub(r"[A-Za-z]+-\s*$", "", s.text)  # drop a trailing broken word
+            t = re.sub(rf"{LETTER}+-\s*$", "", s.text)  # drop a trailing broken word
             for w in WORD.findall(t):
                 self.corpus[w.lower()] += 1
         try:
@@ -44,7 +45,7 @@ class Resolver:
         self.log: list[Decision] = []
         self.code_hyphenated = Counter(
             w.lower() for sp in spans if is_code(sp)
-            for w in re.findall(r"[A-Za-z]+-[A-Za-z]+", sp.text))
+            for w in re.findall(rf"{LETTER}+-{LETTER}+", sp.text))
 
     @staticmethod
     def _stems(w: str) -> list[str]:

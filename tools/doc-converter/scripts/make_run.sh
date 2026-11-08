@@ -6,7 +6,8 @@
 #   <run dir>/verify/<file>.md.txt  verifier report per section file
 #   <run dir>/convert-stdout.txt    converter log
 # Relative paths are relative to the current directory. The run directory is deleted and recreated;
-# a non-empty directory that is not an earlier run (no convert-stdout.txt) is refused.
+# a non-empty directory that is not an earlier run (no convert-stdout.txt) is refused, and so is a
+# PDF that lives inside the run directory (it would be deleted with it).
 set -euo pipefail
 
 if [ $# -ne 3 ]; then
@@ -32,6 +33,11 @@ if [ ! -f "$PDF" ]; then
   echo "$0: no such PDF: $PDF" >&2
   exit 2
 fi
+case $PDF in
+  "$RUN"/*)
+    echo "$0: refusing: the PDF $PDF is inside the run directory $RUN, which is deleted and recreated" >&2
+    exit 2 ;;
+esac
 if [ -n "$(ls -A "$RUN" 2>/dev/null)" ] && [ ! -e "$RUN/convert-stdout.txt" ]; then
   echo "$0: refusing to delete $RUN: it is not an earlier run directory (no convert-stdout.txt)" >&2
   exit 2

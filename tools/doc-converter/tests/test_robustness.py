@@ -14,6 +14,7 @@ from types import SimpleNamespace
 
 from doc_converter.core.hyphens import Resolver
 from doc_converter.core.pdf import Span
+from doc_converter.core.rows import Row, RowConfig, Text, runs_text
 from doc_converter.core.verify import VerifyConfig, report, tokens
 
 TOOL = Path(__file__).resolve().parents[1]
@@ -51,6 +52,11 @@ class WordMatchingTests(unittest.TestCase):
     def test_line_end_hyphen_after_non_ascii_letter_joins(self):
         lines = compare("naïve\n", span("naï-", 100.0), span("ve", 115.0))
         self.assertEqual(lines[1], "missing from markdown (0): ")
+
+    def test_lower_casing_does_not_change_word_boundaries(self):
+        # lower-casing U+0130 adds a combining dot, which must not split the word in the cased count
+        self.assertEqual(tokens("İstanbul", keep_case=True), ["İstanbul"])
+        self.assertEqual(len(tokens("İstanbul")), 1)
 
 
 class EncodingTests(unittest.TestCase):
@@ -122,3 +128,33 @@ class MakeRunTests(unittest.TestCase):
         r = self.run_script("nope.pdf", "r1")
         self.assertEqual(r.returncode, 2)
         self.assertTrue((old / "convert-stdout.txt").exists())
+
+    def test_pdf_inside_the_run_directory_is_refused(self):
+        old = self.root / "r1"
+        old.mkdir()
+        (old / "convert-stdout.txt").touch()
+        (old / "book.pdf").touch()
+        r = self.run_script("r1/book.pdf", "r1")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("inside the run directory", r.stderr)
+        self.assertTrue((old / "book.pdf").exists())
+        self.assertTrue((old / "convert-stdout.txt").exists())
+
+
+class JoinRowsTests(unittest.TestCase):
+    """The converter joins line-end hyphens after the same letters the verifier does."""
+
+    def join(self, corpus: str, *rows: str) -> str:
+        no = lambda s: False
+        cfg = RowConfig(lambda r: "", no, no, no, no, no, 2.7, 30.0, (0.0, 0.0))
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".words", delete=False) as f:
+            f.write("the\n")
+            self.addCleanup(os.unlink, f.name)
+        text = Text(cfg, Resolver([span(corpus)], no, f.name))
+        return runs_text(text.join_rows([Row(1, 100.0 + 15 * i, [span(t, 100.0 + 15 * i)]) for i, t in enumerate(rows)]))
+
+    def test_hyphen_after_non_ascii_letter_is_resolved(self):
+        self.assertEqual(self.join("naïve", "naï-", "ve"), "naïve")
+
+    def test_hyphen_after_ascii_letter_is_resolved(self):
+        self.assertEqual(self.join("hello", "hel-", "lo"), "hello")
