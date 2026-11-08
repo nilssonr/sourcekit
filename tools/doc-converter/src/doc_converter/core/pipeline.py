@@ -60,13 +60,16 @@ def section_ids(book: Book, prof: Profile) -> list[str]:
     return list(outline.sections(book, prof.split))
 
 
-def convert(book: Book, prof: Profile, out: Path, wanted: list[str] | None = None) -> Result:
+def convert(book: Book, prof: Profile, out: Path, wanted: list[str] | None = None,
+            dict_path: str = Resolver.DICT_PATH) -> Result:
+    """Convert ``wanted`` sections (default: all) into ``out``. ``dict_path`` is the word list the
+    hyphen resolver falls back on when the book itself has no answer."""
     res = Result()
     sections = outline.sections(book, prof.split)
     wanted = wanted or list(sections)
     (out / "illustrations").mkdir(parents=True, exist_ok=True)
     # whole book, incl. figure labels and index
-    res.resolver = Resolver(book.all_spans(1, book.page_count), prof.rows.is_code_font)
+    res.resolver = Resolver(book.all_spans(1, book.page_count), prof.rows.is_code_font, dict_path)
     text = Text(prof.rows, res.resolver)
     dpath = prof.data_dir / "descriptions.json"
     desc = json.loads(dpath.read_text(encoding="utf-8")) if dpath.exists() else {}
@@ -95,7 +98,7 @@ def convert(book: Book, prof: Profile, out: Path, wanted: list[str] | None = Non
     # added ranges are [start, end, kind] in characters (not bytes) of the file's text
     (out / "manifest.json").write_text(json.dumps({"profile": prof.name, "files": files}, indent=1), encoding="utf-8")
     (out / "warnings.txt").write_text("".join(w + "\n" for w in res.warnings), encoding="utf-8")
-    (out / "run-info.json").write_text(json.dumps(run_info(book, prof), indent=1), encoding="utf-8")
+    (out / "run-info.json").write_text(json.dumps(run_info(book, prof, dict_path), indent=1), encoding="utf-8")
     return res
 
 
@@ -107,8 +110,7 @@ def _sha256(path: str | Path) -> str:
     return h.hexdigest()
 
 
-def run_info(book: Book, prof: Profile) -> dict:
+def run_info(book: Book, prof: Profile, dict_path: str = Resolver.DICT_PATH) -> dict:
     """Inputs besides the code that decide the output."""
     return {"profile": prof.name, "input_sha256": _sha256(book.path), "pymupdf": pymupdf.__version__,
-            "mupdf": pymupdf.VersionFitz, "dictionary": Resolver.DICT_PATH,
-            "dictionary_sha256": _sha256(Resolver.DICT_PATH)}
+            "mupdf": pymupdf.VersionFitz, "dictionary": dict_path, "dictionary_sha256": _sha256(dict_path)}

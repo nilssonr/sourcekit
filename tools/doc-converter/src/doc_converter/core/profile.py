@@ -57,9 +57,12 @@ def load(name: str) -> Profile:
     modname = f"doc_converter_profile_{d.name}"
     mod = sys.modules.get(modname)
     if mod is None:
-        spec = importlib.util.spec_from_file_location(modname, d / "__init__.py", submodule_search_locations=[str(d)])
-        if spec is None or spec.loader is None:
+        init = d / "__init__.py"
+        if not init.is_file():
             sys.exit(f"profile {d} has no __init__.py")
+        spec = importlib.util.spec_from_file_location(modname, init, submodule_search_locations=[str(d)])
+        if spec is None or spec.loader is None:  # pragma: no cover - importlib always builds a spec for a .py file
+            sys.exit(f"profile {d}: cannot import __init__.py")
         mod = importlib.util.module_from_spec(spec)
         sys.modules[modname] = mod
         spec.loader.exec_module(mod)
