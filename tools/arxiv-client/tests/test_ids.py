@@ -19,8 +19,9 @@ class ParseIdTests(unittest.TestCase):
         self.assertEqual(parse_id("0704.0001").base, "0704.0001")
         self.assertEqual(parse_id("1412.9999").base, "1412.9999")
         for bad in ("0704.00001", "1412.00001"):
-            with self.assertRaises(ValidationError):
-                parse_id(bad)
+            with self.subTest(bad=bad):
+                with self.assertRaises(ValidationError):
+                    parse_id(bad)
 
     def test_five_digit_numbers_from_1501(self):
         self.assertEqual(parse_id("1501.00001").base, "1501.00001")
@@ -33,8 +34,9 @@ class ParseIdTests(unittest.TestCase):
 
     def test_zero_sequence_number_rejected(self):
         for bad in ("2301.00000", "hep-th/9901000"):
-            with self.assertRaises(ValidationError):
-                parse_id(bad)
+            with self.subTest(bad=bad):
+                with self.assertRaises(ValidationError):
+                    parse_id(bad)
 
     def test_old_style(self):
         a = parse_id("hep-th/9901001v1")
@@ -49,11 +51,13 @@ class ParseIdTests(unittest.TestCase):
         self.assertTrue(is_valid_id("hep-th/9108001"))
         self.assertTrue(is_valid_id("astro-ph/0703001"))
         for bad in ("hep-th/9106001", "astro-ph/0704001"):
-            self.assertFalse(is_valid_id(bad), bad)
+            with self.subTest(bad=bad):
+                self.assertFalse(is_valid_id(bad))
 
-    def test_malformed(self):
+    def test_malformed_ids_are_invalid(self):
         for bad in ("foo", "", "2301.1", "2313.00001", "HEP-TH/9901001", "2301.00001v0", "1706.03762 v1", None):
-            self.assertFalse(is_valid_id(bad), bad)
+            with self.subTest(bad=bad):
+                self.assertFalse(is_valid_id(bad))
 
 
 class SplitTests(unittest.TestCase):

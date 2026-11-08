@@ -1,7 +1,6 @@
 import os
 import tempfile
 import unittest
-from unittest import mock
 
 from arxiv_client import (
     ArxivTimeoutError,
@@ -69,7 +68,7 @@ class PdfTests(unittest.TestCase):
         self.assertTrue(r.skipped)
         self.assertEqual(self.opener.requests, [])
 
-    def test_overwrite(self):
+    def test_overwrite_replaces_an_existing_file(self):
         with open(os.path.join(self.dir, "2301.00001v1.pdf"), "wb") as f:
             f.write(b"old")
         self.opener.add(pdf_response())
@@ -92,16 +91,16 @@ class PdfTests(unittest.TestCase):
 
     def test_unwritable_directory_raises_local_file_error(self):
         self.opener.add(pdf_response())
-        with mock.patch("arxiv_client.transport._create_part_file", side_effect=part_file_failing_after(0)):
-            with self.assertRaises(LocalFileError):
-                self.client.download_pdf("2301.00001v1", self.dir)
+        client = make_client(self.clock, self.opener, create_part_file=part_file_failing_after(0))
+        with self.assertRaises(LocalFileError):
+            client.download_pdf("2301.00001v1", self.dir)
         self.assertEqual(self.files(), [])
 
     def test_local_failure_on_second_pdf_lists_the_first(self):
         self.opener.add(pdf_response(), pdf_response(filename="2301.00002v1.pdf"))
-        with mock.patch("arxiv_client.transport._create_part_file", side_effect=part_file_failing_after(1)):
-            with self.assertRaises(LocalFileError) as cm:
-                self.client.download_pdfs(["2301.00001v1", "2301.00002v1"], self.dir)
+        client = make_client(self.clock, self.opener, create_part_file=part_file_failing_after(1))
+        with self.assertRaises(LocalFileError) as cm:
+            client.download_pdfs(["2301.00001v1", "2301.00002v1"], self.dir)
         self.assertEqual([r.id for r in cm.exception.completed], ["2301.00001"])
         self.assertEqual(self.files(), ["2301.00001v1.pdf"])
 
@@ -133,7 +132,7 @@ class PdfTests(unittest.TestCase):
             self.client.download_pdf("2301.00001v1", self.dir)
         self.assertEqual(self.files(), [])
 
-    def test_404_is_not_found(self):
+    def test_a_404_is_not_found(self):
         self.opener.add(FakeResponse(404, b"", {}))
         with self.assertRaises(NotFoundError):
             self.client.download_pdf("2301.99999v1", self.dir)
@@ -147,7 +146,7 @@ class PdfTests(unittest.TestCase):
         self.assertEqual(self.files(), [])
         self.assertLessEqual(self.clock.now - start, 32.5)  # 30 s budget, at most one read overshoots
 
-    def test_size_cap(self):
+    def test_a_pdf_over_max_bytes_is_rejected_and_leaves_no_file(self):
         self.opener.add(pdf_response())
         with self.assertRaises(ValidationError):
             self.client.download_pdf("2301.00001v1", self.dir, max_bytes=1000)
@@ -165,7 +164,7 @@ class PdfTests(unittest.TestCase):
         self.assertEqual(reads, [])
         self.assertEqual(self.files(), [])
 
-    def test_missing_dest_dir(self):
+    def test_a_missing_destination_directory_is_rejected_before_any_request(self):
         with self.assertRaises(ValidationError):
             self.client.download_pdf("2301.00001v1", os.path.join(self.dir, "nope"))
 

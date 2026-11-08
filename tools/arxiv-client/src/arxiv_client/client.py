@@ -23,6 +23,7 @@ from .transport import (
     PDF_INTERVAL,
     Opener,
     Transport,
+    create_part_file,
 )
 
 QUERY_URL = "https://export.arxiv.org/api/query"
@@ -150,6 +151,7 @@ class ArxivClient:
         gate: Optional[MemoryGate] = None,
         min_interval: float = MIN_INTERVAL,
         pdf_interval: float = PDF_INTERVAL,
+        create_part_file: Callable[[str], Tuple[int, str]] = create_part_file,
     ) -> None:
         if not (0 < budget <= 30):
             raise ValidationError("budget must be between 0 and 30 seconds")
@@ -171,6 +173,7 @@ class ArxivClient:
             min_interval=min_interval,
             pdf_interval=pdf_interval,
             request_timeout=request_timeout,
+            create_part_file=create_part_file,
         )
 
     def _pacer(self, interval: Optional[float] = None) -> Pacer:

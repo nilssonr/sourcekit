@@ -39,11 +39,11 @@ class FullFeedTests(unittest.TestCase):
         self.assertEqual(names, ["Ada Lovelace", "The ATLAS Collaboration", "J. Kova{č}i{ć}"])
         self.assertEqual(self.paper.authors[0].affiliations, ("Analytical Engine Co.",))
 
-    def test_dates(self):
+    def test_published_and_updated_are_utc_datetimes(self):
         self.assertEqual(self.paper.published, dt.datetime(2023, 1, 1, 9, tzinfo=dt.timezone.utc))
         self.assertEqual(self.paper.updated, dt.datetime(2023, 2, 1, 10, tzinfo=dt.timezone.utc))
 
-    def test_optional_fields(self):
+    def test_comment_journal_ref_and_urls_are_read(self):
         self.assertEqual(self.paper.comment, "12 pages, 3 figures")
         self.assertEqual(self.paper.journal_ref, "J. Stat. 1 (2023) 1-12")
         self.assertEqual(self.paper.abs_url, "https://arxiv.org/abs/2301.00001v2")
@@ -90,7 +90,7 @@ class AbstractTests(unittest.TestCase):
     def test_spaces_within_line_collapsed(self):
         self.assertEqual(clean_abstract("a   b\tc"), "a b c")
 
-    def test_none(self):
+    def test_a_missing_or_blank_abstract_is_none(self):
         self.assertIsNone(clean_abstract(None))
         self.assertIsNone(clean_abstract("   \n  "))
 
@@ -107,8 +107,9 @@ class FeedLevelTests(unittest.TestCase):
 
     def test_error_feeds_detected(self):
         for name in ("query_error_400.xml", "query_error_sort.xml", "query_error_500.xml"):
-            with self.assertRaises(ServerError, msg=name):
-                parse_query_feed(fixture(name))
+            with self.subTest(fixture=name):
+                with self.assertRaises(ServerError):
+                    parse_query_feed(fixture(name))
 
     def test_error_message_extraction(self):
         self.assertEqual(error_message(fixture("query_error_400.xml")), "incorrect id format for foo")

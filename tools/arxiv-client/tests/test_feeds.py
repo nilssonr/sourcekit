@@ -11,7 +11,7 @@ class RssTests(unittest.TestCase):
     def setUp(self):
         self.feed = parse_rss(fixture("rss_weekday.xml"))
 
-    def test_items(self):
+    def test_a_weekday_feed_has_its_items(self):
         self.assertEqual(len(self.feed.items), 2)
         self.assertFalse(self.feed.empty)
 
@@ -44,7 +44,7 @@ class RssTests(unittest.TestCase):
 
 
 class AtomFeedTests(unittest.TestCase):
-    def test_entry(self):
+    def test_an_atom_entry_is_read_in_full(self):
         feed = parse_atom_feed(fixture("atom_weekday.xml"))
         item = feed.items[0]
         self.assertEqual((item.id, item.version, item.announce_type), ("2611.01234", 1, "new"))
@@ -63,30 +63,32 @@ class CreatorSplitTests(unittest.TestCase):
             ("A One", "B Two", "C Three"),
         )
 
-    def test_empty(self):
+    def test_no_creator_text_gives_no_authors(self):
         self.assertEqual(split_creators(None), ())
         self.assertEqual(split_creators(" "), ())
 
 
 class CategoryValidationTests(unittest.TestCase):
-    def test_valid(self):
+    def test_known_category_forms_are_accepted(self):
         self.assertEqual(validate_categories(["cs.AI", "q-bio.NC", "hep-th"]), ["cs.AI", "q-bio.NC", "hep-th"])
         self.assertEqual(validate_categories("cs.AI+math.NA"), ["cs.AI", "math.NA"])
 
-    def test_invalid(self):
+    def test_malformed_categories_are_rejected(self):
         for bad in (["cs.AI/x"], [], ["cs AI"]):
-            with self.assertRaises(ValidationError):
-                validate_categories(bad)
+            with self.subTest(bad=bad):
+                with self.assertRaises(ValidationError):
+                    validate_categories(bad)
 
 
 class FeedClientTests(unittest.TestCase):
     def test_400_with_valid_empty_feed_is_an_error(self):
         for fmt, name, ct in (("rss", "rss_400.xml", RSS_CT), ("atom", "atom_400.xml", "application/atom+xml")):
-            clock = FakeClock()
-            opener = FakeOpener(clock, [xml_response(fixture(name), status=400, ct=ct)])
-            with self.assertRaises(ValidationError) as cm:
-                make_client(clock, opener).feed(["foo.BAR"], fmt=fmt)
-            self.assertIn("Bad archive/category: foo.BAR", str(cm.exception))
+            with self.subTest(fmt=fmt):
+                clock = FakeClock()
+                opener = FakeOpener(clock, [xml_response(fixture(name), status=400, ct=ct)])
+                with self.assertRaises(ValidationError) as cm:
+                    make_client(clock, opener).feed(["foo.BAR"], fmt=fmt)
+                self.assertIn("Bad archive/category: foo.BAR", str(cm.exception))
 
     def test_url_and_parse(self):
         clock = FakeClock()

@@ -16,7 +16,7 @@ class SearchPageTests(unittest.TestCase):
         self.opener = FakeOpener(self.clock)
         self.client = make_client(self.clock, self.opener)
 
-    def test_parameters(self):
+    def test_search_parameters_are_sent_as_arxiv_query_fields(self):
         self.opener.add(xml_response(make_feed([])))
         self.client.search_page(Q.title("x"), start=5, max_results=20, sort_by="submittedDate", sort_order="ascending")
         p = self.opener.requests[0].params
@@ -27,12 +27,13 @@ class SearchPageTests(unittest.TestCase):
         self.assertEqual(p["sortOrder"], ["ascending"])
         self.assertTrue(self.opener.requests[0].url.startswith("https://export.arxiv.org/api/query?"))
 
-    def test_deterministic_500_inputs_refused_locally(self):
+    def test_inputs_arxiv_would_answer_with_a_500_are_refused_locally(self):
         for kwargs in ({"max_results": 0}, {"max_results": 29999}, {"max_results": 2001},
                        {"start": 10000}, {"start": -1}, {"max_results": True}):
-            with self.assertRaises(ValidationError, msg=str(kwargs)):
-                self.client.search_page("x", **kwargs)
-        self.assertEqual(self.opener.requests, [])
+            with self.subTest(**kwargs):
+                with self.assertRaises(ValidationError):
+                    self.client.search_page("x", **kwargs)
+                self.assertEqual(self.opener.requests, [])
 
     def test_bad_sort_refused(self):
         with self.assertRaises(ValidationError):
@@ -229,12 +230,12 @@ class FetchTests(unittest.TestCase):
             self.client.fetch(["hep-th/9901001v1"])
         self.assertEqual(len(self.opener.requests), 2)
 
-    def test_get_not_found(self):
+    def test_an_unknown_id_is_not_found(self):
         self.opener.add(xml_response(make_feed([], total=0)))
         with self.assertRaises(NotFoundError):
             self.client.get("2401.99999")
 
-    def test_get(self):
+    def test_a_known_id_returns_its_paper(self):
         self.opener.add(xml_response(make_feed([make_entry("2401.00001")])))
         self.assertEqual(self.client.get("2401.00001").id, "2401.00001")
 

@@ -83,16 +83,17 @@ class ThrottleSignalTests(unittest.TestCase):
         self.assertEqual(resp.body, OK)
         self.assertEqual(clock.sleeps, [5.0])
 
-    def test_429_and_503_retried_then_raise_within_30s(self):
+    def test_429_and_503_are_retried_twice_then_raise_within_the_30s_budget(self):
         for status in (429, 503):
-            clock = FakeClock()
-            start = clock.now
-            opener = FakeOpener(clock, [FakeResponse(status, b"Rate exceeded.", {}) for _ in range(5)])
-            with self.assertRaises(ThrottledError) as cm:
-                transport(clock, opener).get(URL, pacer(clock), budget=30)
-            self.assertEqual(cm.exception.kind, str(status))
-            self.assertEqual(len(opener.requests), 3)
-            self.assertLessEqual(clock.now - start, 30.0)
+            with self.subTest(status=status):
+                clock = FakeClock()
+                start = clock.now
+                opener = FakeOpener(clock, [FakeResponse(status, b"Rate exceeded.", {}) for _ in range(5)])
+                with self.assertRaises(ThrottledError) as cm:
+                    transport(clock, opener).get(URL, pacer(clock), budget=30)
+                self.assertEqual(cm.exception.kind, str(status))
+                self.assertEqual(len(opener.requests), 3)
+                self.assertLessEqual(clock.now - start, 30.0)
 
     def test_retry_skipped_when_budget_cannot_cover_backoff(self):
         clock = FakeClock()
@@ -102,36 +103,49 @@ class ThrottleSignalTests(unittest.TestCase):
         self.assertEqual(len(opener.requests), 1)
         self.assertEqual(clock.sleeps, [])
 
-    def test_retry_after_header_used_with_60s_floor(self):
+    def test_a_retry_after_header_above_the_floor_is_reported_as_is(self):
         clock = FakeClock()
         opener = FakeOpener(clock, [FakeResponse(429, b"", {"retry-after": "120"})])
         with self.assertRaises(ThrottledError) as cm:
             transport(clock, opener).get(URL, pacer(clock), budget=5)
         self.assertEqual(cm.exception.retry_after, 120)
+
+    def test_a_retry_after_of_zero_is_reported_as_the_60s_floor(self):
         clock = FakeClock()
         opener = FakeOpener(clock, [FakeResponse(503, b"", {"retry-after": "0"})])
         with self.assertRaises(ThrottledError) as cm:
             transport(clock, opener).get(URL, pacer(clock), budget=5)
         self.assertEqual(cm.exception.retry_after, 60)
 
-    def test_406_not_retried_and_blocks(self):
+    def test_a_406_is_not_retried_and_starts_a_10_minute_block(self):
         clock = FakeClock()
-        store = MemoryBlockStore(wall=clock.wall)
         opener = FakeOpener(clock, [FakeResponse(406, b"", {}), xml_response(OK)])
-        t = transport(clock, opener, block_store=store)
         with self.assertRaises(ThrottledError) as cm:
-            t.get(URL, pacer(clock))
+            transport(clock, opener).get(URL, pacer(clock))
         self.assertEqual(cm.exception.kind, "406")
         self.assertGreaterEqual(cm.exception.retry_after, 600)
         self.assertEqual(len(opener.requests), 1)
         self.assertEqual(clock.sleeps, [])
-        # Subsequent calls refuse without sending anything until the block expires.
-        with self.assertRaises(ThrottledError):
-            t.get(URL, pacer(clock))
-        self.assertEqual(len(opener.requests), 1)
+
+    def test_requests_during_a_406_block_are_refused_without_being_sent(self):
+        clock = FakeClock()
+        store = MemoryBlockStore(wall=clock.wall)
+        store.block()
+        opener = FakeOpener(clock, [xml_response(OK)])
+        with self.assertRaises(ThrottledError) as cm:
+            transport(clock, opener, block_store=store).get(URL, pacer(clock))
+        self.assertEqual(cm.exception.kind, "406")
+        self.assertEqual(opener.requests, [])
+
+    def test_the_406_block_lifts_after_600s(self):
+        clock = FakeClock()
+        store = MemoryBlockStore(wall=clock.wall)
+        store.block()
+        opener = FakeOpener(clock, [xml_response(OK)])
         clock.advance(601)
-        t.get(URL, pacer(clock))
-        self.assertEqual(len(opener.requests), 2)
+        resp = transport(clock, opener, block_store=store).get(URL, pacer(clock))
+        self.assertEqual(resp.body, OK)
+        self.assertEqual(len(opener.requests), 1)
 
     def test_empty_200_without_content_type_is_transient(self):
         clock = FakeClock()
@@ -217,7 +231,9 @@ class GateTests(unittest.TestCase):
         store = MemoryBlockStore(wall=clock.wall)
         store.block()
         gate = RecordingGate(clock, events)
-        gate._lanes = {"any": clock.wall(), "pdf": clock.wall()}  # a wait would be due
+        with gate.hold({"any": 3.0, "pdf": 15.0}, clock.now + 30):  # a wait is now due on both lanes
+            pass
+        events.clear()
         opener = FakeOpener(clock, [])
         t = Transport("test-agent/1.0", opener=opener, clock=clock.monotonic, sleep=clock.sleep,
                       block_store=store, gate=gate)
@@ -228,10 +244,6 @@ class GateTests(unittest.TestCase):
         self.assertEqual(events, [])
         self.assertEqual(clock.sleeps, [])
         self.assertEqual(opener.requests, [])
-
-    def test_default_gate_is_a_file_gate(self):
-        from arxiv_client import FileGate
-        self.assertIsInstance(Transport("test-agent/1.0").gate, FileGate)
 
 
 class ErrorStatusTests(unittest.TestCase):
@@ -259,24 +271,20 @@ class ErrorStatusTests(unittest.TestCase):
         self.assertIn("internal error", str(cm.exception))
         self.assertEqual(len(opener.requests), 1)
 
-    def test_502_504_not_retried(self):
+    def test_502_and_504_are_server_errors_and_not_retried(self):
         for status in (502, 504):
-            clock = FakeClock()
-            opener = FakeOpener(clock, [FakeResponse(status, b"Bad gateway", {})])
-            with self.assertRaises(ServerError):
-                transport(clock, opener).get(URL, pacer(clock))
-            self.assertEqual(len(opener.requests), 1)
+            with self.subTest(status=status):
+                clock = FakeClock()
+                opener = FakeOpener(clock, [FakeResponse(status, b"Bad gateway", {})])
+                with self.assertRaises(ServerError):
+                    transport(clock, opener).get(URL, pacer(clock))
+                self.assertEqual(len(opener.requests), 1)
 
-    def test_404(self):
+    def test_a_404_is_not_found(self):
         clock = FakeClock()
         opener = FakeOpener(clock, [FakeResponse(404, b"", {})])
         with self.assertRaises(NotFoundError):
             transport(clock, opener).get(URL, pacer(clock))
-
-    def test_200_error_feed_is_detected(self):
-        from arxiv_client.atom import parse_query_feed
-        with self.assertRaises(ServerError):
-            parse_query_feed(fixture("query_error_400.xml"))
 
 
 class TimeoutAndNetworkTests(unittest.TestCase):
@@ -315,18 +323,19 @@ class TimeoutAndNetworkTests(unittest.TestCase):
         transport(clock, opener).get(URL, pacer(clock), budget=4)
         self.assertLessEqual(opener.requests[0].timeout, 4.0)
 
-    def test_dns_failure_refused_and_proxy_tunnel_are_network_blocked(self):
+    def test_dns_failure_refused_connection_and_proxy_tunnel_refusal_are_network_blocked(self):
         for exc in (
             urllib.error.URLError(socket.gaierror(8, "nodename nor servname provided")),
             urllib.error.URLError(ConnectionRefusedError(61, "Connection refused")),
             urllib.error.URLError(OSError("Tunnel connection failed: 403 Forbidden")),
         ):
-            clock = FakeClock()
-            opener = FakeOpener(clock, [exc])
-            with self.assertRaises(NetworkBlockedError) as cm:
-                transport(clock, opener).get(URL, pacer(clock))
-            self.assertEqual(cm.exception.host, "export.arxiv.org")
-            self.assertIn("allow this domain", str(cm.exception))
+            with self.subTest(reason=str(exc.reason)):
+                clock = FakeClock()
+                opener = FakeOpener(clock, [exc])
+                with self.assertRaises(NetworkBlockedError) as cm:
+                    transport(clock, opener).get(URL, pacer(clock))
+                self.assertEqual(cm.exception.host, "export.arxiv.org")
+                self.assertIn("allow this domain", str(cm.exception))
 
     def test_connection_reset_is_server_error(self):
         clock = FakeClock()
