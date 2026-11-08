@@ -18,7 +18,7 @@ from pathlib import Path
 from .core import pipeline
 from .core.pdf import Book
 from .core.profile import load as load_profile
-from .core.verify import main as verify
+from .core.verify import main as verify, tolerant_stdout
 
 
 def convert(argv: list[str] | None = None) -> None:
@@ -74,6 +74,7 @@ USAGE = f"usage: doc-converter {{{','.join(COMMANDS)}}} [options]   (doc-convert
 
 
 def main(argv: list[str] | None = None) -> None:
+    tolerant_stdout()
     argv = sys.argv[1:] if argv is None else argv
     if not argv or argv[0] in ("-h", "--help"):
         print(USAGE)

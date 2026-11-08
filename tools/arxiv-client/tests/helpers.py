@@ -6,7 +6,7 @@ Nothing here touches the network or really sleeps.
 from __future__ import annotations
 
 import os
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from urllib.parse import parse_qs, urlsplit
 
 from arxiv_client import ArxivClient, MemoryBlockStore, MemoryGate
@@ -181,3 +181,20 @@ def make_client(clock: FakeClock, opener: FakeOpener, **kw: Any) -> ArxivClient:
     kw.setdefault("block_store", MemoryBlockStore(wall=clock.wall))
     kw.setdefault("gate", MemoryGate(clock=clock.monotonic, sleep=clock.sleep, wall=clock.wall))
     return ArxivClient(opener=opener, clock=clock.monotonic, sleep=clock.sleep, **kw)
+
+
+def part_file_failing_after(successes: int) -> Callable[[str], Tuple[int, str]]:
+    """A stand-in for ``transport._create_part_file``: the real thing for ``successes`` calls, then
+    PermissionError. Tests use it instead of ``chmod 0o555``, which root ignores."""
+    from arxiv_client import transport
+
+    real = transport._create_part_file
+    calls = [0]
+
+    def fake(dest_dir: str) -> Tuple[int, str]:
+        calls[0] += 1
+        if calls[0] > successes:
+            raise PermissionError(13, "Permission denied", os.path.join(dest_dir, ".arxiv.pdf.part"))
+        return real(dest_dir)
+
+    return fake

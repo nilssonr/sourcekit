@@ -9,6 +9,10 @@ class ArxivError(Exception):
     """Base class for every error raised by this package."""
 
 
+class LocalFileError(ArxivError):
+    """A downloaded file could not be written: permissions, a full disk, or similar."""
+
+
 class ValidationError(ArxivError):
     """The request was invalid, either caught locally or reported by arXiv (HTTP 400)."""
 

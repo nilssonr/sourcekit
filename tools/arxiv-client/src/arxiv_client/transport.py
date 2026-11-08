@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import http.client
 import os
+import secrets
 import socket
 import ssl
-import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -134,6 +134,25 @@ def _is_timeout(exc: BaseException) -> bool:
     return isinstance(exc, (socket.timeout, TimeoutError))
 
 
+def _content_length(headers: Dict[str, str]) -> Optional[int]:
+    try:
+        value = int(headers.get("content-length", ""))
+    except ValueError:
+        return None
+    return value if value >= 0 else None
+
+
+def _create_part_file(dest_dir: str) -> Tuple[int, str]:
+    """Create a uniquely named temp file. Unlike mkstemp's 0600, its mode follows the umask."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+    while True:
+        path = os.path.join(dest_dir, ".arxiv-%s.pdf.part" % secrets.token_hex(8))
+        try:
+            return os.open(path, flags, 0o666), path
+        except FileExistsError:
+            continue
+
+
 class Transport:
     def __init__(
         self,
@@ -211,7 +230,7 @@ class Transport:
                     headers = _lower_headers(raw.headers)
                     ctype = headers.get("content-type", "").lower()
                     if status == 200 and "application/pdf" in ctype:
-                        path, size = self._stream_pdf(raw, deadline, dest_dir, max_bytes)
+                        path, size = self._stream_pdf(raw, deadline, dest_dir, max_bytes, _content_length(headers))
                         return path, headers, size
                     body = self._read(raw, deadline, 1024 * 1024)
                 finally:
@@ -309,8 +328,12 @@ class Transport:
             raise MalformedResponseError("response larger than %d bytes" % max_bytes) from None
         return b"".join(parts)
 
-    def _stream_pdf(self, raw: Any, deadline: float, dest_dir: str, max_bytes: int) -> Tuple[str, int]:
-        fd, tmp = tempfile.mkstemp(dir=dest_dir, prefix=".arxiv-", suffix=".pdf.part")
+    def _stream_pdf(
+        self, raw: Any, deadline: float, dest_dir: str, max_bytes: int, expected_size: Optional[int]
+    ) -> Tuple[str, int]:
+        if expected_size is not None and expected_size > max_bytes:
+            raise ValidationError("PDF is larger than max_bytes=%d" % max_bytes)  # before any byte is read
+        fd, tmp = _create_part_file(dest_dir)
         head = bytearray()
         try:
             with os.fdopen(fd, "wb") as f:
@@ -327,6 +350,9 @@ class Transport:
                     raise ValidationError("PDF is larger than max_bytes=%d" % max_bytes) from None
             if not bytes(head).startswith(b"%PDF-"):
                 raise MalformedResponseError("response is labelled PDF but lacks the %PDF- header")
+            # http.client reports a connection dropped mid-body as a normal end of data.
+            if expected_size is not None and size != expected_size:
+                raise ServerError("PDF download incomplete: got %d of %d bytes" % (size, expected_size))
             return tmp, size
         except BaseException:
             try:

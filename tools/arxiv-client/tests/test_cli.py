@@ -5,9 +5,20 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 from arxiv_client.__main__ import main
-from tests.helpers import FakeClock, FakeOpener, FakeResponse, fixture, make_client, make_entry, make_feed, xml_response
+from tests.helpers import (
+    FakeClock,
+    FakeOpener,
+    FakeResponse,
+    fixture,
+    make_client,
+    make_entry,
+    make_feed,
+    part_file_failing_after,
+    xml_response,
+)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -38,6 +49,24 @@ class CliTests(unittest.TestCase):
         self.assertFalse(data["truncated"])
         self.assertEqual(data["query"], 'ti:"attention is all you need" AND cat:cs.CL')
         self.assertEqual(data["papers"][0]["versioned_id"], "1706.03762v7")
+
+    def test_batch_unhashable_sort_is_a_validation_error(self):
+        for sort in (["submitted"], {"a": 1}):
+            code, _, err = self.run_cli(["batch", "-"], [], stdin=json.dumps([{"title": "x", "sort": sort}]))
+            self.assertEqual(code, 2)
+            self.assertEqual(json.loads(err)["error"], "validation")
+
+    def test_local_write_failure_reports_json_and_completed(self):
+        pdf = b"%PDF-1.5\n" + b"x" * 100
+        headers = {"content-type": "application/pdf"}
+        with tempfile.TemporaryDirectory() as out:
+            with mock.patch("arxiv_client.transport._create_part_file", side_effect=part_file_failing_after(1)):
+                code, _, err = self.run_cli(["pdf", "2301.00001v1", "2301.00002v1", "--out", out],
+                                            [FakeResponse(200, pdf, headers), FakeResponse(200, pdf, headers)])
+        self.assertEqual(code, 8)
+        payload = json.loads(err)
+        self.assertEqual(payload["error"], "local_io")
+        self.assertEqual([c["id"] for c in payload["completed"]], ["2301.00001"])
 
     def test_search_all_and_dates(self):
         code, out, err = self.run_cli(
