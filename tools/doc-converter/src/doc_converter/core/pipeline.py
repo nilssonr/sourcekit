@@ -69,7 +69,7 @@ def convert(book: Book, prof: Profile, out: Path, wanted: list[str] | None = Non
     res.resolver = Resolver(book.all_spans(1, book.page_count), prof.rows.is_code_font)
     text = Text(prof.rows, res.resolver)
     dpath = prof.data_dir / "descriptions.json"
-    desc = json.loads(dpath.read_text()) if dpath.exists() else {}
+    desc = json.loads(dpath.read_text(encoding="utf-8")) if dpath.exists() else {}
     asm = Assembler(book, prof.flow, text, desc, res.warnings.append)
     md = Markdown(prof.markdown)
     files = []
@@ -77,7 +77,7 @@ def convert(book: Book, prof: Profile, out: Path, wanted: list[str] | None = Non
         sec = sections[sid]
         doc = asm.section(sec)
         text_md, ranges = md.section(doc)
-        (out / sec.file).write_text(text_md)
+        (out / sec.file).write_text(text_md, encoding="utf-8")
         p0, p1 = sec.pages
         files.append({"file": sec.file, "pages": [p0, p1],
                       "skip_pages": sorted(p for p in prof.skip_pages if p0 <= p <= p1),
@@ -90,12 +90,12 @@ def convert(book: Book, prof: Profile, out: Path, wanted: list[str] | None = Non
     (out / "figure-labels.json").write_text(
         json.dumps(dict(sorted(labels.items(), key=lambda kv: [int(x) if x.isdigit() else -1
                                                                 for x in re.split(r"[.-]", kv[0])])),
-                   indent=1, ensure_ascii=False))
-    (out / "hyphen-decisions.json").write_text(json.dumps(res.resolver.log_dicts(), indent=1))
+                   indent=1, ensure_ascii=False), encoding="utf-8")
+    (out / "hyphen-decisions.json").write_text(json.dumps(res.resolver.log_dicts(), indent=1), encoding="utf-8")
     # added ranges are [start, end, kind] in characters (not bytes) of the file's text
-    (out / "manifest.json").write_text(json.dumps({"profile": prof.name, "files": files}, indent=1))
-    (out / "warnings.txt").write_text("".join(w + "\n" for w in res.warnings))
-    (out / "run-info.json").write_text(json.dumps(run_info(book, prof), indent=1))
+    (out / "manifest.json").write_text(json.dumps({"profile": prof.name, "files": files}, indent=1), encoding="utf-8")
+    (out / "warnings.txt").write_text("".join(w + "\n" for w in res.warnings), encoding="utf-8")
+    (out / "run-info.json").write_text(json.dumps(run_info(book, prof), indent=1), encoding="utf-8")
     return res
 
 

@@ -31,6 +31,9 @@ uv run python -m unittest discover -s tests -v    # PDF tests run only when DOC_
 Run the command with `uv run --package doc-converter doc-converter …`, or put it on your PATH with
 `uv tool install --editable tools/doc-converter`.
 
+`convert` needs a word list at `/usr/share/dict/words` (on Debian or Ubuntu: `apt-get install wamerican`). A
+different word list can change hyphen decisions; `run-info.json` records its hash.
+
 Section ids (`front`, `part-1`, `ch01`, …) come from the PDF outline, using the profile's split rules.
 
 ## Layout

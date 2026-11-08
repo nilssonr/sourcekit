@@ -10,6 +10,7 @@ verify lives in core/verify.py.
 from __future__ import annotations
 
 import argparse
+import io
 import re
 import sys
 from collections import defaultdict
@@ -74,6 +75,8 @@ USAGE = f"usage: doc-converter {{{','.join(COMMANDS)}}} [options]   (doc-convert
 
 
 def main(argv: list[str] | None = None) -> None:
+    if isinstance(sys.stdout, io.TextIOWrapper):  # book text must not crash printing on a narrow locale
+        sys.stdout.reconfigure(errors="backslashreplace")
     argv = sys.argv[1:] if argv is None else argv
     if not argv or argv[0] in ("-h", "--help"):
         print(USAGE)

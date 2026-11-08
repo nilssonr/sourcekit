@@ -23,6 +23,7 @@ import html
 import json
 import re
 import sys
+import unicodedata
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -48,10 +49,24 @@ class VerifyConfig:
     column_gap: float                         # a wider horizontal gap inside a row separates columns
 
 
-def tokens(s: str) -> list[str]:
-    s = s.lower().replace("’", "'")
+def tokens(s: str, *, keep_case: bool = False) -> list[str]:
+    s = unicodedata.normalize("NFC", s).replace("’", "'")
+    if not keep_case:
+        s = s.lower()
     s = re.sub(r"[-‐‑]", "", s)
-    return [t for t in re.split(r"[^a-z0-9]+", s) if t]
+    return [t for t in re.split(r"[\W_]+", s) if t]
+
+
+def case_differences(expected: list[str], actual: list[str]) -> list[str]:
+    """Words that match only when lower-cased, as "pdf form->markdown form×count"."""
+    by_word: dict[str, tuple[Counter[str], Counter[str]]] = {}
+    for words, side in ((expected, 0), (actual, 1)):
+        for w in words:
+            by_word.setdefault(w.lower(), (Counter(), Counter()))[side][w] += 1
+    pairs: Counter[tuple[str, str]] = Counter()
+    for pdf, md in by_word.values():
+        pairs.update(zip(sorted((pdf - md).elements()), sorted((md - pdf).elements())))
+    return [f"{a}->{b}×{n}" for (a, b), n in pairs.items()]
 
 
 def _excluded(s: Span, cfg: VerifyConfig) -> bool:
@@ -98,7 +113,7 @@ def page_text(spans: list[Span], cfg: VerifyConfig) -> str:
                 continue
             txt, x0, x1 = seg
             k = i
-            while re.search(r"[A-Za-z]-\s*$", txt) and k + 1 < len(seg_rows):
+            while re.search(r"[^\W\d_]-\s*$", txt) and k + 1 < len(seg_rows):
                 below = next((t for t in seg_rows[k + 1] if t[0] is not None and t[1] < x1 and t[2] > x0), None)
                 if below is None:
                     break
@@ -110,8 +125,8 @@ def page_text(spans: list[Span], cfg: VerifyConfig) -> str:
     text = ""
     for t in parts:
         # a hyphen left open (nothing below it) joins the next part; tokens() drops the hyphen itself
-        text += t.lstrip() if re.search(r"[A-Za-z]-\s*$", text) else " " + t
-        text = re.sub(r"([A-Za-z])-\s*$", r"\1-", text)
+        text += t.lstrip() if re.search(r"[^\W\d_]-\s*$", text) else " " + t
+        text = re.sub(r"([^\W\d_])-\s*$", r"\1-", text)
     return text
 
 
@@ -136,7 +151,7 @@ def report(book: Book, book_text: str, p0: int, p1: int, skip_pages: set[int], c
         if p not in skip_pages:
             t = page_text(book.spans(p), cfg)
             # a hyphen at the end of a page joins the first word of the next page
-            text += t.lstrip() if re.search(r"[A-Za-z]-$", text) else " " + t
+            text += t.lstrip() if re.search(r"[^\W\d_]-$", text) else " " + t
     expected = tokens(text)
     actual = tokens(book_text)
 
@@ -147,6 +162,8 @@ def report(book: Book, book_text: str, p0: int, p1: int, skip_pages: set[int], c
     lines.append(f"expected {len(expected)} words, markdown {len(actual)} words, matched {matched}")
     lines.append(f"missing from markdown ({len(missing)}): {' '.join(missing)}")
     lines.append(f"extra in markdown ({len(extra)}): {' '.join(extra)}")
+    cased = case_differences(tokens(text, keep_case=True), tokens(book_text, keep_case=True))
+    lines.append(f"case differences ({len(cased)}): {' '.join(cased)}")
 
     sm = difflib.SequenceMatcher(None, expected, actual, autojunk=False)
     hunks = [op for op in sm.get_opcodes() if op[0] != "equal"]
@@ -214,7 +231,7 @@ def independent(book: Book, pages: list[int], book_text: str, cfg: VerifyConfig)
     # a lower-case word, or joining within PyMuPDF's text blocks; both paired more words wrongly.
     text: list[str] = []
     for i, (w, _) in enumerate(words):
-        if text and words[i - 1][1] and re.search(r"[A-Za-z]-$", text[-1]):
+        if text and words[i - 1][1] and re.search(r"[^\W\d_]-$", text[-1]):
             text[-1] += w
         else:
             text.append(w)
@@ -316,11 +333,11 @@ def main(argv: list[str] | None = None) -> None:
     mpath = out / "manifest.json"
     if not mpath.exists():
         sys.exit(f"no manifest.json in {out}")
-    files = json.loads(mpath.read_text())["files"]
+    files = json.loads(mpath.read_text(encoding="utf-8"))["files"]
 
     def emit(name: str, title: str, text: str) -> None:
         if rdir:
-            (rdir / name).write_text(text)
+            (rdir / name).write_text(text, encoding="utf-8")
         else:
             sys.stdout.write(f"--- {title}\n{text}\n")
 

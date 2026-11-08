@@ -4,6 +4,7 @@ using the book's own unbroken text first and the system dictionary second."""
 from __future__ import annotations
 
 import re
+import sys
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, asdict
@@ -34,8 +35,12 @@ class Resolver:
             t = re.sub(r"[A-Za-z]+-\s*$", "", s.text)  # drop a trailing broken word
             for w in WORD.findall(t):
                 self.corpus[w.lower()] += 1
-        with open(dict_path, encoding="utf-8", errors="replace") as f:
-            self.dict = {w.strip().lower() for w in f}
+        try:
+            with open(dict_path, encoding="utf-8", errors="replace") as f:
+                self.dict = {w.strip().lower() for w in f}
+        except OSError as e:
+            sys.exit(f"cannot read the system dictionary {dict_path} ({e.strerror}); hyphen decisions need it. "
+                     "On Debian or Ubuntu: apt-get install wamerican")
         self.log: list[Decision] = []
         self.code_hyphenated = Counter(
             w.lower() for sp in spans if is_code(sp)
