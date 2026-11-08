@@ -1,6 +1,6 @@
 """Full conversion compared with a saved reference run (scripts/compare_ref.sh).
 
-Runs only when BOOK_REF points at a reference directory (e.g. ~/temp/book-converter-ref/manning),
+Runs only when BOOK_REF points at a reference directory (e.g. ~/temp/book-converter-ref/manning-v2),
 the PDF is present (BOOK_PDF) and the profile exists. Takes about 15 s.
 """
 
