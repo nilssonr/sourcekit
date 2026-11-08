@@ -230,9 +230,17 @@ class GateTests(unittest.TestCase):
                     self.fail("request must not start")
         self.assertIn("another arxiv_client process", str(cm.exception))
         self.assertTrue(all(s == 0.5 for s in self.clock.sleeps))
-        # The lock was released: b can go once a is done.
+
+    def test_a_waiter_that_timed_out_can_take_the_gate_once_it_is_free(self):
+        a, b = self.gate(), self.gate(poll=0.5)
+        with a.hold(API, self.clock.now + 30):
+            with self.assertRaises(ArxivTimeoutError):
+                with b.hold(API, self.clock.now + 5.0):
+                    self.fail("request must not start")
+        self.clock.advance(5)
         with b.hold(API, self.clock.now + 30):
             pass
+        self.assertEqual(self.clock.sleeps[-1], 0.5)  # only the polls: no wait for the lane once it is clear
 
     def test_lock_released_when_the_request_raises(self):
         a, b = self.gate(), self.gate()
@@ -279,6 +287,8 @@ class GateTests(unittest.TestCase):
         warn = io.StringIO()
         gate = self.gate(warn_stream=warn)
         c = self.clock
+        # The OS lock is the edge of the system: the module alias is patched here because adding an
+        # injection point for flock to the production code would serve tests only.
         with mock.patch("arxiv_client.pacing._fcntl.flock", side_effect=OSError(errno.ENOLCK, "No locks available")):
             for _ in range(3):
                 with gate.hold(API, c.now + 30):

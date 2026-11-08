@@ -142,8 +142,12 @@ def _content_length(headers: Dict[str, str]) -> Optional[int]:
     return value if value >= 0 else None
 
 
-def _create_part_file(dest_dir: str) -> Tuple[int, str]:
-    """Create a uniquely named temp file. Unlike mkstemp's 0600, its mode follows the umask."""
+def create_part_file(dest_dir: str) -> Tuple[int, str]:
+    """Create a uniquely named ``.part`` file in ``dest_dir`` and return ``(fd, path)``.
+
+    Unlike mkstemp's 0600, its mode follows the umask. This is the default for
+    ``Transport(create_part_file=...)``, the seam a test double for the filesystem plugs into.
+    """
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
     while True:
         path = os.path.join(dest_dir, ".arxiv-%s.pdf.part" % secrets.token_hex(8))
@@ -166,6 +170,7 @@ class Transport:
         gate: Optional[MemoryGate] = None,
         min_interval: float = MIN_INTERVAL,
         pdf_interval: float = PDF_INTERVAL,
+        create_part_file: Callable[[str], Tuple[int, str]] = create_part_file,
     ) -> None:
         if not user_agent or not user_agent.strip():
             raise ValidationError("user_agent must not be empty")
@@ -176,6 +181,7 @@ class Transport:
         self.block_store = block_store if block_store is not None else BlockStore()
         self.request_timeout = float(request_timeout)
         self.gate = gate if gate is not None else FileGate(clock=clock, sleep=sleep)
+        self._create_part_file = create_part_file
         self._api_lanes = {"any": float(min_interval)}
         self._pdf_lanes = {"any": float(min_interval), "pdf": float(pdf_interval)}
 
@@ -333,7 +339,7 @@ class Transport:
     ) -> Tuple[str, int]:
         if expected_size is not None and expected_size > max_bytes:
             raise ValidationError("PDF is larger than max_bytes=%d" % max_bytes)  # before any byte is read
-        fd, tmp = _create_part_file(dest_dir)
+        fd, tmp = self._create_part_file(dest_dir)
         head = bytearray()
         try:
             with os.fdopen(fd, "wb") as f:

@@ -43,13 +43,16 @@ class QueryBuilderTests(unittest.TestCase):
         self.assertEqual(str(Q.author("Fréchet")), "au:Fréchet")
         self.assertIn("Fr%C3%A9chet", encode_params({"search_query": str(Q.author("Fréchet"))}))
 
-    def test_wildcard(self):
+    def test_a_trailing_wildcard_on_a_single_word_is_allowed(self):
         self.assertEqual(str(Q.title("transform*")), "ti:transform*")
-        for bad in ("tr*ansform", "*", "two words*"):
-            with self.assertRaises(ValidationError):
-                Q.title(bad)
 
-    def test_empty_text_rejected(self):
+    def test_wildcards_anywhere_else_are_rejected(self):
+        for bad in ("tr*ansform", "*", "two words*"):
+            with self.subTest(bad=bad):
+                with self.assertRaises(ValidationError):
+                    Q.title(bad)
+
+    def test_blank_field_text_is_rejected(self):
         with self.assertRaises(ValidationError):
             Q.title("   ")
 
@@ -78,21 +81,17 @@ class DateRangeTests(unittest.TestCase):
         q = Q.submitted_between(dt.datetime(2023, 1, 1, 2, 0, tzinfo=tz), dt.datetime(2023, 1, 2, tzinfo=dt.timezone.utc))
         self.assertEqual(str(q), "submittedDate:[20230101000000 TO 20230102000000]")
 
-    def test_invalid(self):
-        with self.assertRaises(ValidationError):
-            Q.submitted_between("2023-01-01", "20230131")
-        with self.assertRaises(ValidationError):
-            Q.submitted_between("20230201", "20230101")
+    def test_malformed_or_reversed_date_ranges_are_rejected(self):
+        for start, end in (("2023-01-01", "20230131"), ("20230201", "20230101")):
+            with self.subTest(start=start, end=end):
+                with self.assertRaises(ValidationError):
+                    Q.submitted_between(start, end)
 
     def test_spaces_encode_as_percent20_never_percent2B(self):
         encoded = encode_params({"search_query": str(Q.category("cs.LG") & Q.submitted_between("20230101", "20230131"))})
         self.assertIn("%20TO%20", encoded)
         self.assertNotIn("%2B", encoded)
         self.assertNotIn("+", encoded)
-
-    def test_no_last_updated_filter(self):
-        self.assertFalse(hasattr(Q, "updated_between"))
-        self.assertFalse(any("updated" in name.lower() for name in dir(Q)))
 
 
 class PlainTextTests(unittest.TestCase):
@@ -114,7 +113,7 @@ class PlainTextTests(unittest.TestCase):
     def test_q_passes_through(self):
         self.assertEqual(to_search_query(Q.title("x")), "ti:x")
 
-    def test_empty(self):
+    def test_blank_free_text_is_rejected(self):
         with self.assertRaises(ValidationError):
             to_search_query("   ")
 

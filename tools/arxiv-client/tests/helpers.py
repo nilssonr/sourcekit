@@ -10,6 +10,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from urllib.parse import parse_qs, urlsplit
 
 from arxiv_client import ArxivClient, MemoryBlockStore, MemoryGate
+from arxiv_client.transport import create_part_file
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures", "arxiv")
 ATOM_CT = "application/atom+xml; charset=utf-8"
@@ -184,17 +185,15 @@ def make_client(clock: FakeClock, opener: FakeOpener, **kw: Any) -> ArxivClient:
 
 
 def part_file_failing_after(successes: int) -> Callable[[str], Tuple[int, str]]:
-    """A stand-in for ``transport._create_part_file``: the real thing for ``successes`` calls, then
-    PermissionError. Tests use it instead of ``chmod 0o555``, which root ignores."""
-    from arxiv_client import transport
-
-    real = transport._create_part_file
+    """A ``create_part_file`` for ``ArxivClient``: the real one for ``successes`` calls, then
+    PermissionError. It stands in for a destination that stops being writable; ``chmod 0o555``
+    would not do, because root ignores it."""
     calls = [0]
 
-    def fake(dest_dir: str) -> Tuple[int, str]:
+    def failing(dest_dir: str) -> Tuple[int, str]:
         calls[0] += 1
         if calls[0] > successes:
             raise PermissionError(13, "Permission denied", os.path.join(dest_dir, ".arxiv.pdf.part"))
-        return real(dest_dir)
+        return create_part_file(dest_dir)
 
-    return fake
+    return failing
