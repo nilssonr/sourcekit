@@ -225,17 +225,16 @@ class GateTests(unittest.TestCase):
 
     def test_busy_gate_times_out_instead_of_hanging(self):
         a, b = self.gate(), self.gate(poll=0.5)
-        with a.hold(API, self.clock.now + 30):
-            with self.assertRaises(ArxivTimeoutError) as cm, b.hold(API, self.clock.now + 5.0):
-                self.fail("request must not start")
+        with a.hold(API, self.clock.now + 30), self.assertRaises(ArxivTimeoutError) as cm, \
+                b.hold(API, self.clock.now + 5.0):
+            self.fail("request must not start")
         self.assertIn("another arxiv_client process", str(cm.exception))
         self.assertTrue(all(s == 0.5 for s in self.clock.sleeps))
 
     def test_a_waiter_that_timed_out_can_take_the_gate_once_it_is_free(self):
         a, b = self.gate(), self.gate(poll=0.5)
-        with a.hold(API, self.clock.now + 30):
-            with self.assertRaises(ArxivTimeoutError), b.hold(API, self.clock.now + 5.0):
-                self.fail("request must not start")
+        with a.hold(API, self.clock.now + 30), self.assertRaises(ArxivTimeoutError), b.hold(API, self.clock.now + 5.0):
+            self.fail("request must not start")
         self.clock.advance(5)
         with b.hold(API, self.clock.now + 30):
             pass
