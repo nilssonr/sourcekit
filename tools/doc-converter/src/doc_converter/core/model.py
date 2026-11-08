@@ -35,8 +35,9 @@ Inlines = list[Run]
 class ImageRef:
     """An image to render after assembly: a figure (label glyphs kept, other text removed) or a
     plain crop of a listing with its callouts."""
-    file: str                 # file name under illustrations/
-    kind: str                 # "figure" | "crop"
+
+    file: str  # file name under illustrations/
+    kind: str  # "figure" | "crop"
     page: int
     box: pymupdf.Rect
     rotate: int = 0
@@ -62,12 +63,13 @@ class Paragraph(Block):
 @dataclass
 class Label(Block):
     """A bold line that introduces the next block ("This chapter covers")."""
+
     inlines: Inlines
 
 
 @dataclass
 class ListItem:
-    number: str | None        # None: bulleted
+    number: str | None  # None: bulleted
     inlines: Inlines
     subitems: list[Inlines] = field(default_factory=list)
 
@@ -79,16 +81,17 @@ class ListBlock(Block):
 
 @dataclass
 class Callout:
-    lines: list[int]          # 1-based line numbers in the listing text, blank lines included
+    lines: list[int]  # 1-based line numbers in the listing text, blank lines included
     inlines: Inlines
-    top: float                # y of the callout text on its page (orders callouts on the same line)
+    top: float  # y of the callout text on its page (orders callouts on the same line)
 
 
 @dataclass
 class Code(Block):
     """A code block. A listing has a title or callouts; lid names its images."""
+
     lines: list[str]
-    marks: list[str]          # emphasis per character of each line ("." plain, "b", "i", "B" bold italic)
+    marks: list[str]  # emphasis per character of each line ("." plain, "b", "i", "B" bold italic)
     title: str = ""
     lid: str = ""
     callouts: list[Callout] = field(default_factory=list)
@@ -97,11 +100,11 @@ class Code(Block):
 
 @dataclass
 class Figure(Block):
-    id: str                   # "4.9", or the page-figure id ("chapter-map")
+    id: str  # "4.9", or the page-figure id ("chapter-map")
     image: ImageRef
     alt: str
-    caption: Inlines | None   # None: an uncaptioned page figure
-    description: str | None   # added in conversion (profile data); None: missing
+    caption: Inlines | None  # None: an uncaptioned page figure
+    description: str | None  # added in conversion (profile data); None: missing
 
 
 @dataclass
@@ -113,15 +116,15 @@ class Table(Block):
 
 @dataclass
 class Note(Block):
-    label: str                # DEFINITION, TIP, NOTE, ...
+    label: str  # DEFINITION, TIP, NOTE, ...
     inlines: Inlines
     continued: list[Block] = field(default_factory=list)  # parts after a "(continued)" page break
 
 
 @dataclass
 class Sidebar(Block):
-    title: Inlines            # may be empty (sidebar text found without a title)
-    children: list[Block] = field(default_factory=list)   # Paragraph | ListBlock | Code
+    title: Inlines  # may be empty (sidebar text found without a title)
+    children: list[Block] = field(default_factory=list)  # Paragraph | ListBlock | Code
 
 
 @dataclass

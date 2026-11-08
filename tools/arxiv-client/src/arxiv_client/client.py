@@ -33,10 +33,10 @@ PDF_BASE = "https://arxiv.org/pdf"
 SORT_BY = ("relevance", "lastUpdatedDate", "submittedDate")
 SORT_ORDER = ("ascending", "descending")
 
-START_LIMIT = 10000          # start >= 10000 returns a deterministic 500 (doc section 2.1)
-MAX_PAGE_REQUEST = 2000      # largest max_results we send in one request
-ID_CHUNK_SIZE = 100          # GET URLs with ~650+ IDs return 414
-EMPTY_PAGE_RETRIES = 3       # an empty page partway through paging is retried this many times
+START_LIMIT = 10000  # start >= 10000 returns a deterministic 500 (doc section 2.1)
+MAX_PAGE_REQUEST = 2000  # largest max_results we send in one request
+ID_CHUNK_SIZE = 100  # GET URLs with ~650+ IDs return 414
+EMPTY_PAGE_RETRIES = 3  # an empty page partway through paging is retried this many times
 MAX_PDFS_PER_CALL = 10
 DEFAULT_MAX_PDF_BYTES = 50 * 1024 * 1024
 
@@ -99,9 +99,7 @@ class SearchResults:
     def _generate(self) -> Iterator[Paper]:
         yielded = 0
         first = True
-        for page in self._client._iter_pages(
-            self._query, self._sort_by, self._sort_order, self._page_size, self._max
-        ):
+        for page in self._client._iter_pages(self._query, self._sort_by, self._sort_order, self._page_size, self._max):
             if first:
                 first = False
                 self.total_results = page.total_results
@@ -236,7 +234,11 @@ class ArxivClient:
             want = page_size if remaining is None else min(page_size, remaining)
             page = self.search_page(
                 Q.raw(search_query) if search_query else None,
-                start, want, sort_by, sort_order, _pacer=pacer,
+                start,
+                want,
+                sort_by,
+                sort_order,
+                _pacer=pacer,
             )
             total = page.total_results
             retries = 0
@@ -247,9 +249,7 @@ class ArxivClient:
                         "(%d retries)" % (start, total, retries)
                     )
                 retries += 1
-                page = self.search_page(
-                    Q.raw(search_query), start, want, sort_by, sort_order, _pacer=pacer
-                )
+                page = self.search_page(Q.raw(search_query), start, want, sort_by, sort_order, _pacer=pacer)
                 if page.total_results is not None:
                     total = page.total_results
             yield page
@@ -322,9 +322,7 @@ class ArxivClient:
 
     def _fetch_chunk(self, chunk: List[ArxivId], pacer: Pacer) -> Dict[ArxivId, Paper]:
         try:
-            page = self.search_page(
-                id_list=[str(a) for a in chunk], max_results=len(chunk), _pacer=pacer
-            )
+            page = self.search_page(id_list=[str(a) for a in chunk], max_results=len(chunk), _pacer=pacer)
             return _match_ids(chunk, page.papers, fallback=frozenset())
         except ServerError as e:
             affected = frozenset(a for a in chunk if a.old_style and a.version is not None)
@@ -365,9 +363,7 @@ class ArxivClient:
         _check_int("stop_after_empty_pages", stop_after_empty_pages, 1)
         size = self.page_size if page_size is None else _check_int("page_size", page_size, 100, 200)
         empty_streak = 0
-        for page in self._iter_pages(
-            to_search_query(query), "lastUpdatedDate", "descending", size, None
-        ):
+        for page in self._iter_pages(to_search_query(query), "lastUpdatedDate", "descending", size, None):
             new = [p for p in page.papers if (p.version or 0) > known.get(p.id, 0)]
             for p in new:
                 yield p
@@ -416,8 +412,11 @@ class ArxivClient:
         # The transport maps network failures to ArxivError, so an OSError here is a local file problem.
         try:
             tmp, headers, size = self.transport.download(
-                url, _pacer or self._pacer(self._pdf_interval), dest_dir,
-                max_bytes=max_bytes, budget=self.budget,
+                url,
+                _pacer or self._pacer(self._pdf_interval),
+                dest_dir,
+                max_bytes=max_bytes,
+                budget=self.budget,
             )
             try:
                 version = aid.version or _version_from_disposition(headers.get("content-disposition", ""))
@@ -459,18 +458,14 @@ class ArxivClient:
         done: List[PdfResult] = []
         for i in ids:
             try:
-                done.append(
-                    self.download_pdf(i, dest_dir, overwrite=overwrite, max_bytes=max_bytes, _pacer=pacer)
-                )
+                done.append(self.download_pdf(i, dest_dir, overwrite=overwrite, max_bytes=max_bytes, _pacer=pacer))
             except ArxivError as e:
                 e.completed = list(done)  # type: ignore[attr-defined]
                 raise
         return done
 
 
-def _match_ids(
-    requested: Sequence[ArxivId], papers: Sequence[Paper], fallback: frozenset
-) -> Dict[ArxivId, Paper]:
+def _match_ids(requested: Sequence[ArxivId], papers: Sequence[Paper], fallback: frozenset) -> Dict[ArxivId, Paper]:
     """Match results to requests by ID; arXiv doesn't preserve order."""
     by_base: Dict[str, List[Paper]] = {}
     for p in papers:

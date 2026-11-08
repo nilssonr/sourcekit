@@ -144,7 +144,12 @@ class RenderRunsTests(unittest.TestCase):
 
 class FormatLinesTests(unittest.TestCase):
     def test_line_lists_are_written_as_ranges(self):
-        for lines, expected in (([], "(no line)"), ([3], "line 3"), ([1, 2, 3], "lines 1–3"), ([1, 2, 5], "lines 1–2, 5")):
+        for lines, expected in (
+            ([], "(no line)"),
+            ([3], "line 3"),
+            ([1, 2, 3], "lines 1–3"),
+            ([1, 2, 5], "lines 1–2, 5"),
+        ):
             with self.subTest(lines=lines):
                 out = fmt_lines(lines)
 
@@ -207,15 +212,22 @@ class BlockTests(unittest.TestCase):
         self.assertEqual(out, "**Listing 1.2 Foo**\n\n```\na\n```")
 
     def test_callouts_follow_the_code_in_line_order(self):
-        block = Code(["a", "b", "c", "d", "e"], ["", "", "", "", ""],
-                     callouts=[Callout([4, 5], plain("second"), 10.0), Callout([3], plain("first"), 20.0)])
+        block = Code(
+            ["a", "b", "c", "d", "e"],
+            ["", "", "", "", ""],
+            callouts=[Callout([4, 5], plain("second"), 10.0), Callout([3], plain("first"), 20.0)],
+        )
 
         out = self._clean(block)
 
-        self.assertEqual(out, "```\na\nb\nc\nd\ne\n```\n\n" + CALLOUT_HEADER + "\n- (line 3) first\n- (lines 4–5) second")
+        self.assertEqual(
+            out, "```\na\nb\nc\nd\ne\n```\n\n" + CALLOUT_HEADER + "\n- (line 3) first\n- (lines 4–5) second"
+        )
 
     def test_callouts_on_the_same_line_follow_their_position_on_the_page(self):
-        block = Code(["a", "b"], ["", ""], callouts=[Callout([2], plain("lower"), 30.0), Callout([2], plain("upper"), 20.0)])
+        block = Code(
+            ["a", "b"], ["", ""], callouts=[Callout([2], plain("lower"), 30.0), Callout([2], plain("upper"), 20.0)]
+        )
 
         out = self._clean(block)
 
@@ -240,7 +252,9 @@ class BlockTests(unittest.TestCase):
 
         out = self._clean(block)
 
-        self.assertEqual(out, "![Figure 4.1](illustrations/f.png)\n\n**Figure 4.1** Caption\n\n" + DESCRIPTION + "A box.")
+        self.assertEqual(
+            out, "![Figure 4.1](illustrations/f.png)\n\n**Figure 4.1** Caption\n\n" + DESCRIPTION + "A box."
+        )
 
     def test_an_uncaptioned_figure_is_image_and_description(self):
         block = Figure("chapter-map", image(), "Chapter map", None, "A map.")
@@ -355,7 +369,9 @@ class AddedMaterialTests(unittest.TestCase):
 
         text, ranges = extract_added(marked)
 
-        self.assertEqual((text, ranges), ("# Chapter 1: Goal\n\n![x](y.png)\n", [(2, 13, "title"), (19, 30, "figure-image")]))
+        self.assertEqual(
+            (text, ranges), ("# Chapter 1: Goal\n\n![x](y.png)\n", [(2, 13, "title"), (19, 30, "figure-image")])
+        )
 
     def test_an_unbalanced_marker_is_rejected(self):
         with self.assertRaises(ValueError):
@@ -397,7 +413,7 @@ class PreTests(unittest.TestCase):
         self.assertEqual(emphasis, ("a < bf(x);", ""))
 
     def test_literal_tags_in_book_text_are_not_emphasis(self):
-        md, ranges = extract_added("```\nreturn \"<b>\" + body;\n```\n")
+        md, ranges = extract_added('```\nreturn "<b>" + body;\n```\n')
 
         emphasis = markup_emphasis(md, [list(r) for r in ranges])
 

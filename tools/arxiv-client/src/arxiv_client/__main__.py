@@ -56,10 +56,15 @@ MAX_BATCH_QUERIES = 20
 
 
 def _add_output_flags(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--format", choices=("json", "compact"), default="json",
-                        help="json (default), or compact: one line per paper (id | date | category | title)")
-    parser.add_argument("--abstract-chars", type=int, metavar="N",
-                        help="JSON only: cut each abstract to N characters (0 drops it)")
+    parser.add_argument(
+        "--format",
+        choices=("json", "compact"),
+        default="json",
+        help="json (default), or compact: one line per paper (id | date | category | title)",
+    )
+    parser.add_argument(
+        "--abstract-chars", type=int, metavar="N", help="JSON only: cut each abstract to N characters (0 drops it)"
+    )
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -70,12 +75,27 @@ def _build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("search", help="search the query API")
     for flag in ("title", "author", "abstract", "comment", "journal-ref", "category", "report-number"):
-        s.add_argument("--" + flag, action="append", default=[], metavar="TEXT",
-                       help="field search (repeatable; multi-word text is a phrase)")
-    s.add_argument("--all", action="append", default=[], metavar="TEXT",
-                   help="free text: words are ANDed; \"quoted\" parts stay phrases")
-    s.add_argument("--any-category", action="append", default=[], metavar="CAT",
-                   help="repeatable; matches papers in any of these categories (ORed)")
+        s.add_argument(
+            "--" + flag,
+            action="append",
+            default=[],
+            metavar="TEXT",
+            help="field search (repeatable; multi-word text is a phrase)",
+        )
+    s.add_argument(
+        "--all",
+        action="append",
+        default=[],
+        metavar="TEXT",
+        help='free text: words are ANDed; "quoted" parts stay phrases',
+    )
+    s.add_argument(
+        "--any-category",
+        action="append",
+        default=[],
+        metavar="CAT",
+        help="repeatable; matches papers in any of these categories (ORed)",
+    )
     s.add_argument("--raw", help="raw search_query, ANDed with the other filters")
     s.add_argument("--from", dest="date_from", metavar="YYYYMMDD", help="submitted on or after (GMT)")
     s.add_argument("--to", dest="date_to", metavar="YYYYMMDD", help="submitted on or before (GMT)")
@@ -153,8 +173,15 @@ def _build_query(spec: Dict[str, Any]) -> Q:
 
 def _search_spec(args: argparse.Namespace) -> Dict[str, Any]:
     spec: Dict[str, Any] = {name: getattr(args, name) for name in FIELDS}
-    spec.update({"all": args.all, "raw": args.raw, "any_category": args.any_category,
-                 "from": args.date_from, "to": args.date_to})
+    spec.update(
+        {
+            "all": args.all,
+            "raw": args.raw,
+            "any_category": args.any_category,
+            "from": args.date_from,
+            "to": args.date_to,
+        }
+    )
     return spec
 
 
@@ -178,8 +205,9 @@ def _load_batch(path: str, stdin: TextIO) -> List[Dict[str, Any]]:
             raise ValidationError("batch item %d must be an object" % (i + 1))
         unknown = sorted(set(item) - set(BATCH_KEYS))
         if unknown:
-            raise ValidationError("batch item %d has unknown keys %s; allowed: %s"
-                                  % (i + 1, ", ".join(unknown), ", ".join(BATCH_KEYS)))
+            raise ValidationError(
+                "batch item %d has unknown keys %s; allowed: %s" % (i + 1, ", ".join(unknown), ", ".join(BATCH_KEYS))
+            )
     return data
 
 
@@ -238,8 +266,10 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
             e.completed_papers = dict(papers)  # type: ignore[attr-defined]
             raise
         ids = []
-        lines.append("## %s  [%s]  total=%s%s" % (label, q.expr, results.total_results,
-                                                   "  (truncated)" if results.truncated else ""))
+        lines.append(
+            "## %s  [%s]  total=%s%s"
+            % (label, q.expr, results.total_results, "  (truncated)" if results.truncated else "")
+        )
         for paper in found:
             ids.append(paper.id)
             new = paper.id not in papers
@@ -249,8 +279,16 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
             papers[paper.id]["found_by"].append(label)
             lines.append(_compact_line(paper, "* " if new else "  "))
         lines.append("")
-        queries.append({"label": label, "query": q.expr, "total_results": results.total_results,
-                        "truncated": results.truncated, "count": len(ids), "ids": ids})
+        queries.append(
+            {
+                "label": label,
+                "query": q.expr,
+                "total_results": results.total_results,
+                "truncated": results.truncated,
+                "count": len(ids),
+                "ids": ids,
+            }
+        )
     lines.append("# %d unique papers from %d queries (* = first seen)" % (len(papers), len(queries)))
     result = {"queries": queries, "papers": papers, "unique": len(papers)}
     return result, "\n".join(lines)
@@ -271,8 +309,12 @@ def _run(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[
             "count": len(found),
             "papers": [_paper_dict(p, args.abstract_chars) for p in found],
         }
-        header = "## [%s]  total=%s  shown=%d%s" % (q.expr, results.total_results, len(found),
-                                                   "  (truncated)" if results.truncated else "")
+        header = "## [%s]  total=%s  shown=%d%s" % (
+            q.expr,
+            results.total_results,
+            len(found),
+            "  (truncated)" if results.truncated else "",
+        )
         return result, "\n".join([header] + [_compact_line(p) for p in found])
     if args.command == "batch":
         return _run_batch(args, client, stdin)

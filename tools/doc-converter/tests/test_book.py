@@ -97,9 +97,17 @@ class BookTests(unittest.TestCase):
         hit = [c for c in got if " ".join(s.text.strip() for s in c.spans).startswith("Uses the repositories")]
         self.assertEqual(len(hit), 1)
         covered = [text[n - 1].strip() for n in hit[0].lines]
-        self.assertEqual(covered, ["object[] userData = _userRepository", ".GetUserById(userId);",
-                                   "object[] companyData = _companyRepository", ".GetCompany();",
-                                   "_companyRepository.SaveCompany(company);", "_userRepository.SaveUser(user);"])
+        self.assertEqual(
+            covered,
+            [
+                "object[] userData = _userRepository",
+                ".GetUserById(userId);",
+                "object[] companyData = _companyRepository",
+                ".GetCompany();",
+                "_companyRepository.SaveCompany(company);",
+                "_userRepository.SaveUser(user);",
+            ],
+        )
 
     def test_sections_from_outline(self):
         secs = outline.sections(self.book, self.prof.split)
@@ -118,10 +126,11 @@ class BookTests(unittest.TestCase):
         from doc_converter.core.model import Heading, Note, Sidebar
         from doc_converter.core.rows import Text
         from doc_converter.modules.assemble.flow import Assembler
+
         sec = outline.sections(self.book, self.prof.split)["ch01"]
         text = Text(self.prof.rows, Resolver(self.book.all_spans(1, self.book.page_count), self.prof.rows.is_code_font))
         doc = Assembler(self.book, self.prof.flow, text, {}, lambda w: None).section(sec)
-        blocks = list(doc.blocks[1:]) + list(doc.footnotes)    # doc.blocks[0]: the section title (added)
+        blocks = list(doc.blocks[1:]) + list(doc.footnotes)  # doc.blocks[0]: the section title (added)
         self.assertIsInstance(doc.blocks[0], Heading)
         self.assertEqual(doc.blocks[0].src, [])
         for b in list(blocks):
@@ -150,7 +159,11 @@ class BookTests(unittest.TestCase):
         tmp.insert_pdf(self.book.doc, from_page=106, to_page=106)
         page = tmp[0]
         for s in self.book.spans(107):
-            if not self.prof.figures.is_figure_text(s) and s.text.strip() and pymupdf.Rect(s.x0, s.y0, s.x1, s.y1).intersects(f.box):
+            if (
+                not self.prof.figures.is_figure_text(s)
+                and s.text.strip()
+                and pymupdf.Rect(s.x0, s.y0, s.x1, s.y1).intersects(f.box)
+            ):
                 page.add_redact_annot(pymupdf.Rect(s.x0, s.y0, s.x1, s.y1) + (0.3, 0.6, -0.3, -0.6), fill=False)
         page.apply_redactions(images=0, graphics=0, text=0)
         left = page.get_text("text", clip=f.box)

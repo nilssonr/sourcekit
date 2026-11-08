@@ -35,11 +35,11 @@ from .pacing import BLOCK_SECONDS, BlockStore, FileGate, MemoryGate, Pacer
 DEFAULT_USER_AGENT = "arxiv-client/0.1"
 DEFAULT_BUDGET = 30.0
 DEFAULT_REQUEST_TIMEOUT = 10.0
-MIN_INTERVAL = 3.0              # arXiv: at most 1 request every 3 s, across all hosts and processes
-PDF_INTERVAL = 15.0             # robots.txt Crawl-delay for User-agent: *
+MIN_INTERVAL = 3.0  # arXiv: at most 1 request every 3 s, across all hosts and processes
+PDF_INTERVAL = 15.0  # robots.txt Crawl-delay for User-agent: *
 
-BACKOFFS = (5.0, 10.0)          # sleeps before the 2nd and 3rd attempt on 429/503/rate-exceeded
-MIN_REQUEST_WINDOW = 5.0        # budget that must remain after a backoff sleep to bother retrying
+BACKOFFS = (5.0, 10.0)  # sleeps before the 2nd and 3rd attempt on 429/503/rate-exceeded
+MIN_REQUEST_WINDOW = 5.0  # budget that must remain after a backoff sleep to bother retrying
 SUGGESTED_THROTTLE_WAIT = 60.0  # floor for the retry_after we suggest to callers
 CHUNK_SIZE = 64 * 1024
 MAX_XML_BYTES = 64 * 1024 * 1024
@@ -284,10 +284,7 @@ class Transport:
         if _is_timeout(reason) or "timed out" in str(reason):
             return ArxivTimeoutError("request to %s timed out" % host)
         text = str(reason)
-        if (
-            isinstance(reason, (socket.gaierror, ConnectionRefusedError))
-            or "Tunnel connection failed" in text
-        ):
+        if isinstance(reason, (socket.gaierror, ConnectionRefusedError)) or "Tunnel connection failed" in text:
             return NetworkBlockedError(
                 "could not reach %s (%s). If this runs in a sandbox, allow this domain "
                 "in your network settings." % (host, text),
@@ -336,6 +333,7 @@ class Transport:
         head = bytearray()
         try:
             with os.fdopen(fd, "wb") as f:
+
                 def sink(chunk: bytes) -> None:
                     if len(head) < 5:
                         head.extend(chunk[: 5 - len(head)])
@@ -382,9 +380,7 @@ class Transport:
             return "503"
         return None
 
-    def _backoff_or_raise(
-        self, signal: str, attempt: int, deadline: float, headers: Dict[str, str], url: str
-    ) -> int:
+    def _backoff_or_raise(self, signal: str, attempt: int, deadline: float, headers: Dict[str, str], url: str) -> int:
         if attempt < len(BACKOFFS):
             wait = BACKOFFS[attempt]
             if self._clock() + wait + MIN_REQUEST_WINDOW <= deadline:

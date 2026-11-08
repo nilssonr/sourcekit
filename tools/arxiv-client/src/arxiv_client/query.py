@@ -32,7 +32,7 @@ FIELDS = {
 }
 
 _OPERATOR_WORDS = {"AND", "OR", "ANDNOT", "TO"}
-_NEEDS_QUOTES = re.compile(r'[\s():\[\]]')
+_NEEDS_QUOTES = re.compile(r"[\s():\[\]]")
 _DATE_RE = re.compile(r"^\d{8}(?:\d{4}(?:\d{2})?)?$")
 
 DateLike = Union[str, _dt.date, _dt.datetime]
@@ -118,8 +118,9 @@ class Q:
 
         ``transformer protein folding`` -> ``all:transformer AND all:protein AND all:folding``.
         """
-        parts = [m.group(1) if m.group(1) is not None else m.group(2)
-                 for m in re.finditer(r'"([^"]*)"|(\S+)', text or "")]
+        parts = [
+            m.group(1) if m.group(1) is not None else m.group(2) for m in re.finditer(r'"([^"]*)"|(\S+)', text or "")
+        ]
         parts = [p for p in (p.strip() for p in parts) if p]
         if not parts:
             raise ValidationError("empty search text")
@@ -192,9 +193,7 @@ def _format_date(value: DateLike) -> str:
         return value.strftime("%Y%m%d")
     if isinstance(value, str) and _DATE_RE.match(value.strip()):
         return value.strip()
-    raise ValidationError(
-        "dates must be date/datetime objects or YYYYMMDD[HHMM[SS]] strings, got %r" % (value,)
-    )
+    raise ValidationError("dates must be date/datetime objects or YYYYMMDD[HHMM[SS]] strings, got %r" % (value,))
 
 
 def to_search_query(query: Union[str, Q]) -> str:

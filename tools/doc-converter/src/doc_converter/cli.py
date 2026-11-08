@@ -23,7 +23,9 @@ from .core.verify import tolerant_stdout
 
 
 def convert(argv: list[str] | None = None) -> None:
-    ap = argparse.ArgumentParser(prog="doc-converter convert", description="Convert a PDF into Markdown using a profile.")
+    ap = argparse.ArgumentParser(
+        prog="doc-converter convert", description="Convert a PDF into Markdown using a profile."
+    )
     ap.add_argument("--input", required=True, help="the PDF to convert")
     ap.add_argument("--output", required=True, help="directory for everything the run generates")
     ap.add_argument("--profile", required=True, help="profile name (under profiles/) or directory")
@@ -49,7 +51,9 @@ def convert(argv: list[str] | None = None) -> None:
 
 
 def census(argv: list[str] | None = None) -> None:
-    ap = argparse.ArgumentParser(prog="doc-converter census", description="Histogram of font x size x colour, with sample text.")
+    ap = argparse.ArgumentParser(
+        prog="doc-converter census", description="Histogram of font x size x colour, with sample text."
+    )
     ap.add_argument("--input", required=True, help="the PDF")
     ap.add_argument("--pages", required=True, help="PDF page range, e.g. 16-296")
     args = ap.parse_args(argv)

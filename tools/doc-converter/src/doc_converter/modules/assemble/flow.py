@@ -46,23 +46,24 @@ from ..serialize.markdown import render_runs
 class FlowConfig:
     """Layout values for joining rows into blocks (set by the profile). Right edges and positions are
     for even pages; odd pages sit odd_shift further right."""
+
     page: PageConfig
     column_left: Callable[[int], float]
     column_right: Callable[[int], float]
     odd_shift: float
-    right_edge: dict[str, float]               # full-line right edge per context: "body", "sidebar", "note"
-    right_slack: float                         # a line is full when it ends within this of the right edge
-    sidebar_quote_indent: float                # deeper indents in a sidebar are quotes (narrower on the right too)
-    listing_continue_top: float                # code above this on the next page continues a listing
-    gap_sidebar: float                         # max baseline step inside a sidebar paragraph or item
-    gap_list: float                            # max baseline step inside a body list item
-    gap_note: float                            # max baseline step inside a note
-    gap_para: float                            # max baseline step inside a body paragraph
-    align_tol: float                           # left edges this close are aligned
-    indent_min: float                          # a larger indent starts a new paragraph
-    heading_merge_gap: float                   # a second heading row this close continues the heading
-    smallcaps_lower_max: float                 # small-capital spans this size or smaller are lower case
-    is_body_text: Callable[[Span], bool]       # body text (its most common left edge is the column)
+    right_edge: dict[str, float]  # full-line right edge per context: "body", "sidebar", "note"
+    right_slack: float  # a line is full when it ends within this of the right edge
+    sidebar_quote_indent: float  # deeper indents in a sidebar are quotes (narrower on the right too)
+    listing_continue_top: float  # code above this on the next page continues a listing
+    gap_sidebar: float  # max baseline step inside a sidebar paragraph or item
+    gap_list: float  # max baseline step inside a body list item
+    gap_note: float  # max baseline step inside a note
+    gap_para: float  # max baseline step inside a body paragraph
+    align_tol: float  # left edges this close are aligned
+    indent_min: float  # a larger indent starts a new paragraph
+    heading_merge_gap: float  # a second heading row this close continues the heading
+    smallcaps_lower_max: float  # small-capital spans this size or smaller are lower case
+    is_body_text: Callable[[Span], bool]  # body text (its most common left edge is the column)
     is_note_label: Callable[[Span], bool]
     is_bullet: Callable[[Span], bool]
     is_list_number: Callable[[Span], bool]
@@ -71,7 +72,7 @@ class FlowConfig:
     is_figure_text: Callable[[Span], bool]
     is_listing_head: Callable[[Span], bool]
     is_fn_start_marker: Callable[[Span], bool]
-    listing_id_pattern: str                    # listing number in its title
+    listing_id_pattern: str  # listing number in its title
     skip_pages: frozenset[int]
     page_figures: dict[int, tuple[str, int]]
 
@@ -148,8 +149,12 @@ class Assembler:
 
     def listing_image(self, pno: int, spans: list[Span], area: pymupdf.Rect, name: str) -> ImageRef:
         ink = [s for s in spans if not is_ws(s)]
-        r = pymupdf.Rect(min([self.cfg.column_left(pno)] + [s.x0 for s in ink]), min(s.y0 for s in ink),
-                         max([self.cfg.column_right(pno)] + [s.x1 for s in ink]), max(s.y1 for s in ink))
+        r = pymupdf.Rect(
+            min([self.cfg.column_left(pno)] + [s.x0 for s in ink]),
+            min(s.y0 for s in ink),
+            max([self.cfg.column_right(pno)] + [s.x1 for s in ink]),
+            max(s.y1 for s in ink),
+        )
         for d in self.book.drawings(pno):
             if d["rect"].intersects(area):
                 r |= d["rect"]
@@ -172,11 +177,18 @@ class Assembler:
         lst_cfg = cfg.page.listings
         p0, p1 = sec.pages
         blocks: list[Block] = []
-        listing_state: dict[int, list[int]] = {}   # id(Code) -> [last page, page parts so far]
+        listing_state: dict[int, list[int]] = {}  # id(Code) -> [last page, page parts so far]
         if sec.title:
             blocks.append(Heading(1, [Run(sec.title, "")]))
-        st: dict = {"para": None, "pending": [], "list": None, "sidebar": None, "note": None, "dropcap": "",
-                    "last_head_top": None}
+        st: dict = {
+            "para": None,
+            "pending": [],
+            "list": None,
+            "sidebar": None,
+            "note": None,
+            "dropcap": "",
+            "last_head_top": None,
+        }
 
         def full_right(r: Row, ctx: str) -> bool:
             off = cfg.odd_shift if r.page % 2 == 1 else 0.0
@@ -232,7 +244,8 @@ class Assembler:
                 return
             st["note"] = None
             (st["pending"] if st["para"] else blocks).append(
-                Note(n["label"], text.join_rows(n["rows"]), src=self.rows_src(n["rows"])))
+                Note(n["label"], text.join_rows(n["rows"]), src=self.rows_src(n["rows"]))
+            )
 
         def close_all() -> None:
             close_sidebar()
@@ -257,11 +270,16 @@ class Assembler:
                     if not desc:
                         self.warn(f"no description for {key}")
                     if fig.caption:
-                        b = Figure(fig.id, image, f"Figure {fig.id}",
-                                   text.join_rows(text.rows_of(fig.caption), plain=True), desc or None, src=fsrc)
+                        b = Figure(
+                            fig.id,
+                            image,
+                            f"Figure {fig.id}",
+                            text.join_rows(text.rows_of(fig.caption), plain=True),
+                            desc or None,
+                            src=fsrc,
+                        )
                     else:
-                        b = Figure(fig.id, image, fig.id.replace('-', ' ').capitalize(), None, desc or None,
-                                   src=fsrc)
+                        b = Figure(fig.id, image, fig.id.replace("-", " ").capitalize(), None, desc or None, src=fsrc)
                     if st["para"] or st["sidebar"]:
                         st["pending"].append(b)
                     else:
@@ -279,8 +297,9 @@ class Assembler:
                 if kind == "listing":
                     close_all()
                     bar, head, body = obj
-                    title = re.sub(r"\s+", " ", " ".join(runs_text(text.row_runs(r, plain=True))
-                                                         for r in text.rows_of(head))).strip()
+                    title = re.sub(
+                        r"\s+", " ", " ".join(runs_text(text.row_runs(r, plain=True)) for r in text.rows_of(head))
+                    ).strip()
                     m = re.match(cfg.listing_id_pattern, title)
                     lid = m.group(1) if m else "?"
                     code = [s for s in body if cfg.is_code_block(s)]
@@ -290,8 +309,9 @@ class Assembler:
                     listing_state[id(lst)] = [p, 1]
                     calls = [s for s in body if cfg.is_callout(s)]
                     if calls:
-                        area = pymupdf.Rect(0, bar.y0, self.book.page(p).rect.x1,
-                                            max(s.y1 for s in body if not is_ws(s)) + 3)
+                        area = pymupdf.Rect(
+                            0, bar.y0, self.book.page(p).rect.x1, max(s.y1 for s in body if not is_ws(s)) + 3
+                        )
                         lst.callouts = self.callouts(p, area, lines, pos, calls)
                         lst.images.append(self.listing_image(p, head + body, area, f"listing-{lid}.png"))
                     push(lst)
@@ -301,8 +321,15 @@ class Assembler:
                     lines = code_lines(ink, self.warn, lst_cfg)
                     prev = blocks[-1] if blocks else None
                     state = listing_state.get(id(prev)) if isinstance(prev, Code) else None
-                    if (not st["para"] and not st["list"] and not st["sidebar"] and not st["note"]
-                            and top < cfg.listing_continue_top and state and state[0] == p - 1):
+                    if (
+                        not st["para"]
+                        and not st["list"]
+                        and not st["sidebar"]
+                        and not st["note"]
+                        and top < cfg.listing_continue_top
+                        and state
+                        and state[0] == p - 1
+                    ):
                         sep = 1 if prev.lines and prev.lines[-1].strip() == "}" and lines[0].text.strip() != "}" else 0
                         base = len(prev.lines) + sep
                         ctext, pos, cmarks = self.code_text(lines)
@@ -313,13 +340,21 @@ class Assembler:
                         state[1] += 1
                         self.warn(f"listing {prev.lid} continued across pages {p - 1}-{p}")
                         if calls:
-                            area = pymupdf.Rect(0, min(s.y0 for s in ink) - 6, self.book.page(p).rect.x1,
-                                                max(s.y1 for s in ink + calls) + 3)
+                            area = pymupdf.Rect(
+                                0,
+                                min(s.y0 for s in ink) - 6,
+                                self.book.page(p).rect.x1,
+                                max(s.y1 for s in ink + calls) + 3,
+                            )
                             prev.callouts += self.callouts(p, area, lines, [base + i for i in pos], calls)
-                            prev.images.append(self.listing_image(p, ink + calls, area,
-                                                                  f"listing-{prev.lid}-{state[1]}.png"))
-                    elif st["sidebar"] and not calls and any(b.contains(pymupdf.Point(ink[0].x0 + 1, ink[0].cy))
-                                                             for b in sidebar_boxes):
+                            prev.images.append(
+                                self.listing_image(p, ink + calls, area, f"listing-{prev.lid}-{state[1]}.png")
+                            )
+                    elif (
+                        st["sidebar"]
+                        and not calls
+                        and any(b.contains(pymupdf.Point(ink[0].x0 + 1, ink[0].cy)) for b in sidebar_boxes)
+                    ):
                         sidebar_flush_inner()
                         ctext, _, cmarks = self.code_text(lines)
                         st["sidebar"]["parts"].append(Code(ctext, cmarks, src=self.src(ink)))
@@ -330,8 +365,12 @@ class Assembler:
                             label = self.book.page_label(p)
                             lst = Code(ctext, cmarks, "", f"p{label}", src=self.src(ink + calls))
                             listing_state[id(lst)] = [p, 1]
-                            area = pymupdf.Rect(0, min(s.y0 for s in ink + calls) - 3, self.book.page(p).rect.x1,
-                                                max(s.y1 for s in ink + calls) + 3)
+                            area = pymupdf.Rect(
+                                0,
+                                min(s.y0 for s in ink + calls) - 3,
+                                self.book.page(p).rect.x1,
+                                max(s.y1 for s in ink + calls) + 3,
+                            )
                             lst.callouts = self.callouts(p, area, lines, pos, calls)
                             n = sum(1 for b in blocks if isinstance(b, Code) and b.lid.startswith(f"p{label}"))
                             if n:
@@ -375,9 +414,13 @@ class Assembler:
                     lvl = (2 if cls == "h2" else 3) + sec.heading_shift
                     prev = blocks[-1] if blocks else None
                     t_md = render_runs(t)
-                    if (isinstance(prev, Heading) and prev.level == lvl and not re.match(r"^\d", t_md)
-                            and st["last_head_top"] is not None
-                            and 0 < r.top - st["last_head_top"] < cfg.heading_merge_gap):
+                    if (
+                        isinstance(prev, Heading)
+                        and prev.level == lvl
+                        and not re.match(r"^\d", t_md)
+                        and st["last_head_top"] is not None
+                        and 0 < r.top - st["last_head_top"] < cfg.heading_merge_gap
+                    ):
                         hm = re.search(r"([A-Za-z]+)-$", render_runs(prev.inlines))
                         tm = re.match(r"([A-Za-z]+)", t_md)
                         if hm and tm:
@@ -398,8 +441,12 @@ class Assembler:
                     s_ = ""
                     prev_s = None
                     for s in r.spans:
-                        if prev_s and s.x0 - prev_s.x1 > 1.0 and not prev_s.text[-1:].isspace() \
-                                and not s.text[:1].isspace():
+                        if (
+                            prev_s
+                            and s.x0 - prev_s.x1 > 1.0
+                            and not prev_s.text[-1:].isspace()
+                            and not s.text[:1].isspace()
+                        ):
                             s_ += " "
                         s_ += s.text.lower() if s.size <= cfg.smallcaps_lower_max else s.text
                         prev_s = s
@@ -429,8 +476,7 @@ class Assembler:
                 if cls == "continued":
                     if st["sidebar"]:
                         continue
-                    src = st["pending"] if st["pending"] and isinstance(st["pending"][-1], (Sidebar, Note)) \
-                        else blocks
+                    src = st["pending"] if st["pending"] and isinstance(st["pending"][-1], (Sidebar, Note)) else blocks
                     prev_b = src[-1] if src else None
                     if isinstance(prev_b, (Sidebar, Note)):
                         src.pop()
@@ -452,17 +498,22 @@ class Assembler:
                     if sb["list"]:
                         last = sb["list"][-1]
                         lr = last[-1]
-                        if any(abs(self.rel_left(r.page, r.left) - x) < cfg.align_tol
-                               for x in self.item_text_lefts(last)) and \
-                                (r.page != lr.page or r.top - lr.top < cfg.gap_sidebar):
+                        if any(
+                            abs(self.rel_left(r.page, r.left) - x) < cfg.align_tol for x in self.item_text_lefts(last)
+                        ) and (r.page != lr.page or r.top - lr.top < cfg.gap_sidebar):
                             last.append(r)
                             continue
                         sidebar_flush_inner()
                     pr = sb["para"][-1] if sb["para"] else None
-                    if pr and ((not full_right(pr, "sidebar")) if pr.page != r.page
-                               else (r.top - pr.top > cfg.gap_sidebar or not full_right(pr, "sidebar")
-                                     or abs(self.rel_left(r.page, r.left) - self.rel_left(pr.page, pr.left))
-                                     > cfg.align_tol)):
+                    if pr and (
+                        (not full_right(pr, "sidebar"))
+                        if pr.page != r.page
+                        else (
+                            r.top - pr.top > cfg.gap_sidebar
+                            or not full_right(pr, "sidebar")
+                            or abs(self.rel_left(r.page, r.left) - self.rel_left(pr.page, pr.left)) > cfg.align_tol
+                        )
+                    ):
                         sidebar_flush_inner()
                     sb["para"] = (sb["para"] or []) + [r]
                     continue
@@ -485,16 +536,20 @@ class Assembler:
                     if st["note"]:
                         n = st["note"]
                         lr = n["rows"][-1]
-                        if r.page == lr.page and r.top - lr.top < cfg.gap_note and abs(r.left - n["left"]) < cfg.align_tol:
+                        if (
+                            r.page == lr.page
+                            and r.top - lr.top < cfg.gap_note
+                            and abs(r.left - n["left"]) < cfg.align_tol
+                        ):
                             n["rows"].append(r)
                             continue
                         close_note()
                     if st["list"] and st["list"]["ctx"] == "body":
                         last = st["list"]["items"][-1]
                         lr = last[-1]
-                        if any(abs(self.rel_left(r.page, r.left) - x) < cfg.align_tol
-                               for x in self.item_text_lefts(last)) and \
-                                (r.page != lr.page or r.top - lr.top < cfg.gap_list):
+                        if any(
+                            abs(self.rel_left(r.page, r.left) - x) < cfg.align_tol for x in self.item_text_lefts(last)
+                        ) and (r.page != lr.page or r.top - lr.top < cfg.gap_list):
                             last.append(r)
                             continue
                         flush_list()
@@ -507,33 +562,47 @@ class Assembler:
                     indented = r.left - col > cfg.indent_min
                     if st["para"]:
                         pr = st["para"][-1]
-                        cont = (not indented and full_right(pr, "body")
-                                and (pr.page != r.page or r.top - pr.top < cfg.gap_para or st["pending"]))
+                        cont = (
+                            not indented
+                            and full_right(pr, "body")
+                            and (pr.page != r.page or r.top - pr.top < cfg.gap_para or st["pending"])
+                        )
                         if cont:
                             st["para"].append(r)
                             continue
                         flush_para()
                     st["para"] = [r]
                     continue
-                self.warn(f"unclassified row p{p} [{r.spans[0].font}/{r.spans[0].size}/{r.spans[0].color}]: "
-                          f"{runs_text(text.row_runs(r))[:60]!r}")
+                self.warn(
+                    f"unclassified row p{p} [{r.spans[0].font}/{r.spans[0].size}/{r.spans[0].color}]: "
+                    f"{runs_text(text.row_runs(r))[:60]!r}"
+                )
         close_all()
         return SectionDoc(sec, blocks, self.footnotes(sec))
 
     def footnotes(self, sec: Section) -> list[Footnote]:
         cfg, text = self.cfg, self.text
         p0, p1 = sec.pages
-        spans = [s for p in range(p0, p1 + 1) if p not in cfg.skip_pages for s in self.book.spans(p)
-                 if not cfg.is_figure_text(s) and not cfg.is_code_block(s) and not cfg.is_listing_head(s)
-                 and not cfg.is_callout(s)]
+        spans = [
+            s
+            for p in range(p0, p1 + 1)
+            if p not in cfg.skip_pages
+            for s in self.book.spans(p)
+            if not cfg.is_figure_text(s)
+            and not cfg.is_code_block(s)
+            and not cfg.is_listing_head(s)
+            and not cfg.is_callout(s)
+        ]
         out: list[Footnote] = []
         cur: dict | None = None
 
         def emit() -> None:
             nonlocal cur
             if cur:
-                rows = [Row(r.page, r.top, [s for s in r.spans if not cfg.is_fn_start_marker(s)], r.left, r.right,
-                            r.cls) for r in cur["rows"]]
+                rows = [
+                    Row(r.page, r.top, [s for s in r.spans if not cfg.is_fn_start_marker(s)], r.left, r.right, r.cls)
+                    for r in cur["rows"]
+                ]
                 out.append(Footnote(cur["num"], text.join_rows(rows), src=self.rows_src(cur["rows"])))
             cur = None
 

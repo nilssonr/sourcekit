@@ -35,8 +35,8 @@ class CliRun(NamedTuple):
     code: int
     out: str
     err: str
-    opener: FakeOpener            # the requests the command sent
-    user_agents: List[str]        # the User-Agent each client was built with
+    opener: FakeOpener  # the requests the command sent
+    user_agents: List[str]  # the User-Agent each client was built with
 
 
 def run_cli(argv: List[str], steps: List[Step], stdin: Optional[str] = None, **client_kw) -> CliRun:
@@ -50,8 +50,9 @@ def run_cli(argv: List[str], steps: List[Step], stdin: Optional[str] = None, **c
         user_agents.append(ua)
         return make_client(clock, opener, user_agent=ua, **client_kw)
 
-    code = main(argv, client_factory=factory, stdout=out, stderr=err,
-                stdin=io.StringIO(stdin) if stdin is not None else None)
+    code = main(
+        argv, client_factory=factory, stdout=out, stderr=err, stdin=io.StringIO(stdin) if stdin is not None else None
+    )
     return CliRun(code, out.getvalue(), err.getvalue(), opener, user_agents)
 
 
@@ -125,9 +126,11 @@ class CommandTests(unittest.TestCase):
 
     def test_a_pdf_that_cannot_be_written_is_a_local_io_error_listing_the_completed_files(self):
         with tempfile.TemporaryDirectory() as out:
-            run = run_cli(["pdf", "2301.00001v1", "2301.00002v1", "--out", out],
-                          [FakeResponse(200, PDF, PDF_HEADERS), FakeResponse(200, PDF, PDF_HEADERS)],
-                          create_part_file=part_file_failing_after(1))
+            run = run_cli(
+                ["pdf", "2301.00001v1", "2301.00002v1", "--out", out],
+                [FakeResponse(200, PDF, PDF_HEADERS), FakeResponse(200, PDF, PDF_HEADERS)],
+                create_part_file=part_file_failing_after(1),
+            )
         self.assertEqual(run.code, 8)
         payload = error_payload(run)
         self.assertEqual(payload["error"], "local_io")
@@ -154,7 +157,11 @@ class CommandTests(unittest.TestCase):
         # --help needs no network.
         proc = subprocess.run(
             [sys.executable, "-m", "arxiv_client", "--help"],
-            cwd=ROOT, capture_output=True, text=True, timeout=30, check=False,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("search", proc.stdout)
@@ -170,10 +177,12 @@ class BatchTests(unittest.TestCase):
         return path
 
     def test_batch_deduplicates_papers_and_records_which_queries_found_them(self):
-        path = self.batch_file([
-            {"label": "first", "title": "diffusion", "any_category": ["cs.CV", "cs.LG"], "max": 5},
-            {"abstract": "mode collapse", "sort": "submitted"},
-        ])
+        path = self.batch_file(
+            [
+                {"label": "first", "title": "diffusion", "any_category": ["cs.CV", "cs.LG"], "max": 5},
+                {"abstract": "mode collapse", "sort": "submitted"},
+            ]
+        )
         run = run_cli(["batch", path], [feed_of("2401.00001", "2401.00002"), feed_of("2401.00002", "2401.00003")])
         self.assertEqual(run.code, 0, run.err)
         data = json.loads(run.out)
@@ -189,12 +198,21 @@ class BatchTests(unittest.TestCase):
 
     def test_every_query_is_validated_before_any_request_is_sent(self):
         bad_items = [
-            {"title": "x", "sort": "newest"}, {"title": "x", "colour": "red"}, {"max": 3},
-            {"title": "x", "max": 0}, {"title": 5}, "not an object",
-            {"title": "x", "max": None}, {"title": "x", "max": "10"}, {"title": "x", "max": True},
-            {"title": "x", "label": 0}, {"title": "x", "label": ""}, {"title": "x", "label": False},
+            {"title": "x", "sort": "newest"},
+            {"title": "x", "colour": "red"},
+            {"max": 3},
+            {"title": "x", "max": 0},
+            {"title": 5},
+            "not an object",
+            {"title": "x", "max": None},
+            {"title": "x", "max": "10"},
+            {"title": "x", "max": True},
+            {"title": "x", "label": 0},
+            {"title": "x", "label": ""},
+            {"title": "x", "label": False},
             {"title": "x", "label": "q1"},  # q1 is the first item's default label
-            {"title": "x", "sort": ["submitted"]}, {"title": "x", "sort": {"a": 1}},
+            {"title": "x", "sort": ["submitted"]},
+            {"title": "x", "sort": {"a": 1}},
         ]
         for bad in bad_items:
             with self.subTest(bad=bad):
@@ -245,8 +263,10 @@ class BatchTests(unittest.TestCase):
 
     def test_compact_batch_output_marks_first_appearances_and_counts_unique_papers(self):
         path = self.batch_file([{"label": "a", "title": "x", "max": 1}, {"label": "b", "title": "y"}])
-        run = run_cli(["batch", path, "--format", "compact"],
-                      [feed_of("2401.00001", total=40), feed_of("2401.00001", "2401.00002")])
+        run = run_cli(
+            ["batch", path, "--format", "compact"],
+            [feed_of("2401.00001", total=40), feed_of("2401.00001", "2401.00002")],
+        )
         self.assertEqual(run.code, 0, run.err)
         lines = run.out.splitlines()
         self.assertEqual(lines[0], "## a  [ti:x]  total=40")
@@ -259,32 +279,51 @@ class BatchTests(unittest.TestCase):
 class OutputFormatTests(unittest.TestCase):
     def test_compact_search_output_has_a_header_and_one_line_per_paper(self):
         run = run_cli(
-            ["search", "--abstract", "homogenization", "--any-category", "cs.HC", "--any-category", "cs.CL",
-             "--format", "compact", "--max", "1"],
+            [
+                "search",
+                "--abstract",
+                "homogenization",
+                "--any-category",
+                "cs.HC",
+                "--any-category",
+                "cs.CL",
+                "--format",
+                "compact",
+                "--max",
+                "1",
+            ],
             [feed_of("2401.00001", total=7)],
         )
         self.assertEqual(run.code, 0, run.err)
-        self.assertEqual(run.out.splitlines(), [
-            "## [abs:homogenization AND (cat:cs.HC OR cat:cs.CL)]  total=7  shown=1",
-            "2401.00001 | 2024-01-01 | cs.LG | Paper 2401.00001",
-        ])
+        self.assertEqual(
+            run.out.splitlines(),
+            [
+                "## [abs:homogenization AND (cat:cs.HC OR cat:cs.CL)]  total=7  shown=1",
+                "2401.00001 | 2024-01-01 | cs.LG | Paper 2401.00001",
+            ],
+        )
 
     def test_compact_fetch_output_lists_the_ids_not_found(self):
         run = run_cli(["fetch", "2401.00001", "2401.00002", "--format", "compact"], [feed_of("2401.00001")])
         self.assertEqual(run.code, 0, run.err)
-        self.assertEqual(run.out.splitlines(), ["2401.00001 | 2024-01-01 | cs.LG | Paper 2401.00001",
-                                                "# not found: 2401.00002"])
+        self.assertEqual(
+            run.out.splitlines(), ["2401.00001 | 2024-01-01 | cs.LG | Paper 2401.00001", "# not found: 2401.00002"]
+        )
 
     def test_abstract_chars_zero_drops_the_abstract(self):
-        run = run_cli(["search", "--title", "x", "--abstract-chars", "0"],
-                      [xml_response(make_feed([make_entry("2401.00001", summary="word " * 100)]))])
+        run = run_cli(
+            ["search", "--title", "x", "--abstract-chars", "0"],
+            [xml_response(make_feed([make_entry("2401.00001", summary="word " * 100)]))],
+        )
         paper = json.loads(run.out)["papers"][0]
         self.assertNotIn("summary", paper)
         self.assertEqual(paper["authors"], [{"name": "Someone"}])
 
     def test_abstract_chars_cuts_the_abstract_and_marks_the_cut(self):
-        run = run_cli(["fetch", "2401.00001", "--abstract-chars", "200"],
-                      [xml_response(make_feed([make_entry("2401.00001", summary="word " * 100)]))])
+        run = run_cli(
+            ["fetch", "2401.00001", "--abstract-chars", "200"],
+            [xml_response(make_feed([make_entry("2401.00001", summary="word " * 100)]))],
+        )
         summary = json.loads(run.out)["papers"]["2401.00001"]["summary"]
         self.assertLessEqual(len(summary), 201)
         self.assertTrue(summary.endswith("…"))

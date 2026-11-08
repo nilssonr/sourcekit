@@ -33,8 +33,11 @@ class CommandTests(unittest.TestCase):
     def test_an_unknown_command_exits_with_the_usage_in_the_message(self):
         code, _ = self.run_main(["bogus"])
 
-        self.assertEqual(code, "unknown command 'bogus'\nusage: doc-converter {convert,verify,census} [options]   "
-                               "(doc-converter <command> --help for details)")
+        self.assertEqual(
+            code,
+            "unknown command 'bogus'\nusage: doc-converter {convert,verify,census} [options]   "
+            "(doc-converter <command> --help for details)",
+        )
 
     def test_census_rejects_a_malformed_page_range_before_opening_the_pdf(self):
         code, _ = self.run_main(["census", "--input", "/nonexistent/book.pdf", "--pages", "16-"])

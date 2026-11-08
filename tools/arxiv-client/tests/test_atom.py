@@ -69,6 +69,7 @@ class FullFeedTests(unittest.TestCase):
 
     def test_to_dict_is_json_ready(self):
         import json
+
         d = self.paper.to_dict()
         json.dumps(d)
         self.assertEqual(d["published"], "2023-01-01T09:00:00Z")

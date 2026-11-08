@@ -79,15 +79,14 @@ arxiv pdf 2301.00001 --out ./papers
 from arxiv_client import ArxivClient, Q
 
 client = ArxivClient()
-for paper in client.search(Q.title("diffusion") & Q.category("cs.CV"), max_results=50,
-                           sort_by="submittedDate"):
+for paper in client.search(Q.title("diffusion") & Q.category("cs.CV"), max_results=50, sort_by="submittedDate"):
     print(paper.versioned_id, paper.title)
 
 result = client.fetch(["1706.03762", "hep-th/9901001v1", "2401.99999"])
-result.papers      # keyed by the ID strings you passed in
-result.not_found   # ["2401.99999"]
+result.papers  # keyed by the ID strings you passed in
+result.not_found  # ["2401.99999"]
 
-feed = client.feed(["cs.AI"])            # empty (not an error) at weekends
+feed = client.feed(["cs.AI"])  # empty (not an error) at weekends
 client.download_pdf("2301.00001", "./papers")
 ```
 

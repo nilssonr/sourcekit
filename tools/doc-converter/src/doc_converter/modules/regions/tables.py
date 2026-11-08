@@ -17,11 +17,12 @@ from .listings import hexrgb
 @dataclass(frozen=True)
 class TableConfig:
     """The book's table style (set by the profile)."""
-    header_fill: str                          # fill colour of the header band
-    rule_fill: str                            # fill colour of the horizontal and vertical rules
-    row_gap: float                            # a baseline step larger than this starts a new body row
-    caption_word: str                         # caption starts with this word ("Table")
-    id_pattern: str                           # the table id inside the caption start
+
+    header_fill: str  # fill colour of the header band
+    rule_fill: str  # fill colour of the horizontal and vertical rules
+    row_gap: float  # a baseline step larger than this starts a new body row
+    caption_word: str  # caption starts with this word ("Table")
+    id_pattern: str  # the table id inside the caption start
     is_caption_font: Callable[[Span], bool]
     is_caption_start: Callable[[Span], bool]
     is_figure_text: Callable[[Span], bool]
@@ -33,14 +34,16 @@ class Table:
     page: int
     top: float
     caption: list[Span]
-    header: list[list[Span]]           # one span list per column
-    rows: list[list[list[Span]]]       # rows -> columns -> spans
+    header: list[list[Span]]  # one span list per column
+    rows: list[list[list[Span]]]  # rows -> columns -> spans
     spans: list[Span] = field(default_factory=list)  # every span consumed (caption + cells)
     region: pymupdf.Rect | None = None
 
 
 def _caption(spans: list[Span], start: Span, cfg: TableConfig) -> list[Span]:
-    caps = sorted((s for s in spans if cfg.is_caption_font(s) and s.y0 >= start.y0 - 1), key=lambda s: (s.baseline, s.x0))
+    caps = sorted(
+        (s for s in spans if cfg.is_caption_font(s) and s.y0 >= start.y0 - 1), key=lambda s: (s.baseline, s.x0)
+    )
     out, last = [], start.baseline
     for s in caps:
         if abs(s.baseline - start.baseline) < 1.5 or 0 < s.baseline - last < 13.5:
@@ -54,8 +57,14 @@ def _rules(book: Book, pno: int, cfg: TableConfig):
     black = [d["rect"] for d in draws if d["type"] == "f" and hexrgb(d.get("fill")) == cfg.rule_fill]
     hrules = sorted((r for r in black if r.width > 100 and r.height < 1.0), key=lambda r: r.y0)
     vrules = [r for r in black if r.width < 0.6 and r.height > 10]
-    heads = sorted((d["rect"] for d in draws if d["type"] == "f" and hexrgb(d.get("fill")) == cfg.header_fill
-                    and d["rect"].height > 10), key=lambda r: (r.y0, r.x0))
+    heads = sorted(
+        (
+            d["rect"]
+            for d in draws
+            if d["type"] == "f" and hexrgb(d.get("fill")) == cfg.header_fill and d["rect"].height > 10
+        ),
+        key=lambda r: (r.y0, r.x0),
+    )
     return hrules, vrules, heads
 
 
@@ -105,8 +114,14 @@ def detect(book: Book, pno: int, warn, cfg: TableConfig) -> list[Table]:
             warn(f"p{pno}: table without a caption at y={region.y0:.0f}")
         if not vs:
             warn(f"p{pno}: table {tid}: no vertical rules; columns from header text")
-            hsp = sorted((s for s in spans if region.contains(pymupdf.Point(s.cx, s.cy)) and s.cy < head_bottom
-                          and s.text.strip()), key=lambda s: s.x0)
+            hsp = sorted(
+                (
+                    s
+                    for s in spans
+                    if region.contains(pymupdf.Point(s.cx, s.cy)) and s.cy < head_bottom and s.text.strip()
+                ),
+                key=lambda s: s.x0,
+            )
             vs = [round((a.x1 + b.x0) / 2, 1) for a, b in itertools.pairwise(hsp) if b.x0 - a.x1 > 8]
         edges = [region.x0] + vs + [region.x1]
         ncol = len(edges) - 1

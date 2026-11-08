@@ -42,14 +42,15 @@ from .profile import load as load_profile
 @dataclass(frozen=True)
 class VerifyConfig:
     """What the verifier leaves out of the PDF's word stream (set by the profile)."""
-    header_band: float                        # baselines above this are running headers
-    superscript_max: float                    # smaller text is a superscript (footnote marker)
-    is_figure_text: Callable[[Span], bool]    # figure-label text
-    is_bullet_glyph: Callable[[Span], bool]   # bullet glyphs
-    is_page_number: Callable[[Span], bool]    # a row made only of these is a page number
-    is_code_block: Callable[[Span], bool]     # code block text (its bold/italic must survive as <b>/<i>)
+
+    header_band: float  # baselines above this are running headers
+    superscript_max: float  # smaller text is a superscript (footnote marker)
+    is_figure_text: Callable[[Span], bool]  # figure-label text
+    is_bullet_glyph: Callable[[Span], bool]  # bullet glyphs
+    is_page_number: Callable[[Span], bool]  # a row made only of these is a page number
+    is_code_block: Callable[[Span], bool]  # code block text (its bold/italic must survive as <b>/<i>)
     is_continuation_label: Callable[[Span], bool]  # "(continued)" labels the converter drops on purpose
-    column_gap: float                         # a wider horizontal gap inside a row separates columns
+    column_gap: float  # a wider horizontal gap inside a row separates columns
 
 
 def tokens(s: str, *, keep_case: bool = False) -> list[str]:
@@ -73,8 +74,9 @@ def case_differences(expected: list[str], actual: list[str]) -> list[str]:
 
 
 def _excluded(s: Span, cfg: VerifyConfig) -> bool:
-    return (s.baseline < cfg.header_band or cfg.is_figure_text(s) or cfg.is_bullet_glyph(s)
-            or cfg.is_continuation_label(s))
+    return (
+        s.baseline < cfg.header_band or cfg.is_figure_text(s) or cfg.is_bullet_glyph(s) or cfg.is_continuation_label(s)
+    )
 
 
 def page_text(spans: list[Span], cfg: VerifyConfig) -> str:
@@ -186,7 +188,9 @@ def report(book: Book, book_text: str, p0: int, p1: int, skip_pages: set[int], c
             home.subtract(o)
     leftover_in = [c for c in ins if +c]
     moved = len(out_ops) - len(unpaired)
-    lines.append(f"moves: {moved} stretches reappear elsewhere; unexplained: {len(unpaired)} out, {len(leftover_in)} in")
+    lines.append(
+        f"moves: {moved} stretches reappear elsewhere; unexplained: {len(unpaired)} out, {len(leftover_in)} in"
+    )
     for tag, i1, i2, _j1, _j2 in unpaired:
         lines.append(f"  UNPAIRED {tag} pdf[{i1}:{i2}]: {' '.join(expected[i1:i2])[:140]}")
     for c in leftover_in:
@@ -217,7 +221,7 @@ def _excluded_boxes(spans: list[Span], cfg: VerifyConfig) -> list[pymupdf.Rect]:
 def independent(book: Book, pages: list[int], book_text: str, cfg: VerifyConfig) -> str:
     """Whole-book word multiset from PyMuPDF's own word extraction (not the converter's spans, rows
     or regions) against all files' book text. Shares only the exclusion predicates."""
-    words: list[tuple[str, bool]] = []   # (word, last on its line)
+    words: list[tuple[str, bool]] = []  # (word, last on its line)
     for p in pages:
         page = book.page(p)
         boxes = _excluded_boxes(book.spans(p), cfg)
@@ -243,12 +247,14 @@ def independent(book: Book, pages: list[int], book_text: str, cfg: VerifyConfig)
     missing = sorted(((v - actual[k], k) for k, v in expected.items() if actual[k] < v), reverse=True)
     extra = sorted(((v - expected[k], k) for k, v in actual.items() if expected[k] < v), reverse=True)
     matched = sum(min(v, actual[k]) for k, v in expected.items())
-    return (f"independent count: PyMuPDF words on {len(pages)} pages vs all Markdown files minus added material\n"
-            f"(a coarse check of the loading path: line-end hyphens are joined in PyMuPDF's word order, which is\n"
-            f"not reading order where a listing or figure interrupts a paragraph)\n"
-            f"pdf {sum(expected.values())} words, markdown {sum(actual.values())} words, matched {matched}\n"
-            f"missing from markdown ({len(missing)}): {' '.join(f'{k}×{n}' for n, k in missing)}\n"
-            f"extra in markdown ({len(extra)}): {' '.join(f'{k}×{n}' for n, k in extra)}\n")
+    return (
+        f"independent count: PyMuPDF words on {len(pages)} pages vs all Markdown files minus added material\n"
+        f"(a coarse check of the loading path: line-end hyphens are joined in PyMuPDF's word order, which is\n"
+        f"not reading order where a listing or figure interrupts a paragraph)\n"
+        f"pdf {sum(expected.values())} words, markdown {sum(actual.values())} words, matched {matched}\n"
+        f"missing from markdown ({len(missing)}): {' '.join(f'{k}×{n}' for n, k in missing)}\n"
+        f"extra in markdown ({len(extra)}): {' '.join(f'{k}×{n}' for n, k in extra)}\n"
+    )
 
 
 def markup_emphasis(md: str, ranges: list[list]) -> tuple[str, str]:
@@ -282,8 +288,9 @@ def markup_emphasis(md: str, ranges: list[list]) -> tuple[str, str]:
 def emphasis(book: Book, md: str, ranges: list[list], pages: list[int], cfg: VerifyConfig) -> tuple[bool, str]:
     """Bold and italic characters of code-block spans on these pages against the converter's <b>/<i>
     content in the Markdown, both without whitespace, in reading order."""
-    spans = sorted((s for p in pages for s in book.spans(p) if cfg.is_code_block(s)),
-                   key=lambda s: (s.page, s.baseline, s.x0))
+    spans = sorted(
+        (s for p in pages for s in book.spans(p) if cfg.is_code_block(s)), key=lambda s: (s.page, s.baseline, s.x0)
+    )
     marked = markup_emphasis(md, ranges)
     lines, ok = [], True
     for name, want, marked_text in (("bold", lambda s: s.bold, marked[0]), ("italic", lambda s: s.italic, marked[1])):
@@ -294,8 +301,10 @@ def emphasis(book: Book, md: str, ranges: list[list], pages: list[int], cfg: Ver
         else:
             ok = False
             k = next((n for n, (a, c) in enumerate(zip(pdf, got, strict=False)) if a != c), min(len(pdf), len(got)))
-            lines.append(f"{name}: DIFFERENT: pdf {len(pdf)} characters, markdown {len(got)}; first difference at "
-                         f"{k}: pdf {pdf[max(0, k - 20):k + 20]!r} markdown {got[max(0, k - 20):k + 20]!r}")
+            lines.append(
+                f"{name}: DIFFERENT: pdf {len(pdf)} characters, markdown {len(got)}; first difference at "
+                f"{k}: pdf {pdf[max(0, k - 20) : k + 20]!r} markdown {got[max(0, k - 20) : k + 20]!r}"
+            )
     return ok, "; ".join(lines)
 
 
@@ -328,7 +337,9 @@ def tolerant_stdout() -> None:
 
 def main(argv: list[str] | None = None) -> None:
     tolerant_stdout()
-    ap = argparse.ArgumentParser(prog="doc-converter verify", description="Compare converted Markdown with the PDF's words.")
+    ap = argparse.ArgumentParser(
+        prog="doc-converter verify", description="Compare converted Markdown with the PDF's words."
+    )
     ap.add_argument("--input", required=True, help="the PDF that was converted")
     ap.add_argument("--output", required=True, help="the conversion's output directory")
     ap.add_argument("--profile", required=True, help="profile name (under profiles/) or directory")

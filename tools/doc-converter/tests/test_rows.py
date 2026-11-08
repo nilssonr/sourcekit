@@ -50,8 +50,12 @@ class RowGroupingTests(unittest.TestCase):
         self.assertEqual(texts(rows), [["a"], ["b"]])
 
     def test_rows_come_back_in_page_and_top_order_whatever_the_span_order(self):
-        spans = [span("d", page=2, baseline=50.0), span("c", baseline=130.0), span("a", baseline=100.0),
-                 span("b", baseline=115.0)]
+        spans = [
+            span("d", page=2, baseline=50.0),
+            span("c", baseline=130.0),
+            span("a", baseline=100.0),
+            span("b", baseline=115.0),
+        ]
 
         rows = text(self).rows_of(spans)
 
@@ -81,8 +85,7 @@ class FootnoteMarkerTests(unittest.TestCase):
         self.assertEqual(texts(rows), [["word", "1"]])
 
     def test_a_marker_between_two_rows_joins_the_nearer_one(self):
-        spans = [span("first", baseline=100.0), span("second", baseline=104.0),
-                 fn_marker("1", x0=97.0, baseline=99.5)]
+        spans = [span("first", baseline=100.0), span("second", baseline=104.0), fn_marker("1", x0=97.0, baseline=99.5)]
 
         rows = text(self).rows_of(spans)
 
@@ -98,8 +101,11 @@ class FootnoteMarkerTests(unittest.TestCase):
 
 class RowEdgeTests(unittest.TestCase):
     def test_the_left_edge_skips_bullets_list_numbers_and_whitespace(self):
-        cases = [("bullet", span("•", font=BULLET, x0=60.0)), ("list number", span("1.", font=LIST_NUMBER, x0=60.0)),
-                 ("whitespace", span(" ", x0=60.0))]
+        cases = [
+            ("bullet", span("•", font=BULLET, x0=60.0)),
+            ("list number", span("1.", font=LIST_NUMBER, x0=60.0)),
+            ("whitespace", span(" ", x0=60.0)),
+        ]
         for kind, lead in cases:
             with self.subTest(kind=kind):
                 rows = text(self).rows_of([lead, span("item", x0=72.0)])
@@ -146,8 +152,11 @@ class SpanRunTests(unittest.TestCase):
 
 class RowRunsTests(unittest.TestCase):
     def test_bullets_list_numbers_and_note_labels_leave_no_run(self):
-        cases = [("bullet", span("•", font=BULLET, x0=60.0)), ("list number", span("1.", font=LIST_NUMBER, x0=60.0)),
-                 ("note label", span("NOTE", font=NOTE_LABEL, x0=40.0))]
+        cases = [
+            ("bullet", span("•", font=BULLET, x0=60.0)),
+            ("list number", span("1.", font=LIST_NUMBER, x0=60.0)),
+            ("note label", span("NOTE", font=NOTE_LABEL, x0=40.0)),
+        ]
         for kind, lead in cases:
             with self.subTest(kind=kind):
                 runs = text(self).row_runs(row(lead, span("item", x0=72.0)))
@@ -170,10 +179,16 @@ class RowRunsTests(unittest.TestCase):
 
     def test_a_gap_beside_a_span_that_already_has_the_space_adds_nothing(self):
         cases = [
-            ("previous ends with a space", row(span("one ", x0=72.0), span("two", x0=100.0)),
-             [Run("one ", ""), Run("two", "")]),
-            ("next starts with a space", row(span("one", x0=72.0), span(" two", x0=100.0)),
-             [Run("one", ""), Run(" two", "")]),
+            (
+                "previous ends with a space",
+                row(span("one ", x0=72.0), span("two", x0=100.0)),
+                [Run("one ", ""), Run("two", "")],
+            ),
+            (
+                "next starts with a space",
+                row(span("one", x0=72.0), span(" two", x0=100.0)),
+                [Run("one", ""), Run(" two", "")],
+            ),
         ]
         for side, r, expected in cases:
             with self.subTest(side=side):
@@ -182,8 +197,12 @@ class RowRunsTests(unittest.TestCase):
                 self.assertEqual(runs, expected)
 
     def test_plain_drops_emphasis_but_keeps_code_and_footnote_markers(self):
-        r = row(span("bold", font=BOLD, x0=72.0), span("ital", font=ITALIC, x0=92.0),
-                span("x", font=CODE, size=INLINE_CODE_SIZE, x0=112.0), fn_marker("1", x0=117.0, baseline=100.0))
+        r = row(
+            span("bold", font=BOLD, x0=72.0),
+            span("ital", font=ITALIC, x0=92.0),
+            span("x", font=CODE, size=INLINE_CODE_SIZE, x0=112.0),
+            fn_marker("1", x0=117.0, baseline=100.0),
+        )
 
         runs = text(self).row_runs(r, plain=True)
 
@@ -201,8 +220,9 @@ class JoinRowsTests(unittest.TestCase):
 
     def test_a_trailing_whitespace_run_is_dropped_before_the_joining_space(self):
         t = text(self)
-        rows = t.rows_of([span("one", baseline=100.0), span("  ", baseline=100.0, x0=90.0),
-                          span("two", baseline=115.0)])
+        rows = t.rows_of(
+            [span("one", baseline=100.0), span("  ", baseline=100.0, x0=90.0), span("two", baseline=115.0)]
+        )
 
         runs = t.join_rows(rows)
 
@@ -210,8 +230,9 @@ class JoinRowsTests(unittest.TestCase):
 
     def test_a_trailing_footnote_marker_stays_before_the_joining_space(self):
         t = text(self)
-        rows = t.rows_of([span("one", baseline=100.0), fn_marker("1", x0=87.0, baseline=100.0),
-                          span("two", baseline=115.0)])
+        rows = t.rows_of(
+            [span("one", baseline=100.0), fn_marker("1", x0=87.0, baseline=100.0), span("two", baseline=115.0)]
+        )
 
         runs = t.join_rows(rows)
 
@@ -245,8 +266,12 @@ class JoinRowsTests(unittest.TestCase):
 
     def test_a_code_line_end_hyphen_the_books_code_prints_is_kept(self):
         t = text(self, code=("foo-bar",))
-        rows = t.rows_of([span("foo-", font=CODE, size=INLINE_CODE_SIZE, baseline=100.0),
-                          span("bar", font=CODE, size=INLINE_CODE_SIZE, baseline=115.0)])
+        rows = t.rows_of(
+            [
+                span("foo-", font=CODE, size=INLINE_CODE_SIZE, baseline=100.0),
+                span("bar", font=CODE, size=INLINE_CODE_SIZE, baseline=115.0),
+            ]
+        )
 
         runs = t.join_rows(rows)
 
@@ -254,8 +279,12 @@ class JoinRowsTests(unittest.TestCase):
 
     def test_a_code_line_end_hyphen_unknown_to_the_books_code_is_joined(self):
         t = text(self)
-        rows = t.rows_of([span("foo-", font=CODE, size=INLINE_CODE_SIZE, baseline=100.0),
-                          span("bar", font=CODE, size=INLINE_CODE_SIZE, baseline=115.0)])
+        rows = t.rows_of(
+            [
+                span("foo-", font=CODE, size=INLINE_CODE_SIZE, baseline=100.0),
+                span("bar", font=CODE, size=INLINE_CODE_SIZE, baseline=115.0),
+            ]
+        )
 
         runs = t.join_rows(rows)
 

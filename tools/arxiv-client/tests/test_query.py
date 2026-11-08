@@ -77,7 +77,9 @@ class DateRangeTests(unittest.TestCase):
 
     def test_aware_datetimes_converted_to_gmt(self):
         tz = dt.timezone(dt.timedelta(hours=2))
-        q = Q.submitted_between(dt.datetime(2023, 1, 1, 2, 0, tzinfo=tz), dt.datetime(2023, 1, 2, tzinfo=dt.timezone.utc))
+        q = Q.submitted_between(
+            dt.datetime(2023, 1, 1, 2, 0, tzinfo=tz), dt.datetime(2023, 1, 2, tzinfo=dt.timezone.utc)
+        )
         self.assertEqual(str(q), "submittedDate:[20230101000000 TO 20230102000000]")
 
     def test_malformed_or_reversed_date_ranges_are_rejected(self):
@@ -86,7 +88,9 @@ class DateRangeTests(unittest.TestCase):
                 Q.submitted_between(start, end)
 
     def test_spaces_encode_as_percent20_never_percent2B(self):
-        encoded = encode_params({"search_query": str(Q.category("cs.LG") & Q.submitted_between("20230101", "20230131"))})
+        encoded = encode_params(
+            {"search_query": str(Q.category("cs.LG") & Q.submitted_between("20230101", "20230131"))}
+        )
         self.assertIn("%20TO%20", encoded)
         self.assertNotIn("%2B", encoded)
         self.assertNotIn("+", encoded)

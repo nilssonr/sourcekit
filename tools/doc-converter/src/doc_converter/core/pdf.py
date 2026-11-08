@@ -67,9 +67,9 @@ class Span:
 
 @dataclass(frozen=True)
 class OutlineEntry:
-    level: int   # 1 = top level
+    level: int  # 1 = top level
     title: str
-    page: int    # 1-based PDF page
+    page: int  # 1-based PDF page
 
 
 def is_ws(s: Span) -> bool:
@@ -108,8 +108,21 @@ class Book:
                     if not text:
                         continue
                     x0, y0, x1, y1 = s["bbox"]
-                    out.append(Span(pno, x0, y0, x1, y1, s["font"], round(s["size"], 2), hexcolor(s["color"]),
-                                    text, chars, s["origin"][1]))
+                    out.append(
+                        Span(
+                            pno,
+                            x0,
+                            y0,
+                            x1,
+                            y1,
+                            s["font"],
+                            round(s["size"], 2),
+                            hexcolor(s["color"]),
+                            text,
+                            chars,
+                            s["origin"][1],
+                        )
+                    )
         return out
 
     @functools.lru_cache(maxsize=None)  # noqa: B019 - one Book per run; the cache lives as long as it does

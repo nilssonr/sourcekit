@@ -30,8 +30,14 @@ class SearchPageTests(unittest.TestCase):
         self.assertTrue(self.opener.requests[0].url.startswith("https://export.arxiv.org/api/query?"))
 
     def test_inputs_arxiv_would_answer_with_a_500_are_refused_locally(self):
-        for kwargs in ({"max_results": 0}, {"max_results": 29999}, {"max_results": 2001},
-                       {"start": 10000}, {"start": -1}, {"max_results": True}):
+        for kwargs in (
+            {"max_results": 0},
+            {"max_results": 29999},
+            {"max_results": 2001},
+            {"start": 10000},
+            {"start": -1},
+            {"max_results": True},
+        ):
             with self.subTest(**kwargs):
                 with self.assertRaises(ValidationError):
                     self.client.search_page("x", **kwargs)
@@ -60,8 +66,9 @@ class SearchPagingTests(unittest.TestCase):
     def test_advances_by_raw_entry_count_not_parsed_count(self):
         first = [make_entry(i) for i in ids("2401", 99)] + [BAD_ENTRY]
         second = [make_entry(i) for i in ids("2401", 50, first=100)]
-        self.opener.add(xml_response(make_feed(first, total=150)),
-                        xml_response(make_feed(second, total=150, start=100)))
+        self.opener.add(
+            xml_response(make_feed(first, total=150)), xml_response(make_feed(second, total=150, start=100))
+        )
         papers = list(self.client.search("x"))
         self.assertEqual(len(papers), 149)
         self.assertEqual(self.opener.requests[1].params["start"], ["100"])
@@ -126,8 +133,12 @@ class SearchPagingTests(unittest.TestCase):
         def page(rec):
             start = int(rec.params["start"][0])
             n = int(rec.params["max_results"][0])
-            return xml_response(make_feed([make_entry("2401.%05d" % (1 + (start + k) % 99999)) for k in range(n)],
-                                          total=20000, start=start))
+            return xml_response(
+                make_feed(
+                    [make_entry("2401.%05d" % (1 + (start + k) % 99999)) for k in range(n)], total=20000, start=start
+                )
+            )
+
         for _ in range(60):
             self.opener.add(page)
         client = make_client(self.clock, self.opener, page_size=200)
@@ -181,10 +192,12 @@ class FetchTests(unittest.TestCase):
 
     def test_long_lists_are_chunked(self):
         wanted = ids("2401", 250)
+
         def respond(rec):
             chunk = rec.params["id_list"][0].split(",")
             self.assertEqual(rec.params["max_results"], [str(len(chunk))])
             return xml_response(make_feed([make_entry(i) for i in reversed(chunk)]))
+
         self.opener.add(respond, respond, respond)
         result = self.client.fetch(wanted)
         self.assertEqual(len(result.papers), 250)
@@ -210,8 +223,14 @@ class FetchTests(unittest.TestCase):
     def test_fallback_lists_version_above_latest_as_not_found(self):
         self.opener.add(
             xml_response(fixture("query_error_500.xml"), status=500),
-            xml_response(make_feed([make_entry("hep-th/9711200", 3, category="hep-th"),
-                                    make_entry("hep-th/9901001", 3, category="hep-th")])),
+            xml_response(
+                make_feed(
+                    [
+                        make_entry("hep-th/9711200", 3, category="hep-th"),
+                        make_entry("hep-th/9901001", 3, category="hep-th"),
+                    ]
+                )
+            ),
         )
         result = self.client.fetch(["hep-th/9711200v1", "hep-th/9901001v99"])
         self.assertEqual(list(result.papers), ["hep-th/9711200v1"])
@@ -247,9 +266,9 @@ class RevisionScanTests(unittest.TestCase):
         clock = FakeClock()
         opener = FakeOpener(clock)
         pages = [
-            [make_entry("2401.%05d" % i, 2) for i in range(1, 101)],          # all revised
-            [make_entry("2401.%05d" % i, 1) for i in range(101, 201)],        # all known
-            [make_entry("2401.%05d" % i, 1) for i in range(201, 301)],        # all known
+            [make_entry("2401.%05d" % i, 2) for i in range(1, 101)],  # all revised
+            [make_entry("2401.%05d" % i, 1) for i in range(101, 201)],  # all known
+            [make_entry("2401.%05d" % i, 1) for i in range(201, 301)],  # all known
         ]
         for n, entries in enumerate(pages):
             opener.add(xml_response(make_feed(entries, total=100000, start=n * 100)))

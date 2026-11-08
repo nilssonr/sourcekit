@@ -26,10 +26,15 @@ class RegressionTest(unittest.TestCase):
     def test_output_matches_reference(self):
         with tempfile.TemporaryDirectory() as tmp:
             run = Path(tmp) / "run"
-            subprocess.run([str(REPO / "scripts/make_run.sh"), PDF, str(run), PROFILE], check=True,
-                           capture_output=True, text=True)
-            res = subprocess.run([str(REPO / "scripts/compare_ref.sh"), str(Path(REF).expanduser()), str(run)],
-                                 capture_output=True, text=True, check=False)
+            subprocess.run(
+                [str(REPO / "scripts/make_run.sh"), PDF, str(run), PROFILE], check=True, capture_output=True, text=True
+            )
+            res = subprocess.run(
+                [str(REPO / "scripts/compare_ref.sh"), str(Path(REF).expanduser()), str(run)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
             self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
 
 

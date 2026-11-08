@@ -48,11 +48,14 @@ class PacerTests(unittest.TestCase):
     def test_requests_within_one_call_are_spaced_3s(self):
         clock = FakeClock()
         entries = [make_entry("2401.%05d" % i) for i in range(1, 251)]
-        opener = FakeOpener(clock, [
-            xml_response(make_feed(entries[0:100], total=250)),
-            xml_response(make_feed(entries[100:200], total=250, start=100)),
-            xml_response(make_feed(entries[200:250], total=250, start=200)),
-        ])
+        opener = FakeOpener(
+            clock,
+            [
+                xml_response(make_feed(entries[0:100], total=250)),
+                xml_response(make_feed(entries[100:200], total=250, start=100)),
+                xml_response(make_feed(entries[200:250], total=250, start=200)),
+            ],
+        )
         client = make_client(clock, opener)
         self.assertEqual(len(list(client.search("x"))), 250)
         starts = [r.at for r in opener.requests]
@@ -62,10 +65,13 @@ class PacerTests(unittest.TestCase):
 
     def test_separate_calls_are_paced_by_the_gate(self):
         clock = FakeClock()
-        opener = FakeOpener(clock, [
-            xml_response(make_feed([make_entry("2401.00001")])),
-            xml_response(make_feed([make_entry("2401.00001")])),
-        ])
+        opener = FakeOpener(
+            clock,
+            [
+                xml_response(make_feed([make_entry("2401.00001")])),
+                xml_response(make_feed([make_entry("2401.00001")])),
+            ],
+        )
         client = make_client(clock, opener)
         client.get("2401.00001")
         client.get("2401.00001")
@@ -114,7 +120,7 @@ class BlockStoreTests(unittest.TestCase):
         clock = FakeClock()
         os.makedirs(os.path.dirname(self.path))
         with open(self.path, "w", encoding="utf-8") as f:
-            f.write(str(clock.wall() + 10 ** 6))
+            f.write(str(clock.wall() + 10**6))
         self.assertLessEqual(BlockStore(self.path, wall=clock.wall).remaining(), 600)
 
     def test_garbage_marker_ignored(self):
@@ -225,8 +231,11 @@ class GateTests(unittest.TestCase):
 
     def test_busy_gate_times_out_instead_of_hanging(self):
         a, b = self.gate(), self.gate(poll=0.5)
-        with a.hold(API, self.clock.now + 30), self.assertRaises(ArxivTimeoutError) as cm, \
-                b.hold(API, self.clock.now + 5.0):
+        with (
+            a.hold(API, self.clock.now + 30),
+            self.assertRaises(ArxivTimeoutError) as cm,
+            b.hold(API, self.clock.now + 5.0),
+        ):
             self.fail("request must not start")
         self.assertIn("another arxiv_client process", str(cm.exception))
         self.assertTrue(all(s == 0.5 for s in self.clock.sleeps))
@@ -251,7 +260,7 @@ class GateTests(unittest.TestCase):
     def test_future_timestamp_is_clamped_to_one_interval(self):
         os.makedirs(os.path.dirname(self.path))
         with open(self.path, "w", encoding="utf-8") as f:
-            json.dump({"any": self.clock.wall() + 10 ** 6}, f)
+            json.dump({"any": self.clock.wall() + 10**6}, f)
         with self.gate().hold(API, self.clock.now + 30):
             pass
         self.assertLessEqual(self.clock.sleeps[0], 3.01)
@@ -272,8 +281,9 @@ class GateTests(unittest.TestCase):
             f.write("x")
         warn = io.StringIO()
         c = self.clock
-        gate = FileGate(os.path.join(blocker, "request.lock"), clock=c.monotonic, sleep=c.sleep,
-                        wall=c.wall, warn_stream=warn)
+        gate = FileGate(
+            os.path.join(blocker, "request.lock"), clock=c.monotonic, sleep=c.sleep, wall=c.wall, warn_stream=warn
+        )
         for _ in range(3):
             with gate.hold(API, c.now + 30):
                 pass
