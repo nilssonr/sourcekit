@@ -1,3 +1,4 @@
+import errno
 import io
 import json
 import multiprocessing
@@ -5,6 +6,7 @@ import os
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 from arxiv_client import ArxivTimeoutError, BlockStore, FileGate, MemoryGate, Pacer, ThrottledError
 from tests.helpers import FakeClock, FakeOpener, make_client, make_entry, make_feed, xml_response
@@ -270,6 +272,17 @@ class GateTests(unittest.TestCase):
         for _ in range(3):
             with gate.hold(API, c.now + 30):
                 pass
+        self.assertEqual(warn.getvalue().count("could not use request gate"), 1)
+        self.assertEqual(len(c.sleeps), 2)
+
+    def test_lock_failure_warns_once_and_still_spaces_this_process(self):
+        warn = io.StringIO()
+        gate = self.gate(warn_stream=warn)
+        c = self.clock
+        with mock.patch("arxiv_client.pacing._fcntl.flock", side_effect=OSError(errno.ENOLCK, "No locks available")):
+            for _ in range(3):
+                with gate.hold(API, c.now + 30):
+                    pass
         self.assertEqual(warn.getvalue().count("could not use request gate"), 1)
         self.assertEqual(len(c.sleeps), 2)
 

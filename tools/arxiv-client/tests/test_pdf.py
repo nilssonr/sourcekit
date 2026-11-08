@@ -2,7 +2,15 @@ import os
 import tempfile
 import unittest
 
-from arxiv_client import ArxivTimeoutError, MalformedResponseError, NotFoundError, ThrottledError, ValidationError
+from arxiv_client import (
+    ArxivTimeoutError,
+    LocalFileError,
+    MalformedResponseError,
+    NotFoundError,
+    ServerError,
+    ThrottledError,
+    ValidationError,
+)
 from tests.helpers import FakeClock, FakeOpener, FakeResponse, make_client
 
 PDF = b"%PDF-1.5\n" + b"x" * 5000 + b"\n%%EOF"
@@ -66,6 +74,51 @@ class PdfTests(unittest.TestCase):
         self.opener.add(pdf_response())
         r = self.client.download_pdf("2301.00001v1", self.dir, overwrite=True)
         self.assertEqual(r.bytes, len(PDF))
+
+    def test_body_shorter_than_content_length_is_rejected(self):
+        response = pdf_response()
+        response.headers["content-length"] = str(len(PDF) + 1)
+        self.opener.add(response)
+        with self.assertRaisesRegex(ServerError, "incomplete"):
+            self.client.download_pdf("2301.00001v1", self.dir)
+        self.assertEqual(self.files(), [])
+
+    def test_matching_content_length_is_accepted(self):
+        response = pdf_response()
+        response.headers["content-length"] = str(len(PDF))
+        self.opener.add(response)
+        self.assertEqual(self.client.download_pdf("2301.00001v1", self.dir).bytes, len(PDF))
+
+    def test_unwritable_directory_raises_local_file_error(self):
+        self.opener.add(pdf_response())
+        os.chmod(self.dir, 0o555)
+        try:
+            with self.assertRaises(LocalFileError):
+                self.client.download_pdf("2301.00001v1", self.dir)
+        finally:
+            os.chmod(self.dir, 0o755)
+
+    def test_local_failure_on_second_pdf_lists_the_first(self):
+        def read_only_then_respond(_):
+            os.chmod(self.dir, 0o555)
+            return pdf_response(filename="2301.00002v1.pdf")
+
+        self.opener.add(pdf_response(), read_only_then_respond)
+        try:
+            with self.assertRaises(LocalFileError) as cm:
+                self.client.download_pdfs(["2301.00001v1", "2301.00002v1"], self.dir)
+        finally:
+            os.chmod(self.dir, 0o755)
+        self.assertEqual([r.id for r in cm.exception.completed], ["2301.00001"])
+
+    def test_file_mode_follows_umask(self):
+        self.opener.add(pdf_response())
+        previous = os.umask(0o027)
+        try:
+            r = self.client.download_pdf("2301.00001v1", self.dir)
+        finally:
+            os.umask(previous)
+        self.assertEqual(os.stat(r.path).st_mode & 0o777, 0o640)
 
     def test_html_instead_of_pdf_leaves_no_file(self):
         self.opener.add(FakeResponse(200, b"<html>captcha</html>", {"content-type": "text/html"}))

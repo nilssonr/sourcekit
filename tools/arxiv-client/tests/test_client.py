@@ -204,6 +204,16 @@ class FetchTests(unittest.TestCase):
         self.assertEqual(self.opener.requests[1].params["id_list"], ["hep-th/9901001,2401.00001"])
         self.assertEqual(len(self.opener.requests), 2)
 
+    def test_fallback_lists_version_above_latest_as_not_found(self):
+        self.opener.add(
+            xml_response(fixture("query_error_500.xml"), status=500),
+            xml_response(make_feed([make_entry("hep-th/9711200", 3, category="hep-th"),
+                                    make_entry("hep-th/9901001", 3, category="hep-th")])),
+        )
+        result = self.client.fetch(["hep-th/9711200v1", "hep-th/9901001v99"])
+        self.assertEqual(list(result.papers), ["hep-th/9711200v1"])
+        self.assertEqual(result.not_found, ["hep-th/9901001v99"])
+
     def test_500_without_old_style_versioned_ids_is_raised(self):
         self.opener.add(xml_response(fixture("query_error_500.xml"), status=500))
         with self.assertRaises(ServerError):

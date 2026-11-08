@@ -9,7 +9,7 @@ import time
 from typing import Callable, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, Union
 
 from .atom import parse_query_feed
-from .errors import ArxivError, NotFoundError, ServerError, ValidationError
+from .errors import ArxivError, LocalFileError, NotFoundError, ServerError, ValidationError
 from .feeds import parse_atom_feed, parse_rss, validate_categories
 from .ids import ArxivId, parse_id
 from .models import FeedItem, Feed, FetchResult, Paper, PdfResult, SearchPage
@@ -410,21 +410,25 @@ class ArxivClient:
             if os.path.exists(target) and not overwrite:
                 return PdfResult(target, aid.base, aid.version, os.path.getsize(target), skipped=True)
         url = "%s/%s" % (PDF_BASE, aid)
-        tmp, headers, size = self.transport.download(
-            url, _pacer or self._pacer(self._pdf_interval), dest_dir,
-            max_bytes=max_bytes, budget=self.budget,
-        )
+        # The transport maps network failures to ArxivError, so an OSError here is a local file problem.
         try:
-            version = aid.version or _version_from_disposition(headers.get("content-disposition", ""))
-            target = os.path.join(dest_dir, _pdf_filename(aid.base, version))
-            if os.path.exists(target) and not overwrite:
-                os.unlink(tmp)
-                return PdfResult(target, aid.base, version, os.path.getsize(target), skipped=True)
-            os.replace(tmp, target)
-        except BaseException:
-            if os.path.exists(tmp):
-                os.unlink(tmp)
-            raise
+            tmp, headers, size = self.transport.download(
+                url, _pacer or self._pacer(self._pdf_interval), dest_dir,
+                max_bytes=max_bytes, budget=self.budget,
+            )
+            try:
+                version = aid.version or _version_from_disposition(headers.get("content-disposition", ""))
+                target = os.path.join(dest_dir, _pdf_filename(aid.base, version))
+                if os.path.exists(target) and not overwrite:
+                    os.unlink(tmp)
+                    return PdfResult(target, aid.base, version, os.path.getsize(target), skipped=True)
+                os.replace(tmp, target)
+            except BaseException:
+                if os.path.exists(tmp):
+                    os.unlink(tmp)
+                raise
+        except OSError as e:
+            raise LocalFileError("could not save the PDF in %s: %s" % (dest_dir, e)) from e
         return PdfResult(target, aid.base, version, size)
 
     def download_pdfs(
@@ -475,6 +479,8 @@ def _match_ids(
             continue
         if aid in fallback:
             served = max(candidates, key=lambda p: p.version or 0)
+            if served.version is not None and aid.version > served.version:
+                continue  # newer than the latest version, so it doesn't exist
             out[aid] = dataclasses.replace(served, requested_version=aid.version)
         elif aid.version is None:
             out[aid] = max(candidates, key=lambda p: p.version or 0)

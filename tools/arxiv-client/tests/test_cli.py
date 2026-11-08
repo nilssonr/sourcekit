@@ -39,6 +39,30 @@ class CliTests(unittest.TestCase):
         self.assertEqual(data["query"], 'ti:"attention is all you need" AND cat:cs.CL')
         self.assertEqual(data["papers"][0]["versioned_id"], "1706.03762v7")
 
+    def test_batch_unhashable_sort_is_a_validation_error(self):
+        for sort in (["submitted"], {"a": 1}):
+            code, _, err = self.run_cli(["batch", "-"], [], stdin=json.dumps([{"title": "x", "sort": sort}]))
+            self.assertEqual(code, 2)
+            self.assertEqual(json.loads(err)["error"], "validation")
+
+    def test_local_write_failure_reports_json_and_completed(self):
+        pdf = b"%PDF-1.5\n" + b"x" * 100
+        headers = {"content-type": "application/pdf"}
+        with tempfile.TemporaryDirectory() as out:
+            def read_only_then_respond(_):
+                os.chmod(out, 0o555)
+                return FakeResponse(200, pdf, headers)
+
+            try:
+                code, _, err = self.run_cli(["pdf", "2301.00001v1", "2301.00002v1", "--out", out],
+                                            [FakeResponse(200, pdf, headers), read_only_then_respond])
+            finally:
+                os.chmod(out, 0o755)
+        self.assertEqual(code, 8)
+        payload = json.loads(err)
+        self.assertEqual(payload["error"], "local_io")
+        self.assertEqual([c["id"] for c in payload["completed"]], ["2301.00001"])
+
     def test_search_all_and_dates(self):
         code, out, err = self.run_cli(
             ["search", "--all", "protein folding", "--from", "20230101", "--to", "20230131", "--sort", "submitted"],

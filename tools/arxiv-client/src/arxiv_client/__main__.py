@@ -10,7 +10,7 @@
     arxiv pdf 2301.00001 --out ./papers
 
 Exit codes: 0 ok, 2 validation, 3 not found, 4 throttled, 5 server error,
-6 timeout, 7 network blocked.
+6 timeout, 7 network blocked, 8 local file error.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from .models import Paper
 from .errors import (
     ArxivError,
     ArxivTimeoutError,
+    LocalFileError,
     NetworkBlockedError,
     NotFoundError,
     ServerError,
@@ -43,6 +44,7 @@ EXIT_CODES = (
     (ServerError, 5, "server_error"),
     (ArxivTimeoutError, 6, "timeout"),
     (NetworkBlockedError, 7, "network_blocked"),
+    (LocalFileError, 8, "local_io"),
 )
 
 SORTS = {"relevance": "relevance", "submitted": "submittedDate", "updated": "lastUpdatedDate"}
@@ -212,7 +214,7 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
             raise ValidationError("batch item %d: duplicate label %r" % (i + 1, label))
         labels.add(label)
         sort = item.get("sort", "relevance")
-        if sort not in SORTS:
+        if not isinstance(sort, str) or sort not in SORTS:
             raise ValidationError("batch item %d: sort must be one of %s" % (i + 1, ", ".join(sorted(SORTS))))
         order = item.get("order", "descending")
         if order not in ORDERS:

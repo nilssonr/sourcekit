@@ -69,6 +69,7 @@ arxiv pdf 2301.00001 --out ./papers
 | 5 | `server_error` | other HTTP errors, malformed responses |
 | 6 | `timeout` | the request or its 30 s budget timed out |
 | 7 | `network_blocked` | DNS failure, refused connection, or a proxy refused the tunnel. In a sandbox, allow the domain |
+| 8 | `local_io` | a PDF could not be written: permissions, a full disk, or similar |
 
 **User-Agent:** set by `--user-agent`, then `$ARXIV_USER_AGENT`, then the default `arxiv-client/0.1`.
 

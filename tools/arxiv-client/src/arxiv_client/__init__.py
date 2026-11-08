@@ -9,6 +9,7 @@ from .client import ArxivClient, SearchResults
 from .errors import (
     ArxivError,
     ArxivTimeoutError,
+    LocalFileError,
     MalformedResponseError,
     NetworkBlockedError,
     NotFoundError,
@@ -29,6 +30,7 @@ __all__ = [
     "SearchResults",
     "ArxivError",
     "ArxivTimeoutError",
+    "LocalFileError",
     "MalformedResponseError",
     "NetworkBlockedError",
     "NotFoundError",

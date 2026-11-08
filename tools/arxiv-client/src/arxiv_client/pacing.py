@@ -254,7 +254,7 @@ class FileGate(MemoryGate):
     The lock is taken without blocking and retried every ``poll`` seconds until the
     deadline, so a busy gate ends in ArxivTimeoutError rather than a hang. OS locks are
     not first-come-first-served: with many processes queued, the later ones may time
-    out. If the file can't be opened, the gate warns once on stderr and spaces only
+    out. If the file can't be opened or locked, the gate warns once on stderr and spaces only
     this process's requests.
     """
 
@@ -297,6 +297,10 @@ class FileGate(MemoryGate):
                             "finish its request (gate %s)" % self.path
                         ) from None
                     self._sleep(self._poll)
+                except OSError as e:  # e.g. a filesystem without flock support
+                    os.close(fd)
+                    self._warn(e)
+                    return
         except BaseException:
             os.close(fd)
             raise
