@@ -331,6 +331,8 @@ class Transport:
     def _stream_pdf(
         self, raw: Any, deadline: float, dest_dir: str, max_bytes: int, expected_size: Optional[int]
     ) -> Tuple[str, int]:
+        if expected_size is not None and expected_size > max_bytes:
+            raise ValidationError("PDF is larger than max_bytes=%d" % max_bytes)  # before any byte is read
         fd, tmp = _create_part_file(dest_dir)
         head = bytearray()
         try:

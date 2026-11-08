@@ -5,9 +5,20 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 from arxiv_client.__main__ import main
-from tests.helpers import FakeClock, FakeOpener, FakeResponse, fixture, make_client, make_entry, make_feed, xml_response
+from tests.helpers import (
+    FakeClock,
+    FakeOpener,
+    FakeResponse,
+    fixture,
+    make_client,
+    make_entry,
+    make_feed,
+    part_file_failing_after,
+    xml_response,
+)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -49,15 +60,9 @@ class CliTests(unittest.TestCase):
         pdf = b"%PDF-1.5\n" + b"x" * 100
         headers = {"content-type": "application/pdf"}
         with tempfile.TemporaryDirectory() as out:
-            def read_only_then_respond(_):
-                os.chmod(out, 0o555)
-                return FakeResponse(200, pdf, headers)
-
-            try:
+            with mock.patch("arxiv_client.transport._create_part_file", side_effect=part_file_failing_after(1)):
                 code, _, err = self.run_cli(["pdf", "2301.00001v1", "2301.00002v1", "--out", out],
-                                            [FakeResponse(200, pdf, headers), read_only_then_respond])
-            finally:
-                os.chmod(out, 0o755)
+                                            [FakeResponse(200, pdf, headers), FakeResponse(200, pdf, headers)])
         self.assertEqual(code, 8)
         payload = json.loads(err)
         self.assertEqual(payload["error"], "local_io")
