@@ -1,5 +1,7 @@
 # sourcekit
 
+[![ci](https://github.com/nilssonr/sourcekit/actions/workflows/ci.yml/badge.svg)](https://github.com/nilssonr/sourcekit/actions/workflows/ci.yml)
+
 Tools for finding source material and converting it to text. Each tool is its own Python package under
 `tools/`, with its own dependencies, command, tests and README. Tools don't import each other, so any one
 of them can be used on its own.
@@ -43,6 +45,9 @@ cd tools/doc-converter && uv run python -m unittest discover -s tests
 ```
 
 The tool READMEs describe the opt-in live and regression tests.
+
+Every pull request runs both commands above on GitHub Actions (`.github/workflows/ci.yml`). The opt-in tests
+stay skipped there: nothing in CI touches the network or needs the book PDF.
 
 ## Lint
 
