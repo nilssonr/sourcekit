@@ -29,7 +29,7 @@ class RegressionTest(unittest.TestCase):
             subprocess.run([str(REPO / "scripts/make_run.sh"), PDF, str(run), PROFILE], check=True,
                            capture_output=True, text=True)
             res = subprocess.run([str(REPO / "scripts/compare_ref.sh"), str(Path(REF).expanduser()), str(run)],
-                                 capture_output=True, text=True)
+                                 capture_output=True, text=True, check=False)
             self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
 
 

@@ -3,14 +3,39 @@
 from __future__ import annotations
 
 import unittest
+from typing import ClassVar
 
 import pymupdf
-
-from fixtures import (BLUE, BODY, CALLOUT, CODE, CODE_BOLD, CODE_BOLD_ITALIC, CODE_ITALIC, CODE_SIZE, COLUMN_LEFT,
-                      CW, LISTING_BAR, LISTING_HEAD, FakeBook, arrowhead, fill, leader, listing_config, span)
-
-from doc_converter.modules.regions.listings import (Callout, CodeLine, code_lines, hexrgb, listing_bars,
-                                                    listing_parts, map_callouts, with_blank_lines)
+from doc_converter.modules.regions.listings import (
+    Callout,
+    CodeLine,
+    code_lines,
+    hexrgb,
+    listing_bars,
+    listing_parts,
+    map_callouts,
+    with_blank_lines,
+)
+from fixtures import (
+    BLUE,
+    BODY,
+    CALLOUT,
+    CODE,
+    CODE_BOLD,
+    CODE_BOLD_ITALIC,
+    CODE_ITALIC,
+    CODE_SIZE,
+    COLUMN_LEFT,
+    CW,
+    LISTING_BAR,
+    LISTING_HEAD,
+    FakeBook,
+    arrowhead,
+    fill,
+    leader,
+    listing_config,
+    span,
+)
 
 
 def code(text: str, baseline: float, *, x0: float = COLUMN_LEFT, font: str = CODE, page: int = 1):
@@ -23,28 +48,28 @@ class CodeLinesTests(unittest.TestCase):
 
         lines = code_lines(spans, [].append, listing_config())
 
-        self.assertEqual([l.text for l in lines], ["    foo"])
+        self.assertEqual([line.text for line in lines], ["    foo"])
 
     def test_two_spans_on_one_baseline_merge_into_one_line_in_x_order(self):
         spans = [code("b", 100, x0=COLUMN_LEFT + 2 * CW), code("a", 100)]
 
         lines = code_lines(spans, [].append, listing_config())
 
-        self.assertEqual([l.text for l in lines], ["a b"])
+        self.assertEqual([line.text for line in lines], ["a b"])
 
     def test_lines_come_back_in_page_then_baseline_order(self):
         spans = [code("c", 100, page=2), code("b", 110), code("a", 100)]
 
         lines = code_lines(spans, [].append, listing_config())
 
-        self.assertEqual([(l.page, l.baseline, l.text) for l in lines], [(1, 100.0, "a"), (1, 110.0, "b"), (2, 100.0, "c")])
+        self.assertEqual([(line.page, line.baseline, line.text) for line in lines], [(1, 100.0, "a"), (1, 110.0, "b"), (2, 100.0, "c")])
 
     def test_a_line_starts_at_its_first_inked_character(self):
         spans = [code("  foo", 100)]
 
         lines = code_lines(spans, [].append, listing_config())
 
-        self.assertEqual([(l.text, l.x0) for l in lines], [("  foo", 82.0)])
+        self.assertEqual([(line.text, line.x0) for line in lines], [("  foo", 82.0)])
 
     def test_a_block_sitting_between_grid_cells_uses_its_own_left_edge_as_origin(self):
         warnings: list[str] = []
@@ -52,7 +77,7 @@ class CodeLinesTests(unittest.TestCase):
 
         lines = code_lines(spans, warnings.append, listing_config())
 
-        self.assertEqual([(l.text, l.x0) for l in lines], [("foo", 74.0)])
+        self.assertEqual([(line.text, line.x0) for line in lines], [("foo", 74.0)])
         self.assertEqual(warnings, [])
 
     def test_one_character_off_the_grid_is_reported(self):
@@ -86,21 +111,21 @@ class CodeLinesTests(unittest.TestCase):
 
         lines = code_lines(spans, [].append, listing_config())
 
-        self.assertEqual([(l.text, l.marks) for l in lines], [("new Foo", "bbbbbbb")])
+        self.assertEqual([(line.text, line.marks) for line in lines], [("new Foo", "bbbbbbb")])
 
     def test_a_space_between_a_bold_and_a_plain_word_is_plain(self):
         spans = [code("new", 100, font=CODE_BOLD), code("foo", 100, x0=COLUMN_LEFT + 4 * CW)]
 
         lines = code_lines(spans, [].append, listing_config())
 
-        self.assertEqual([(l.text, l.marks) for l in lines], [("new foo", "bbb....")])
+        self.assertEqual([(line.text, line.marks) for line in lines], [("new foo", "bbb....")])
 
     def test_leading_spaces_stay_plain_and_trailing_spaces_are_dropped(self):
         spans = [code("  x  ", 100, font=CODE_BOLD)]
 
         lines = code_lines(spans, [].append, listing_config())
 
-        self.assertEqual([(l.text, l.marks) for l in lines], [("  x", "..b")])
+        self.assertEqual([(line.text, line.marks) for line in lines], [("  x", "..b")])
 
 
 class WithBlankLinesTests(unittest.TestCase):
@@ -232,9 +257,9 @@ class CalloutTests(unittest.TestCase):
 class MapCalloutsTests(unittest.TestCase):
     """Four code lines with baselines 100-130 (centres 98-128), callout text to the right of the code."""
     AREA = pymupdf.Rect(0, 90, 450, 140)
-    LINES = [CodeLine("int a;", 100.0, 1, COLUMN_LEFT), CodeLine("int b;", 110.0, 1, COLUMN_LEFT),
+    LINES: ClassVar[list[CodeLine]] = [CodeLine("int a;", 100.0, 1, COLUMN_LEFT), CodeLine("int b;", 110.0, 1, COLUMN_LEFT),
              CodeLine("int c;", 120.0, 1, COLUMN_LEFT), CodeLine("int d;", 130.0, 1, COLUMN_LEFT)]
-    INDEX = [0, 1, 2, 3]
+    INDEX: ClassVar[list[int]] = [0, 1, 2, 3]
 
     def callout(self, baseline: float, x0: float = 300):
         return span("Sets a", x0=x0, baseline=baseline, font=CALLOUT, size=CODE_SIZE)

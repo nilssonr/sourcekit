@@ -6,9 +6,22 @@ import unittest
 
 from doc_converter.core.model import Run
 from doc_converter.core.rows import runs_text
-
-from fixtures import (BODY, BOLD, BOLD_ITALIC, BULLET, CODE, DROPCAP, FN_MARKER, INLINE_CODE_SIZE, ITALIC,
-                      LIST_NUMBER, NOTE_LABEL, row, span, text)
+from fixtures import (
+    BODY,
+    BOLD,
+    BOLD_ITALIC,
+    BULLET,
+    CODE,
+    DROPCAP,
+    FN_MARKER,
+    INLINE_CODE_SIZE,
+    ITALIC,
+    LIST_NUMBER,
+    NOTE_LABEL,
+    row,
+    span,
+    text,
+)
 
 FN_SIZE = 6.0
 

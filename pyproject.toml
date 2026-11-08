@@ -16,3 +16,14 @@ members = ["tools/*"]
 
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
+# Pinned so the rule set does not change with each ruff release. UP (modernise syntax) is left out on
+# purpose: the client's printf-style formatting is not worth the churn.
+select = ["E4", "E7", "E9", "F", "I", "B", "RUF", "PLW", "SIM"]
+# RUF001-003: book typography is handled on purpose. RUF005 misreads pymupdf Rect + tuple arithmetic.
+ignore = ["RUF001", "RUF002", "RUF003", "RUF005"]
+# PLW1514 (open() without an encoding) is preview-only in this ruff; nothing else from preview is enabled.
+preview = true
+explicit-preview-rules = true
+extend-select = ["PLW1514"]

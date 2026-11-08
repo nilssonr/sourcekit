@@ -4,7 +4,11 @@ pages are lists of synthetic spans on a fake Book."""
 from __future__ import annotations
 
 import unittest
+from typing import ClassVar
 
+from doc_converter.core.model import Code, Figure, Heading, Label, ListBlock, Note, Paragraph, Sidebar
+from doc_converter.core.rows import runs_text
+from doc_converter.core.sections import Section
 from fixtures import (
     BULLET,
     CALLOUT,
@@ -38,10 +42,6 @@ from fixtures import (
     span,
     stroke,
 )
-
-from doc_converter.core.model import Code, Figure, Heading, Label, ListBlock, Note, Paragraph, Sidebar
-from doc_converter.core.rows import runs_text
-from doc_converter.core.sections import Section
 
 FULL = COLUMN_RIGHT          # a line whose ink reaches this is a full line
 TEXT_X = 84.0                # where list and note text starts, after a 12 pt marker
@@ -311,7 +311,7 @@ class SidebarTests(FlowCase):
 class FigureTests(FlowCase):
     """Figures through the page-figure path (an uncaptioned figure named in page_figures)."""
 
-    ART = {1: [stroke(100, 300, 200, 400, "#ff0000")]}
+    ART: ClassVar[dict[int, list[dict]]] = {1: [stroke(100, 300, 200, 400, "#ff0000")]}
 
     def test_a_figure_between_paragraphs_is_emitted_in_place(self):
         book = FakeBook({1: [short("Before the figure.", 100), short("After the figure.", 500)]}, drawings=self.ART)

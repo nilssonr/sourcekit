@@ -5,7 +5,6 @@ from __future__ import annotations
 import unittest
 
 from doc_converter.core.hyphens import Resolver
-
 from fixtures import resolver
 
 

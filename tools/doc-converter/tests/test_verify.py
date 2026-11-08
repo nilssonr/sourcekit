@@ -3,8 +3,17 @@
 from __future__ import annotations
 
 import unittest
+from typing import ClassVar
 
-from doc_converter.core.verify import case_differences, coverage, markup_emphasis, page_text, report, tokens, without_added
+from doc_converter.core.verify import (
+    case_differences,
+    coverage,
+    markup_emphasis,
+    page_text,
+    report,
+    tokens,
+    without_added,
+)
 from doc_converter.modules.serialize.markdown import extract_added, pre
 from fixtures import BULLET, CONTINUED, FIGURE_TEXT, PAGENUM, FakeBook, span, verify_config
 
@@ -206,7 +215,7 @@ class MarkupEmphasisTests(unittest.TestCase):
 
 
 class CoverageTests(unittest.TestCase):
-    EXPECTED = {"a.md": (2, 10), "b.md": (11, 20)}
+    EXPECTED: ClassVar[dict[str, tuple[int, int]]] = {"a.md": (2, 10), "b.md": (11, 20)}
 
     def test_matching_contiguous_files_pass(self):
         files = [{"file": "a.md", "pages": [2, 10]}, {"file": "b.md", "pages": [11, 20]}]

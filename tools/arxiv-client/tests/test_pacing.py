@@ -1,5 +1,6 @@
 import errno
 import io
+import itertools
 import json
 import multiprocessing
 import os
@@ -9,6 +10,7 @@ import unittest
 from unittest import mock
 
 from arxiv_client import ArxivTimeoutError, BlockStore, FileGate, MemoryGate, Pacer, ThrottledError
+
 from tests.helpers import FakeClock, FakeOpener, make_client, make_entry, make_feed, xml_response
 
 
@@ -55,7 +57,7 @@ class PacerTests(unittest.TestCase):
         self.assertEqual(len(list(client.search("x"))), 250)
         starts = [r.at for r in opener.requests]
         self.assertEqual(len(starts), 3)
-        for a, b in zip(starts, starts[1:]):
+        for a, b in itertools.pairwise(starts):
             self.assertGreaterEqual(b - a, 3.0)
 
     def test_separate_calls_are_paced_by_the_gate(self):
@@ -111,20 +113,20 @@ class BlockStoreTests(unittest.TestCase):
     def test_far_future_marker_is_clamped(self):
         clock = FakeClock()
         os.makedirs(os.path.dirname(self.path))
-        with open(self.path, "w") as f:
+        with open(self.path, "w", encoding="utf-8") as f:
             f.write(str(clock.wall() + 10 ** 6))
         self.assertLessEqual(BlockStore(self.path, wall=clock.wall).remaining(), 600)
 
     def test_garbage_marker_ignored(self):
         os.makedirs(os.path.dirname(self.path))
-        with open(self.path, "w") as f:
+        with open(self.path, "w", encoding="utf-8") as f:
             f.write("not a number")
         self.assertEqual(BlockStore(self.path).remaining(), 0)
 
     def test_unwritable_dir_falls_back_to_memory_with_one_warning(self):
         clock = FakeClock()
         blocker = os.path.join(self.tmp.name, "afile")
-        with open(blocker, "w") as f:
+        with open(blocker, "w", encoding="utf-8") as f:
             f.write("x")
         warn = io.StringIO()
         store = BlockStore(os.path.join(blocker, "blocked_until"), wall=clock.wall, warn_stream=warn)
@@ -147,7 +149,7 @@ def _gate_worker(path, interval, rounds, out_path):
             start = time.time()
             time.sleep(0.05)  # the "request"
             log.append((start, time.time()))
-    with open(out_path, "w") as f:
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(log, f)
 
 
@@ -218,25 +220,21 @@ class GateTests(unittest.TestCase):
         gate = self.gate()
         with gate.hold(API, self.clock.now + 30):
             pass
-        with self.assertRaises(ArxivTimeoutError):
-            with gate.hold(API, self.clock.now + 1.0):
-                self.fail("request must not start")
+        with self.assertRaises(ArxivTimeoutError), gate.hold(API, self.clock.now + 1.0):
+            self.fail("request must not start")
 
     def test_busy_gate_times_out_instead_of_hanging(self):
         a, b = self.gate(), self.gate(poll=0.5)
-        with a.hold(API, self.clock.now + 30):
-            with self.assertRaises(ArxivTimeoutError) as cm:
-                with b.hold(API, self.clock.now + 5.0):
-                    self.fail("request must not start")
+        with a.hold(API, self.clock.now + 30), self.assertRaises(ArxivTimeoutError) as cm, \
+                b.hold(API, self.clock.now + 5.0):
+            self.fail("request must not start")
         self.assertIn("another arxiv_client process", str(cm.exception))
         self.assertTrue(all(s == 0.5 for s in self.clock.sleeps))
 
     def test_a_waiter_that_timed_out_can_take_the_gate_once_it_is_free(self):
         a, b = self.gate(), self.gate(poll=0.5)
-        with a.hold(API, self.clock.now + 30):
-            with self.assertRaises(ArxivTimeoutError):
-                with b.hold(API, self.clock.now + 5.0):
-                    self.fail("request must not start")
+        with a.hold(API, self.clock.now + 30), self.assertRaises(ArxivTimeoutError), b.hold(API, self.clock.now + 5.0):
+            self.fail("request must not start")
         self.clock.advance(5)
         with b.hold(API, self.clock.now + 30):
             pass
@@ -244,16 +242,15 @@ class GateTests(unittest.TestCase):
 
     def test_lock_released_when_the_request_raises(self):
         a, b = self.gate(), self.gate()
-        with self.assertRaises(ValueError):
-            with a.hold(API, self.clock.now + 30):
-                raise ValueError("request failed")
+        with self.assertRaises(ValueError), a.hold(API, self.clock.now + 30):
+            raise ValueError("request failed")
         self.clock.advance(5)
         with b.hold(API, self.clock.now + 1.0):
             pass
 
     def test_future_timestamp_is_clamped_to_one_interval(self):
         os.makedirs(os.path.dirname(self.path))
-        with open(self.path, "w") as f:
+        with open(self.path, "w", encoding="utf-8") as f:
             json.dump({"any": self.clock.wall() + 10 ** 6}, f)
         with self.gate().hold(API, self.clock.now + 30):
             pass
@@ -261,17 +258,17 @@ class GateTests(unittest.TestCase):
 
     def test_corrupt_file_is_ignored(self):
         os.makedirs(os.path.dirname(self.path))
-        with open(self.path, "w") as f:
+        with open(self.path, "w", encoding="utf-8") as f:
             f.write("not json")
         with self.gate().hold(API, self.clock.now + 30):
             pass
         self.assertEqual(self.clock.sleeps, [])
-        with open(self.path) as f:
+        with open(self.path, encoding="utf-8") as f:
             self.assertIn("any", json.load(f))
 
     def test_unusable_path_warns_once_and_still_spaces_this_process(self):
         blocker = os.path.join(self.tmp.name, "afile")
-        with open(blocker, "w") as f:
+        with open(blocker, "w", encoding="utf-8") as f:
             f.write("x")
         warn = io.StringIO()
         c = self.clock
@@ -316,11 +313,11 @@ class GateTests(unittest.TestCase):
             self.assertEqual(p.exitcode, 0)
         spans = []
         for o in outs:
-            with open(o) as f:
+            with open(o, encoding="utf-8") as f:
                 spans += json.load(f)
         spans.sort()
         self.assertEqual(len(spans), 2 * rounds)
-        for (s1, e1), (s2, _) in zip(spans, spans[1:]):
+        for (s1, e1), (s2, _) in itertools.pairwise(spans):
             self.assertGreaterEqual(s2, e1, "requests overlapped")
             self.assertGreaterEqual(s2 - s1, interval - 0.005)
 

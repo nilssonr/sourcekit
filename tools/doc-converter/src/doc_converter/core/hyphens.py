@@ -7,7 +7,7 @@ import re
 import sys
 from collections import Counter
 from collections.abc import Callable
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
 from .pdf import Span
 

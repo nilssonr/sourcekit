@@ -12,6 +12,7 @@ from typing import List, NamedTuple, Optional
 from unittest import mock
 
 from arxiv_client.__main__ import main
+
 from tests.helpers import (
     FakeClock,
     FakeOpener,

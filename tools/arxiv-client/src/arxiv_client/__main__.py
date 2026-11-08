@@ -23,7 +23,6 @@ import sys
 from typing import Any, Callable, Dict, List, Optional, Sequence, TextIO, Tuple
 
 from .client import ArxivClient, _check_int
-from .models import Paper
 from .errors import (
     ArxivError,
     ArxivTimeoutError,
@@ -34,6 +33,7 @@ from .errors import (
     ThrottledError,
     ValidationError,
 )
+from .models import Paper
 from .query import Q
 from .transport import DEFAULT_USER_AGENT
 
@@ -312,7 +312,7 @@ def main(
         return 2
     user_agent = args.user_agent or os.environ.get("ARXIV_USER_AGENT") or DEFAULT_USER_AGENT
     try:
-        client = (client_factory or (lambda ua: ArxivClient(ua)))(user_agent)
+        client = (client_factory or ArxivClient)(user_agent)
         result, compact = _run(args, client, stdin)
     except ArxivError as e:
         code, kind = 1, "error"

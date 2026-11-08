@@ -48,9 +48,8 @@ class QueryBuilderTests(unittest.TestCase):
 
     def test_wildcards_anywhere_else_are_rejected(self):
         for bad in ("tr*ansform", "*", "two words*"):
-            with self.subTest(bad=bad):
-                with self.assertRaises(ValidationError):
-                    Q.title(bad)
+            with self.subTest(bad=bad), self.assertRaises(ValidationError):
+                Q.title(bad)
 
     def test_blank_field_text_is_rejected(self):
         with self.assertRaises(ValidationError):
@@ -83,9 +82,8 @@ class DateRangeTests(unittest.TestCase):
 
     def test_malformed_or_reversed_date_ranges_are_rejected(self):
         for start, end in (("2023-01-01", "20230131"), ("20230201", "20230101")):
-            with self.subTest(start=start, end=end):
-                with self.assertRaises(ValidationError):
-                    Q.submitted_between(start, end)
+            with self.subTest(start=start, end=end), self.assertRaises(ValidationError):
+                Q.submitted_between(start, end)
 
     def test_spaces_encode_as_percent20_never_percent2B(self):
         encoded = encode_params({"search_query": str(Q.category("cs.LG") & Q.submitted_between("20230101", "20230131"))})
