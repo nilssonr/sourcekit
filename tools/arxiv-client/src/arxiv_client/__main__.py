@@ -1,13 +1,13 @@
 """Command-line interface. Prints JSON on stdout; errors as JSON on stderr.
 
-    python3 -m arxiv_client search --title "attention is all you need" --max 5
-    python3 -m arxiv_client search --all "protein folding" --category q-bio.BM --sort submitted
-    python3 -m arxiv_client search --abstract homogenization --any-category cs.HC --any-category cs.CL --format compact
-    python3 -m arxiv_client batch queries.json --format compact
-    python3 -m arxiv_client fetch 1706.03762 hep-th/9901001v1 --abstract-chars 300
-    python3 -m arxiv_client get 2301.00001
-    python3 -m arxiv_client feed cs.AI cs.LG
-    python3 -m arxiv_client pdf 2301.00001 --out ./papers
+    arxiv search --title "attention is all you need" --max 5
+    arxiv search --all "protein folding" --category q-bio.BM --sort submitted
+    arxiv search --abstract homogenization --any-category cs.HC --any-category cs.CL --format compact
+    arxiv batch queries.json --format compact
+    arxiv fetch 1706.03762 hep-th/9901001v1 --abstract-chars 300
+    arxiv get 2301.00001
+    arxiv feed cs.AI cs.LG
+    arxiv pdf 2301.00001 --out ./papers
 
 Exit codes: 0 ok, 2 validation, 3 not found, 4 throttled, 5 server error,
 6 timeout, 7 network blocked.
@@ -61,7 +61,7 @@ def _add_output_flags(parser: argparse.ArgumentParser) -> None:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="arxiv_client", description="Query arXiv; prints JSON.")
+    p = argparse.ArgumentParser(prog="arxiv", description="Query arXiv; prints JSON.")
     p.add_argument("--user-agent", help="User-Agent header (default: $ARXIV_USER_AGENT or %s)" % DEFAULT_USER_AGENT)
     sub = p.add_subparsers(dest="command")
     sub.required = True

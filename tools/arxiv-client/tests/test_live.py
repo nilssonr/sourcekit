@@ -21,7 +21,7 @@ LIVE = os.environ.get("ARXIV_LIVE") == "1"
 @unittest.skipUnless(LIVE, "set ARXIV_LIVE=1 to run live arXiv requests")
 class LiveSmokeTest(unittest.TestCase):
     def test_three_requests(self):
-        client = ArxivClient(os.environ.get("ARXIV_USER_AGENT") or "research-client/0.1")
+        client = ArxivClient(os.environ.get("ARXIV_USER_AGENT") or "arxiv-client/0.1")
 
         page = client.search_page(Q.title("attention is all you need"), max_results=3)
         self.assertGreaterEqual(page.total_results or 0, 1)

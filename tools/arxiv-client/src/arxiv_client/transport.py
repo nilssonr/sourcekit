@@ -32,7 +32,7 @@ from .errors import (
 )
 from .pacing import BLOCK_SECONDS, BlockStore, FileGate, MemoryGate, Pacer
 
-DEFAULT_USER_AGENT = "research-client/0.1"
+DEFAULT_USER_AGENT = "arxiv-client/0.1"
 DEFAULT_BUDGET = 30.0
 DEFAULT_REQUEST_TIMEOUT = 10.0
 MIN_INTERVAL = 3.0              # arXiv: at most 1 request every 3 s, across all hosts and processes

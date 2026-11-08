@@ -97,7 +97,7 @@ class CliTests(unittest.TestCase):
         old = os.environ.pop("ARXIV_USER_AGENT", None)
         try:
             self.run_cli(["get", "2401.00001"], steps())
-            self.assertEqual(self.user_agents, ["research-client/0.1"])
+            self.assertEqual(self.user_agents, ["arxiv-client/0.1"])
             os.environ["ARXIV_USER_AGENT"] = "env-agent/2"
             self.run_cli(["get", "2401.00001"], steps())
             self.assertEqual(self.user_agents, ["env-agent/2"])
