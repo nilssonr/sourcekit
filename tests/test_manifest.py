@@ -51,6 +51,15 @@ class CodeEmphasisTests(unittest.TestCase):
         self.assertEqual(markup_emphasis(md, [list(r) for r in ranges]), ("", ""))
 
 
+class QuoteTests(unittest.TestCase):
+    def test_code_lines_starting_with_gt_stay_inside_the_quote(self):
+        from book_converter.core.model import Code, Paragraph, Run, Sidebar
+        from book_converter.modules.serialize.markdown import Markdown, MarkdownConfig
+        md = Markdown(MarkdownConfig(("x", "x"), ("x", "x"), ("x", "x")))
+        out = md.block(Sidebar([Run("T", "")], [Paragraph([Run("p", "")]), Code([">foo", "> bar"], ["", ""])]))
+        self.assertEqual(out, "> **T**\n>\n> p\n>\n> ```\n> >foo\n> > bar\n> ```")
+
+
 class CoverageTests(unittest.TestCase):
     EXPECTED = {"a.md": (2, 10), "b.md": (11, 20)}
 

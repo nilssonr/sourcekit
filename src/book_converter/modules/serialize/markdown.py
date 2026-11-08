@@ -150,8 +150,8 @@ def fmt_lines(ns: list[int]) -> str:
 
 
 def _quote(parts: list[str]) -> str:
-    """Parts as one blockquote; lines that already start with ">" are kept as they are."""
-    return "\n>\n".join("\n".join(("> " + l) if not l.startswith(">") else l for l in p.split("\n")) for p in parts)
+    """Parts as one blockquote: every line gets "> " (a part that is itself a quote nests as "> > ")."""
+    return "\n>\n".join("\n".join("> " + l for l in p.split("\n")) for p in parts)
 
 
 class Markdown:
@@ -187,8 +187,8 @@ class Markdown:
             case Table():
                 return self.table(b)
             case Note():
-                first = f"> **{b.label}** {render_runs(b.inlines)}"
-                return _quote([first] + [self.block(c) for c in b.continued]) if b.continued else first
+                first = f"**{b.label}** {render_runs(b.inlines)}"
+                return _quote([first] + [self.block(c) for c in b.continued]) if b.continued else _quote([first])
             case Sidebar():
                 return _quote([f"**{render_runs(b.title)}**"] + [self.block(c) for c in b.children])
         raise TypeError(f"no Markdown for {type(b).__name__}")
