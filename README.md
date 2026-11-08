@@ -64,6 +64,9 @@ All of these are generated fresh on every run.
   line(s) its arrow or bracket points to, measured from the vector graphics. Each listing also gets a
   `![Listing …](…)` image.
 - `Chapter N: ` prefixes on chapter titles, and the `# Front matter` title.
+- In code blocks with bold or italic: the `<pre><code>` block and its `<b>`/`<i>` tags. These blocks are
+  written as HTML so the emphasis survives (GitHub and CommonMark render them). Code is HTML-escaped there,
+  and every other code block is a plain fenced block.
 
 A listing that continues onto another page gets one image per page part that has callouts:
 `listing-6.10.png` (first page), `listing-6.10-2.png` (second page). Code blocks with callouts but no
@@ -87,6 +90,8 @@ the table of contents and the index.
   end of the chapter, table cells row by row.
 - **Coverage** (`coverage.txt`): the files' page ranges must match the outline split, with no gaps or
   overlaps. `verify` exits with status 1 if they don't.
+- **Emphasis** (`emphasis.txt`): the bold and italic characters of the PDF's code blocks must equal the
+  text inside the converter's `<b>`/`<i>` tags (literal tags in book code don't count).
 - **Independent count** (`independent.txt`): PyMuPDF's separate word extraction for the whole book,
   compared with all files. This is a coarse check of the loading path. Its hyphen joining follows
   PyMuPDF's word order, which isn't reading order where a listing or figure interrupts a paragraph.

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import unittest
 
-from book_converter.core.verify import coverage, without_added
-from book_converter.modules.serialize.markdown import added, extract_added
+from book_converter.core.verify import coverage, markup_emphasis, without_added
+from book_converter.modules.regions.listings import _fill_space_marks
+from book_converter.modules.serialize.markdown import added, extract_added, has_emphasis, pre
 
 
 class AddedMaterialTests(unittest.TestCase):
@@ -26,6 +27,28 @@ class AddedMaterialTests(unittest.TestCase):
         text, ranges = extract_added("keep " + added("k", "drop ") + "keep2")
         self.assertEqual(without_added(text, [list(r) for r in ranges]), "keep keep2")
         self.assertEqual(without_added("abc", []), "abc")
+
+
+class CodeEmphasisTests(unittest.TestCase):
+    def test_spaces_join_a_bold_phrase_but_not_its_edges(self):
+        text = "x = new Foo(a, b);"
+        marks = "....bbb.bbbbbbbbb."
+        self.assertEqual(_fill_space_marks(text, [m if c != " " else "." for c, m in zip(text, marks)]),
+                         "....bbbbbbbbbbbbb.")
+
+    def test_pre_escapes_and_tags_and_round_trips_through_the_verifier(self):
+        lines, marks = ["if (a < b) {", "", "  f(x);"], ["....bbbbb...", "", "..bbbbb"]
+        self.assertTrue(has_emphasis(marks))
+        self.assertFalse(has_emphasis(["....", ""]))
+        md, ranges = extract_added(pre(lines, marks))
+        self.assertEqual(md, "<pre><code>if (<b>a &lt; b</b>) {\n\n  <b>f(x);</b>\n</code></pre>")
+        rs = [list(r) for r in ranges]
+        self.assertEqual(without_added(md, rs), "if (a < b) {\n\n  f(x);\n")
+        self.assertEqual(markup_emphasis(md, rs), ("a < bf(x);", ""))
+
+    def test_literal_tags_in_book_text_are_not_emphasis(self):
+        md, ranges = extract_added("```\nreturn \"<b>\" + body;\n```\n")
+        self.assertEqual(markup_emphasis(md, [list(r) for r in ranges]), ("", ""))
 
 
 class CoverageTests(unittest.TestCase):

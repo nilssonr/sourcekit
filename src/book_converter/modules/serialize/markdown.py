@@ -6,6 +6,7 @@ section title prefixes) is reported as character ranges, so the verifier can tel
 
 from __future__ import annotations
 
+import html
 import re
 from dataclasses import dataclass
 
@@ -103,6 +104,35 @@ def fence(lines: list[str]) -> str:
     return "```\n" + "\n".join(lines) + "\n```"
 
 
+TAGS = {"b": ("<b>", "</b>"), "i": ("<i>", "</i>"), "B": ("<b><i>", "</i></b>")}
+
+
+def has_emphasis(marks: list[str]) -> bool:
+    return any(m.strip(".") for m in marks)
+
+
+def pre(lines: list[str], marks: list[str]) -> str:
+    """Code with emphasis as an HTML block: <pre><code> with <b>/<i>, text HTML-escaped. Tags are
+    marked "code-markup" (added); entities are marked "code-escape" (book characters, written escaped)."""
+    def esc_html(t: str) -> str:
+        return re.sub(r"&(?:lt|gt|amp);", lambda m: added("code-escape", m[0]), html.escape(t, quote=False))
+
+    out = []
+    for t, m in zip(lines, marks):
+        m = m.ljust(len(t), ".")
+        line, i = "", 0
+        while i < len(t):
+            j = i
+            while j < len(t) and m[j] == m[i]:
+                j += 1
+            seg = esc_html(t[i:j])
+            tag = TAGS.get(m[i])
+            line += added("code-markup", tag[0]) + seg + added("code-markup", tag[1]) if tag else seg
+            i = j
+        out.append(line)
+    return added("code-markup", "<pre><code>") + "\n".join(out) + "\n" + added("code-markup", "</code></pre>")
+
+
 def fmt_lines(ns: list[int]) -> str:
     if not ns:
         return "(no line)"
@@ -172,7 +202,7 @@ class Markdown:
         return "\n".join(lines)
 
     def code(self, b: Code) -> str:
-        md = fence(b.lines)
+        md = pre(b.lines, b.marks) if has_emphasis(b.marks) else fence(b.lines)
         if b.title:
             pat, rep = self.cfg.listing_title
             md = f"**{re.sub(pat, rep, b.title)}**\n\n" + md

@@ -34,6 +34,24 @@ class CodeLine:
     baseline: float
     page: int
     x0: float = 0.0  # x of the first non-space character
+    marks: str = ""  # emphasis per character of text: "." plain, "b" bold, "i" italic, "B" bold italic
+
+
+def _mark(s: Span) -> str:
+    return {(True, True): "B", (True, False): "b", (False, True): "i"}.get((s.bold, s.italic), ".")
+
+
+def _fill_space_marks(text: str, marks: list[str]) -> str:
+    """Spaces take the emphasis of the characters on both sides when those agree, so a bold phrase
+    stays one run; leading and trailing spaces of a run stay plain."""
+    out = list(marks)
+    for i, ch in enumerate(text):
+        if ch != " ":
+            continue
+        left = next((marks[j] for j in range(i - 1, -1, -1) if text[j] != " "), ".")
+        right = next((marks[j] for j in range(i + 1, len(text)) if text[j] != " "), ".")
+        out[i] = left if left == right else "."
+    return "".join(out)
 
 
 @dataclass
@@ -81,6 +99,7 @@ def listing_parts(spans: list[Span], bar: pymupdf.Rect, used: set[int],
 def code_lines(spans: list[Span], warn, cfg: ListingConfig) -> list[CodeLine]:
     """Rebuild code lines from character positions on the fixed-pitch grid (cfg.char_width)."""
     rows: dict[tuple[int, float], dict[int, str]] = {}
+    marks: dict[tuple[int, float], dict[int, str]] = {}
     keys: list[tuple[int, float]] = []
     # grid origin: the text column, unless the block sits off that grid (e.g. padded inside a sidebar)
     bases: dict[int, float] = {}
@@ -102,6 +121,7 @@ def code_lines(spans: list[Span], warn, cfg: ListingConfig) -> list[CodeLine]:
                 k = (s.page, c.y)
                 keys.append(k)
                 rows[k] = {}
+                marks[k] = {}
             pos = (c.x0 - base) / cfg.char_width
             col = max(0, round(pos))
             if abs(pos - col) > 0.3:
@@ -109,16 +129,19 @@ def code_lines(spans: list[Span], warn, cfg: ListingConfig) -> list[CodeLine]:
             if col in rows[k] and rows[k][col] != c.c:
                 warn(f"code column clash p{s.page} col {col} {rows[k][col]!r}/{c.c!r} in {s.text.strip()[:30]!r}")
             rows[k][col] = c.c
+            marks[k][col] = _mark(s)
     out = []
     for k in sorted(keys):
         row = rows[k]
-        out.append(CodeLine("".join(row.get(i, " ") for i in range(max(row) + 1)).rstrip(), k[1], k[0],
-                            bases[k[0]] + min(row) * cfg.char_width))
+        text = "".join(row.get(i, " ") for i in range(max(row) + 1)).rstrip()
+        mk = _fill_space_marks(text, [marks[k].get(i, ".") for i in range(len(text))])
+        out.append(CodeLine(text, k[1], k[0], bases[k[0]] + min(row) * cfg.char_width, mk))
     return out
 
 
-def with_blank_lines(lines: list[CodeLine], cfg: ListingConfig) -> tuple[list[str], list[int]]:
-    """Insert blank lines from the line pitch. Returns (text lines, index of each CodeLine in them)."""
+def with_blank_lines(lines: list[CodeLine], cfg: ListingConfig, attr: str = "text") -> tuple[list[str], list[int]]:
+    """Insert blank lines from the line pitch. Returns (text lines, index of each CodeLine in them);
+    attr="marks" gives the emphasis marks of the same lines instead of their text."""
     out: list[str] = []
     pos: list[int] = []
     for i, l in enumerate(lines):
@@ -126,7 +149,7 @@ def with_blank_lines(lines: list[CodeLine], cfg: ListingConfig) -> tuple[list[st
             for _ in range(round((l.baseline - lines[i - 1].baseline) / cfg.line_pitch) - 1):
                 out.append("")
         pos.append(len(out))
-        out.append(l.text)
+        out.append(getattr(l, attr))
     return out, pos
 
 

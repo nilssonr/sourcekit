@@ -88,6 +88,7 @@ class Callout:
 class Code(Block):
     """A code block. A listing has a title or callouts; lid names its images."""
     lines: list[str]
+    marks: list[str]          # emphasis per character of each line ("." plain, "b", "i", "B" bold italic)
     title: str = ""
     lid: str = ""
     callouts: list[Callout] = field(default_factory=list)

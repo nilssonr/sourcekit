@@ -139,6 +139,11 @@ class Assembler:
         r = (r + (-6, -4, 6, 5)) & self.book.page(pno).rect
         return ImageRef(name, "crop", pno, r)
 
+    def code_text(self, lines) -> tuple[list[str], list[int], list[str]]:
+        """Code lines with blank lines from the line pitch: (text lines, position of each line, marks)."""
+        text, pos = with_blank_lines(lines, self.cfg.page.listings)
+        return text, pos, with_blank_lines(lines, self.cfg.page.listings, "marks")[0]
+
     def callouts(self, pno: int, area: pymupdf.Rect, lines, pos: list[int], calls: list[Span]) -> list[Callout]:
         got = map_callouts(self.book, pno, area, lines, pos, calls, self.warn, self.cfg.page.listings)
         return [Callout(c.lines, self.text.join_rows(self.text.rows_of(c.spans), plain=True), c.top) for c in got]
@@ -263,8 +268,8 @@ class Assembler:
                     lid = m.group(1) if m else "?"
                     code = [s for s in body if cfg.is_code_block(s)]
                     lines = code_lines(code, self.warn, lst_cfg)
-                    ltext, pos = with_blank_lines(lines, lst_cfg)
-                    lst = Code(ltext, title, lid, src=self.src(head + body))
+                    ltext, pos, lmarks = self.code_text(lines)
+                    lst = Code(ltext, lmarks, title, lid, src=self.src(head + body))
                     listing_state[id(lst)] = [p, 1]
                     calls = [s for s in body if cfg.is_callout(s)]
                     if calls:
@@ -283,8 +288,9 @@ class Assembler:
                             and top < cfg.listing_continue_top and state and state[0] == p - 1):
                         sep = 1 if prev.lines and prev.lines[-1].strip() == "}" and lines[0].text.strip() != "}" else 0
                         base = len(prev.lines) + sep
-                        ctext, pos = with_blank_lines(lines, lst_cfg)
+                        ctext, pos, cmarks = self.code_text(lines)
                         prev.lines.extend([""] * sep + ctext)
+                        prev.marks.extend([""] * sep + cmarks)
                         prev.src += self.src(ink + calls)
                         state[0] = p
                         state[1] += 1
@@ -298,13 +304,14 @@ class Assembler:
                     elif st["sidebar"] and not calls and any(b.contains(pymupdf.Point(ink[0].x0 + 1, ink[0].cy))
                                                              for b in sidebar_boxes):
                         sidebar_flush_inner()
-                        st["sidebar"]["parts"].append(Code(with_blank_lines(lines, lst_cfg)[0], src=self.src(ink)))
+                        ctext, _, cmarks = self.code_text(lines)
+                        st["sidebar"]["parts"].append(Code(ctext, cmarks, src=self.src(ink)))
                     else:
                         close_all()
                         if calls:
-                            ctext, pos = with_blank_lines(lines, lst_cfg)
+                            ctext, pos, cmarks = self.code_text(lines)
                             label = self.book.page_label(p)
-                            lst = Code(ctext, "", f"p{label}", src=self.src(ink + calls))
+                            lst = Code(ctext, cmarks, "", f"p{label}", src=self.src(ink + calls))
                             listing_state[id(lst)] = [p, 1]
                             area = pymupdf.Rect(0, min(s.y0 for s in ink + calls) - 3, self.book.page(p).rect.x1,
                                                 max(s.y1 for s in ink + calls) + 3)
@@ -315,7 +322,8 @@ class Assembler:
                             lst.images.append(self.listing_image(p, ink + calls, area, f"code-{lst.lid}.png"))
                             push(lst)
                         else:
-                            push(Code(with_blank_lines(lines, lst_cfg)[0], src=self.src(ink)))
+                            ctext, _, cmarks = self.code_text(lines)
+                            push(Code(ctext, cmarks, src=self.src(ink)))
                     continue
 
                 r: Row = obj

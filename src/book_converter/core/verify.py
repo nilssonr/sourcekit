@@ -9,7 +9,8 @@ and an independent whole-book count compares PyMuPDF's separate word extraction 
 
 Usage: uv run verify --input <pdf> --output <dir> --profile <name|dir> [--report-dir DIR]
 
-Reports go to stdout, or to --report-dir: <file>.md.txt per file, coverage.txt, independent.txt.
+Reports go to stdout, or to --report-dir: <file>.md.txt per file, coverage.txt, emphasis.txt,
+independent.txt.
 Exits 1 when coverage fails.
 """
 
@@ -17,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import html
 import json
 import re
 import sys
@@ -40,6 +42,7 @@ class VerifyConfig:
     is_figure_text: Callable[[Span], bool]    # figure-label text
     is_bullet_glyph: Callable[[Span], bool]   # bullet glyphs
     is_page_number: Callable[[Span], bool]    # a row made only of these is a page number
+    is_code_block: Callable[[Span], bool]     # code block text (its bold/italic must survive as <b>/<i>)
 
 
 def tokens(s: str) -> list[str]:
@@ -79,10 +82,13 @@ def page_text(spans: list[Span], cfg: VerifyConfig) -> str:
 
 
 def without_added(md: str, ranges: list[list]) -> str:
-    """The Markdown with the manifest's added-material ranges [start, end, kind] removed."""
+    """The Markdown with the manifest's added-material ranges [start, end, kind] removed; "code-escape"
+    ranges are HTML entities for book characters and become those characters."""
     out, pos = [], 0
-    for start, end, _ in sorted(ranges):
+    for start, end, kind in sorted(ranges):
         out.append(md[pos:start])
+        if kind == "code-escape":
+            out.append(html.unescape(md[start:end]))
         pos = end
     out.append(md[pos:])
     return "".join(out)
@@ -192,6 +198,54 @@ def independent(book: Book, pages: list[int], book_text: str, cfg: VerifyConfig)
             f"extra in markdown ({len(extra)}): {' '.join(f'{k}×{n}' for n, k in extra)}\n")
 
 
+def markup_emphasis(md: str, ranges: list[list]) -> tuple[str, str]:
+    """(bold text, italic text) of the Markdown: the text between the <b>/<i> tags the converter
+    added (manifest kind "code-markup"). Literal tags in book text are not markup and don't count."""
+    bold, ital = [], []
+    b = i = False
+    pos = 0
+
+    def take(t: str) -> None:
+        if b:
+            bold.append(t)
+        if i:
+            ital.append(t)
+
+    for start, end, kind in sorted(ranges):
+        take(md[pos:start])
+        if kind == "code-markup":
+            for tag in re.findall(r"</?[bi]>", md[start:end]):
+                if tag[1:-1] in ("b", "/b"):
+                    b = not tag.startswith("</")
+                else:
+                    i = not tag.startswith("</")
+        elif kind == "code-escape":
+            take(html.unescape(md[start:end]))
+        pos = end
+    take(md[pos:])
+    return "".join(bold), "".join(ital)
+
+
+def emphasis(book: Book, md: str, ranges: list[list], pages: list[int], cfg: VerifyConfig) -> tuple[bool, str]:
+    """Bold and italic characters of code-block spans on these pages against the converter's <b>/<i>
+    content in the Markdown, both without whitespace, in reading order."""
+    spans = sorted((s for p in pages for s in book.spans(p) if cfg.is_code_block(s)),
+                   key=lambda s: (s.page, s.baseline, s.x0))
+    marked = markup_emphasis(md, ranges)
+    lines, ok = [], True
+    for name, want, got in (("bold", lambda s: s.bold, marked[0]), ("italic", lambda s: s.italic, marked[1])):
+        pdf = "".join(re.sub(r"\s+", "", s.text) for s in spans if want(s))
+        got = re.sub(r"\s+", "", got)
+        if pdf == got:
+            lines.append(f"{name}: {len(pdf)} characters, OK")
+        else:
+            ok = False
+            k = next((n for n, (a, c) in enumerate(zip(pdf, got)) if a != c), min(len(pdf), len(got)))
+            lines.append(f"{name}: DIFFERENT: pdf {len(pdf)} characters, markdown {len(got)}; first difference at "
+                         f"{k}: pdf {pdf[max(0, k - 20):k + 20]!r} markdown {got[max(0, k - 20):k + 20]!r}")
+    return ok, "; ".join(lines)
+
+
 def coverage(files: list[dict], expected: dict[str, tuple[int, int]]) -> tuple[bool, str]:
     """The manifest's files against the profile's outline split; page ranges contiguous, no overlap."""
     problems = []
@@ -240,14 +294,18 @@ def main() -> None:
     expected = {sec.file: sec.pages for sec in outline.sections(book, prof.split).values()}
     ok, cov = coverage(files, expected)
     emit("coverage.txt", "coverage", cov)
-    all_text, pages = [], []
+    all_text, pages, emph = [], [], []
     for f in files:
         p0, p1 = f["pages"]
         skip = set(f["skip_pages"])
-        text = without_added((out / f["file"]).read_text(encoding="utf-8"), f["added"])
+        md = (out / f["file"]).read_text(encoding="utf-8")
+        text = without_added(md, f["added"])
+        kept = [p for p in range(p0, p1 + 1) if p not in skip]
+        emph.append(f"{f['file']}: " + emphasis(book, md, f["added"], kept, prof.verify)[1])
         all_text.append(text)
         pages += [p for p in range(p0, p1 + 1) if p not in skip]
         emit(f"{f['file']}.txt", f"{f['file']} (PDF pages {p0}-{p1})", report(book, text, p0, p1, skip, prof.verify))
+    emit("emphasis.txt", "emphasis in code", "\n".join(emph) + "\n")
     emit("independent.txt", "independent count", independent(book, sorted(pages), "\n".join(all_text), prof.verify))
     if not ok:
         sys.exit(1)
