@@ -1,8 +1,8 @@
 # Design: stages, document model and profile
 
-Status: **draft for review** (Phase 2 of the approved plan). No code has moved yet.
+Status: **implemented.** §10 records where the code differs from this draft.
 
-Scope: the Manning *Unit Testing* PDF only. The aim is a clean split between book-independent code and the Manning profile, and a document model between PDF analysis and Markdown. The output stays **byte-identical** to the reference in `~/temp/book-converter-ref/manning/`, except where a section below names a deliberate, reviewed difference.
+Scope: the Manning *Unit Testing* PDF only. The aim is a clean split between book-independent code and the Manning profile, and a document model between PDF analysis and Markdown. The output stays **byte-identical** to a saved reference run (see `tests/test_regression.py`), except where a section below names a deliberate, reviewed difference.
 
 ## 1. Rules for the split
 

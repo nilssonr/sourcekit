@@ -1,9 +1,9 @@
-# research-client
+# arxiv-client
 
-A standard-library Python client for arXiv's query API (`export.arxiv.org/api/query`) and its daily announcement feeds (`rss.arxiv.org`), plus single-PDF download. It's built to ship in a Claude skill's `scripts/` folder:
-- Python 3.9 or later.
-- No dependencies.
-- No install step.
+A Python client for arXiv's query API (`export.arxiv.org/api/query`) and its daily announcement feeds (`rss.arxiv.org`), plus single-PDF download. Part of [sourcekit](../../README.md).
+- Python 3.14.
+- No runtime dependencies (standard library only).
+- Command: `arxiv`. Run it with `uv run --package arxiv-client arxiv …`, or put it on your PATH with `uv tool install --editable tools/arxiv-client`.
 
 The behaviour follows the empirical reference in [`docs/arxiv-api.md`](docs/arxiv-api.md). Section 6 of that doc is the requirements list.
 
@@ -12,24 +12,23 @@ Thank you to arXiv for use of its open access interoperability.
 ## Layout
 
 ```
-arxiv_client/     the package (self-contained; a skill can ship a copy in its scripts/ folder)
-tests/            unittest suite; fixtures in tests/fixtures/arxiv/
+src/arxiv_client/  the package
+tests/             unittest suite; fixtures in tests/fixtures/arxiv/
+docs/              the empirical API reference and an OpenAPI description
 ```
 
 ## CLI (prints JSON)
 
-Run it from the folder that contains `arxiv_client/`:
-
 ```sh
-python3 -m arxiv_client search --title "attention is all you need" --max 5
-python3 -m arxiv_client search --all "protein folding" --category q-bio.BM --sort submitted --max 20
-python3 -m arxiv_client search --author Hinton --from 20230101 --to 20231231
-python3 -m arxiv_client search --abstract homogenization --any-category cs.HC --any-category cs.CL --format compact
-python3 -m arxiv_client batch queries.json --format compact   # or - to read the list from stdin
-python3 -m arxiv_client fetch 1706.03762 hep-th/9901001v1 --abstract-chars 300
-python3 -m arxiv_client get 2301.00001
-python3 -m arxiv_client feed cs.AI cs.LG          # add --rss for the RSS feed
-python3 -m arxiv_client pdf 2301.00001 --out ./papers
+arxiv search --title "attention is all you need" --max 5
+arxiv search --all "protein folding" --category q-bio.BM --sort submitted --max 20
+arxiv search --author Hinton --from 20230101 --to 20231231
+arxiv search --abstract homogenization --any-category cs.HC --any-category cs.CL --format compact
+arxiv batch queries.json --format compact   # or - to read the list from stdin
+arxiv fetch 1706.03762 hep-th/9901001v1 --abstract-chars 300
+arxiv get 2301.00001
+arxiv feed cs.AI cs.LG          # add --rss for the RSS feed
+arxiv pdf 2301.00001 --out ./papers
 ```
 
 **Search filters:**
@@ -71,7 +70,7 @@ python3 -m arxiv_client pdf 2301.00001 --out ./papers
 | 6 | `timeout` | the request or its 30 s budget timed out |
 | 7 | `network_blocked` | DNS failure, refused connection, or a proxy refused the tunnel. In a sandbox, allow the domain |
 
-**User-Agent:** set by `--user-agent`, then `$ARXIV_USER_AGENT`, then the default `research-client/0.1`.
+**User-Agent:** set by `--user-agent`, then `$ARXIV_USER_AGENT`, then the default `arxiv-client/0.1`.
 
 ## Library
 
@@ -158,8 +157,8 @@ The client is built for the **Claude Code CLI**. It runs locally with normal net
 ## Tests
 
 ```sh
-python3 -m unittest discover -s tests -t .           # never touches the network
-ARXIV_LIVE=1 python3 -m unittest tests.test_live -v  # 5 live requests, opt-in
+uv run python -m unittest discover -s tests -t .           # never touches the network
+ARXIV_LIVE=1 uv run python -m unittest tests.test_live -v  # 5 live requests, opt-in
 ```
 
 The suite uses a fake clock and fake sleep, so almost nothing really waits. The exception is one test that runs two real processes through the gate, which takes about a second.
@@ -172,4 +171,4 @@ The suite uses a fake clock and fake sleep, so almost nothing really waits. The 
 
 ## License
 
-MIT. See [`LICENSE`](LICENSE). A copy also sits in `arxiv_client/LICENSE`, so the notice travels with the package when it is copied into a skill.
+MIT. See [`LICENSE`](LICENSE).

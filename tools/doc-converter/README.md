@@ -1,7 +1,7 @@
-# book-converter
+# doc-converter
 
-Converts a born-digital PDF into verbatim Markdown, with a verifier. Book-independent code lives in this
-repository. Everything specific to one PDF lives in a **profile**: fonts, colours, layout values, how
+Converts a born-digital PDF into verbatim Markdown, with a verifier. Part of [sourcekit](../../README.md).
+PDF is the only input format so far. Document-independent code lives in this tool. Everything specific to one PDF lives in a **profile**: fonts, colours, layout values, how
 the outline splits into files, and hand-written data such as figure descriptions.
 
 The one profile so far is for *Unit Testing: Principles, Practices, and Patterns* (Khorikov, Manning
@@ -9,31 +9,35 @@ The one profile so far is for *Unit Testing: Principles, Practices, and Patterns
 PNGs. PyMuPDF supplies text spans, vector drawings (callout arrows, table rules, figure geometry) and
 rendering.
 
-No book content lives in this repository. The PDF, the output directory and the profile are arguments,
+No document content lives in this repository. The PDF, the output directory and the profile are arguments,
 and a run writes only under `--output`. Profiles live under `profiles/<name>/`. That directory is
 git-ignored here and is a separate local git repository. The design is in `docs/design.md`.
 
 ## Usage
 
 ```sh
-uv run convert --input <pdf> --output <dir> --profile manning_unit_testing [--sections ID...]
-uv run verify  --input <pdf> --output <dir> --profile manning_unit_testing [--report-dir DIR]
-uv run census  --input <pdf> --pages 16-296       # font x size x colour histogram (profile authoring)
+doc-converter convert --input <pdf> --output <dir> --profile manning_unit_testing [--sections ID...]
+doc-converter verify  --input <pdf> --output <dir> --profile manning_unit_testing [--report-dir DIR]
+doc-converter census  --input <pdf> --pages 16-296       # font x size x colour histogram (profile authoring)
 
 scripts/make_run.sh <pdf> <run dir> <profile>     # convert + verify into a run directory
 scripts/compare_ref.sh <ref dir> <run dir>        # regression check against a saved reference run
 
-uv run python -m unittest discover -s tests -v    # book tests need the PDF (BOOK_PDF, default under ~/temp)
-                                                  # and the profile; BOOK_REF=<ref dir> adds the full regression run
+uv run python -m unittest discover -s tests -v    # PDF tests run only when DOC_CONVERTER_PDF names the PDF
+                                                  # and the profile exists; DOC_CONVERTER_REF=<ref run dir>
+                                                  # adds the full regression run
 ```
+
+Run the command with `uv run --package doc-converter doc-converter …`, or put it on your PATH with
+`uv tool install --editable tools/doc-converter`.
 
 Section ids (`front`, `part-1`, `ch01`, …) come from the PDF outline, using the profile's split rules.
 
 ## Layout
 
 ```
-src/book_converter/
-  cli.py                 convert, census
+src/doc_converter/
+  cli.py                 the doc-converter command: convert, verify, census
   core/                  pdf (Book, spans, outline, page labels), model (document blocks), rows (rows, runs,
                          line joining), hyphens, sections, profile (loader), pipeline, verify
   modules/regions/       page (one page's regions in reading order), figures, tables, listings (code, callouts)
