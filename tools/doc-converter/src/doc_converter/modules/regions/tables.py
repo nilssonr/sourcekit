@@ -3,14 +3,15 @@ a blue header band, and no rules between body rows (rows split on vertical gaps)
 
 from __future__ import annotations
 
+import itertools
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import pymupdf
 
-from .listings import hexrgb
 from ...core.pdf import Book, Span
+from .listings import hexrgb
 
 
 @dataclass(frozen=True)
@@ -69,7 +70,7 @@ def regions(book: Book, pno: int, cfg: TableConfig) -> list[tuple[pymupdf.Rect, 
             continue
         seen.append(h.y0)
         band = [x for x in heads if abs(x.y0 - h.y0) < 1]
-        x0, x1 = min(x.x0 for x in band), max(x.x1 for x in band)
+        x0 = min(x.x0 for x in band)
         top = next((r for r in hrules if abs(r.y0 - h.y0) < 1.5 and abs(r.x0 - x0) < 2), None)
         if top is None:
             continue
@@ -92,7 +93,8 @@ def detect(book: Book, pno: int, warn, cfg: TableConfig) -> list[Table]:
     starts = [s for s in spans if cfg.is_caption_start(s) and s.text.strip().startswith(cfg.caption_word)]
     out = []
     used_caps: set[int] = set()
-    for region, head_bottom, vs in regions(book, pno, cfg):
+    for region, head_bottom, rule_xs in regions(book, pno, cfg):
+        vs = rule_xs
         st = next((s for s in starts if region.y0 - 40 < s.y0 < region.y0), None)
         if st is not None:
             used_caps.add(id(st))
@@ -105,11 +107,11 @@ def detect(book: Book, pno: int, warn, cfg: TableConfig) -> list[Table]:
             warn(f"p{pno}: table {tid}: no vertical rules; columns from header text")
             hsp = sorted((s for s in spans if region.contains(pymupdf.Point(s.cx, s.cy)) and s.cy < head_bottom
                           and s.text.strip()), key=lambda s: s.x0)
-            vs = [round((a.x1 + b.x0) / 2, 1) for a, b in zip(hsp, hsp[1:]) if b.x0 - a.x1 > 8]
+            vs = [round((a.x1 + b.x0) / 2, 1) for a, b in itertools.pairwise(hsp) if b.x0 - a.x1 > 8]
         edges = [region.x0] + vs + [region.x1]
         ncol = len(edges) - 1
 
-        def col_of(s: Span) -> int:
+        def col_of(s: Span, edges: list[float] = edges, ncol: int = ncol) -> int:
             for i in range(ncol):
                 if edges[i] - 1 <= s.cx < edges[i + 1] + 1:
                     return i

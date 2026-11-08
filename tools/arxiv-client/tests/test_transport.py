@@ -1,9 +1,9 @@
 import os
 import socket
-from unittest import mock
 import unittest
 import urllib.error
 import urllib.request
+from unittest import mock
 
 from arxiv_client import (
     ArxivTimeoutError,
@@ -18,6 +18,7 @@ from arxiv_client import (
     ValidationError,
 )
 from arxiv_client.transport import Transport, build_urllib_opener
+
 from tests.helpers import FakeClock, FakeOpener, FakeResponse, fixture, make_entry, make_feed, xml_response
 
 URL = "https://export.arxiv.org/api/query?search_query=all:x"

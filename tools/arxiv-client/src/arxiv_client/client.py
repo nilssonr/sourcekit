@@ -12,7 +12,7 @@ from .atom import parse_query_feed
 from .errors import ArxivError, LocalFileError, NotFoundError, ServerError, ValidationError
 from .feeds import parse_atom_feed, parse_rss, validate_categories
 from .ids import ArxivId, parse_id
-from .models import FeedItem, Feed, FetchResult, Paper, PdfResult, SearchPage
+from .models import Feed, FetchResult, Paper, PdfResult, SearchPage
 from .pacing import BlockStore, MemoryGate, Pacer
 from .query import Q, encode_params, to_search_query
 from .transport import (

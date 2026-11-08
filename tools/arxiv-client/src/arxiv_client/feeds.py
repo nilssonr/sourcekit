@@ -58,8 +58,8 @@ def split_creators(creator: Optional[str]) -> Tuple[str, ...]:
             current.append(ch)
     names.append("".join(current))
     result = []
-    for name in names:
-        name = re.sub(r"\([^()]*\)", " ", name)
+    for raw in names:
+        name = re.sub(r"\([^()]*\)", " ", raw)
         name = re.sub(r"\([^()]*\)", " ", name)  # one level of nesting
         name = " ".join(name.split())
         if name:
@@ -132,9 +132,9 @@ def parse_atom_feed(body: bytes) -> Feed:
         except ValueError:
             continue
         link = None
-        for l in entry.findall(_A + "link"):
-            if l.get("rel") in (None, "alternate"):
-                link = l.get("href")
+        for lnk in entry.findall(_A + "link"):
+            if lnk.get("rel") in (None, "alternate"):
+                link = lnk.get("href")
                 break
         items.append(
             FeedItem(

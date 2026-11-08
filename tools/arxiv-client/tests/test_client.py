@@ -1,6 +1,8 @@
+import itertools
 import unittest
 
 from arxiv_client import NotFoundError, Q, ServerError, ValidationError
+
 from tests.helpers import FakeClock, FakeOpener, fixture, make_client, make_entry, make_feed, xml_response
 
 BAD_ENTRY = "<entry><title>no id</title></entry>"
@@ -189,7 +191,7 @@ class FetchTests(unittest.TestCase):
         self.assertEqual(result.not_found, [])
         self.assertEqual([len(r.params["id_list"][0].split(",")) for r in self.opener.requests], [100, 100, 50])
         starts = [r.at for r in self.opener.requests]
-        self.assertTrue(all(b - a >= 3.0 for a, b in zip(starts, starts[1:])))
+        self.assertTrue(all(b - a >= 3.0 for a, b in itertools.pairwise(starts)))
 
     def test_old_style_versioned_500_falls_back_to_unversioned(self):
         self.opener.add(

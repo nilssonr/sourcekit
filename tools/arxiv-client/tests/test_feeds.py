@@ -2,6 +2,7 @@ import unittest
 
 from arxiv_client import ValidationError
 from arxiv_client.feeds import parse_atom_feed, parse_rss, split_creators, validate_categories
+
 from tests.helpers import FakeClock, FakeOpener, fixture, make_client, xml_response
 
 RSS_CT = "application/rss+xml; charset=utf-8"
@@ -75,9 +76,8 @@ class CategoryValidationTests(unittest.TestCase):
 
     def test_malformed_categories_are_rejected(self):
         for bad in (["cs.AI/x"], [], ["cs AI"]):
-            with self.subTest(bad=bad):
-                with self.assertRaises(ValidationError):
-                    validate_categories(bad)
+            with self.subTest(bad=bad), self.assertRaises(ValidationError):
+                validate_categories(bad)
 
 
 class FeedClientTests(unittest.TestCase):

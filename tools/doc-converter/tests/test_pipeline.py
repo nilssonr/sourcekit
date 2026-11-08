@@ -9,6 +9,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from doc_converter.core.pdf import OutlineEntry
+from doc_converter.core.pipeline import convert
+from doc_converter.core.profile import Profile
 from fixtures import (
     COLUMN_RIGHT,
     TITLE,
@@ -24,10 +27,6 @@ from fixtures import (
     table_config,
     verify_config,
 )
-
-from doc_converter.core.pdf import OutlineEntry
-from doc_converter.core.pipeline import convert
-from doc_converter.core.profile import Profile
 
 
 class ConvertTests(unittest.TestCase):
@@ -101,7 +100,7 @@ class ConvertTests(unittest.TestCase):
 
         convert(self.book(), self.profile(), out, dict_path=words)
 
-        self.assertEqual(sorted(p.name for p in out.iterdir() if not p.suffix == ".md"),
+        self.assertEqual(sorted(p.name for p in out.iterdir() if p.suffix != ".md"),
                          ["figure-labels.json", "hyphen-decisions.json", "illustrations", "manifest.json",
                           "run-info.json", "warnings.txt"])
         info = json.loads((out / "run-info.json").read_text(encoding="utf-8"))

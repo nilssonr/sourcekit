@@ -41,7 +41,7 @@ DateLike = Union[str, _dt.date, _dt.datetime]
 class Q:
     """An immutable search_query expression. Combine with ``&`` (AND), ``|`` (OR), ``-`` (ANDNOT)."""
 
-    __slots__ = ("expr", "_op")
+    __slots__ = ("_op", "expr")
 
     def __init__(self, expr: str, _op: Optional[str] = None) -> None:
         self.expr = expr

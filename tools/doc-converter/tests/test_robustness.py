@@ -11,7 +11,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 TOOL = Path(__file__).resolve().parents[1]
 
 

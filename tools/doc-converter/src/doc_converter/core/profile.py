@@ -15,12 +15,12 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # annotations only: verify imports this module
     from ..modules.assemble.flow import FlowConfig
-    from ..modules.serialize.markdown import MarkdownConfig
-    from .rows import RowConfig
-    from ..modules.split.outline import SplitConfig
     from ..modules.regions.figures import FigureConfig
     from ..modules.regions.listings import ListingConfig
     from ..modules.regions.tables import TableConfig
+    from ..modules.serialize.markdown import MarkdownConfig
+    from ..modules.split.outline import SplitConfig
+    from .rows import RowConfig
     from .verify import VerifyConfig
 
 REPO = Path(__file__).resolve().parents[3]

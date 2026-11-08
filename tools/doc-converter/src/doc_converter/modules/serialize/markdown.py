@@ -10,8 +10,21 @@ import html
 import re
 from dataclasses import dataclass
 
-from ...core.model import (Block, Code, Figure, Footnote, Heading, Label, ListBlock, Note, Paragraph, Run, SectionDoc,
-                           Sidebar, Table)
+from ...core.model import (
+    Block,
+    Code,
+    Figure,
+    Footnote,
+    Heading,
+    Label,
+    ListBlock,
+    Note,
+    Paragraph,
+    Run,
+    SectionDoc,
+    Sidebar,
+    Table,
+)
 
 
 @dataclass(frozen=True)
@@ -118,8 +131,8 @@ def pre(lines: list[str], marks: list[str]) -> str:
         return re.sub(r"&(?:lt|gt|amp);", lambda m: added("code-escape", m[0]), html.escape(t, quote=False))
 
     out = []
-    for t, m in zip(lines, marks):
-        m = m.ljust(len(t), ".")
+    for t, mk in zip(lines, marks, strict=False):
+        m = mk.ljust(len(t), ".")
         line, i = "", 0
         while i < len(t):
             j = i
@@ -151,7 +164,7 @@ def fmt_lines(ns: list[int]) -> str:
 
 def _quote(parts: list[str]) -> str:
     """Parts as one blockquote: every line gets "> " (a part that is itself a quote nests as "> > ")."""
-    return "\n>\n".join("\n".join("> " + l for l in p.split("\n")) for p in parts)
+    return "\n>\n".join("\n".join("> " + ln for ln in p.split("\n")) for p in parts)
 
 
 class Markdown:

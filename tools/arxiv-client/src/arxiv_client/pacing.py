@@ -113,10 +113,8 @@ class BlockStore:
                     f.write("%.3f\n" % until)
                 os.replace(tmp, self.path)
             except BaseException:
-                try:
+                with contextlib.suppress(OSError):
                     os.unlink(tmp)
-                except OSError:
-                    pass
                 raise
         except OSError as e:
             if not self._warned:
@@ -129,7 +127,7 @@ class BlockStore:
 
     def _read_file(self) -> float:
         try:
-            with open(self.path) as f:
+            with open(self.path, encoding="utf-8") as f:
                 return float(f.read().strip() or 0)
         except (OSError, ValueError):
             return 0.0

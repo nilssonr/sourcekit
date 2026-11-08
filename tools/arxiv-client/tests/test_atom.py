@@ -3,6 +3,7 @@ import unittest
 
 from arxiv_client import MalformedResponseError, ServerError
 from arxiv_client.atom import clean_abstract, error_message, parse_query_feed
+
 from tests.helpers import fixture, make_entry, make_feed
 
 
@@ -107,9 +108,8 @@ class FeedLevelTests(unittest.TestCase):
 
     def test_error_feeds_detected(self):
         for name in ("query_error_400.xml", "query_error_sort.xml", "query_error_500.xml"):
-            with self.subTest(fixture=name):
-                with self.assertRaises(ServerError):
-                    parse_query_feed(fixture(name))
+            with self.subTest(fixture=name), self.assertRaises(ServerError):
+                parse_query_feed(fixture(name))
 
     def test_error_message_extraction(self):
         self.assertEqual(error_message(fixture("query_error_400.xml")), "incorrect id format for foo")

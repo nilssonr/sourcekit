@@ -96,13 +96,13 @@ class Book:
     def page(self, pno: int) -> pymupdf.Page:
         return self.doc[pno - 1]
 
-    @functools.lru_cache(maxsize=None)
+    @functools.lru_cache(maxsize=None)  # noqa: B019 - one Book per run; the cache lives as long as it does
     def spans(self, pno: int) -> list[Span]:
         out: list[Span] = []
         raw = self.page(pno).get_text("rawdict", flags=TEXT_FLAGS)
         for b in raw["blocks"]:
-            for l in b.get("lines", []):
-                for s in l["spans"]:
+            for line in b.get("lines", []):
+                for s in line["spans"]:
                     chars = [Char(c["c"], c["bbox"][0], c["bbox"][2], c["origin"][1]) for c in s["chars"]]
                     text = "".join(c.c for c in chars)
                     if not text:
@@ -112,7 +112,7 @@ class Book:
                                     text, chars, s["origin"][1]))
         return out
 
-    @functools.lru_cache(maxsize=None)
+    @functools.lru_cache(maxsize=None)  # noqa: B019 - one Book per run; the cache lives as long as it does
     def _span_index(self, pno: int) -> dict[int, int]:
         return {id(s): i for i, s in enumerate(self.spans(pno))}
 
@@ -120,7 +120,7 @@ class Book:
         """(page, index into spans(page)): a stable id for a span of this Book."""
         return (s.page, self._span_index(s.page)[id(s)])
 
-    @functools.lru_cache(maxsize=None)
+    @functools.lru_cache(maxsize=None)  # noqa: B019 - one Book per run; the cache lives as long as it does
     def drawings(self, pno: int) -> list[dict]:
         return self.page(pno).get_drawings()
 

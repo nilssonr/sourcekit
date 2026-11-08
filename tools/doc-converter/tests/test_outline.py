@@ -104,9 +104,8 @@ class SectionsTests(unittest.TestCase):
             ("duplicate section id", [OutlineEntry(2, "3 A", 5), OutlineEntry(2, "3 B", 7), INDEX], "duplicate section id"),
         )
         for name, outline, message in cases:
-            with self.subTest(name):
-                with self.assertRaisesRegex(ValueError, message):
-                    sections(FakeBook(outline=outline), split_config())
+            with self.subTest(name), self.assertRaisesRegex(ValueError, message):
+                sections(FakeBook(outline=outline), split_config())
 
 
 if __name__ == "__main__":

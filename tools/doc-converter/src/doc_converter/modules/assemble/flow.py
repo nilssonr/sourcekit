@@ -14,9 +14,26 @@ from dataclasses import dataclass
 
 import pymupdf
 
-from ...core.model import (Block, Callout, Code, Figure, Footnote, Heading, ImageRef, Label, ListBlock, ListItem,
-                           Note, Paragraph, Run, SectionDoc, Sidebar, SourceRef, Table)
-from ...core.pdf import Book, Span, is_ws, near
+from ...core.model import (
+    Block,
+    Callout,
+    Code,
+    Figure,
+    Footnote,
+    Heading,
+    ImageRef,
+    Label,
+    ListBlock,
+    ListItem,
+    Note,
+    Paragraph,
+    Run,
+    SectionDoc,
+    Sidebar,
+    SourceRef,
+    Table,
+)
+from ...core.pdf import Book, Span, is_ws
 from ...core.rows import Row, Text, runs_text
 from ...core.sections import Section
 from ..regions import figures as figmod

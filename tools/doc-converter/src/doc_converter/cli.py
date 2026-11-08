@@ -18,7 +18,8 @@ from pathlib import Path
 from .core import pipeline
 from .core.pdf import Book
 from .core.profile import load as load_profile
-from .core.verify import main as verify, tolerant_stdout
+from .core.verify import main as verify
+from .core.verify import tolerant_stdout
 
 
 def convert(argv: list[str] | None = None) -> None:

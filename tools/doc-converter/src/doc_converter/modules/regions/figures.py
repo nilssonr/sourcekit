@@ -9,9 +9,9 @@ from dataclasses import dataclass, field
 
 import pymupdf
 
+from ...core.pdf import Book, Span
 from . import tables as tabmod
 from .listings import ListingConfig, hexrgb, listing_bars
-from ...core.pdf import Book, Span
 
 DPI = 216
 
@@ -145,8 +145,8 @@ def detect(book: Book, pno: int, warn, cfg: FigureConfig) -> list[Figure]:
              and id(s) not in cap_ids]
     used: set[int] = set()
     figs = []
-    for st, cr in zip(starts, cap_rects):
-        def dist(c: pymupdf.Rect) -> float:
+    for st, cr in zip(starts, cap_rects, strict=True):
+        def dist(c: pymupdf.Rect, cr: pymupdf.Rect = cr) -> float:
             dx = max(c.x0 - cr.x1, cr.x0 - c.x1, 0)
             if c.y1 <= cr.y0 + 2:
                 dy = cr.y0 - c.y1

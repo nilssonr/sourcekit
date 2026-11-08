@@ -12,12 +12,18 @@ import unittest
 from pathlib import Path
 
 import pymupdf
-
-from doc_converter.modules.regions import figures, tables
-from doc_converter.modules.split import outline
-from doc_converter.modules.regions.listings import code_lines, listing_bars, listing_parts, map_callouts, with_blank_lines
 from doc_converter.core.pdf import Book
-from doc_converter.core.profile import REPO, load as load_profile
+from doc_converter.core.profile import REPO
+from doc_converter.core.profile import load as load_profile
+from doc_converter.modules.regions import figures, tables
+from doc_converter.modules.regions.listings import (
+    code_lines,
+    listing_bars,
+    listing_parts,
+    map_callouts,
+    with_blank_lines,
+)
+from doc_converter.modules.split import outline
 
 PDF = os.environ.get("DOC_CONVERTER_PDF", "")
 PROFILE_DIR = REPO / "profiles" / "manning_unit_testing"
@@ -41,7 +47,7 @@ class BookTests(unittest.TestCase):
         for bar in bars[:index]:
             listing_parts(spans, bar, used, lc)
         bar = bars[index]
-        head, body = listing_parts(spans, bar, used, lc)
+        _head, body = listing_parts(spans, bar, used, lc)
         lines = code_lines([s for s in body if lc.is_code_block(s)], warns.append, lc)
         _, pos = with_blank_lines(lines, lc)
         area = pymupdf.Rect(0, bar.y0, 1000, max(s.y1 for s in body if s.text.strip()) + 3)

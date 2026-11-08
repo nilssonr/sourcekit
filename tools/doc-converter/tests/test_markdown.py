@@ -5,13 +5,35 @@ from __future__ import annotations
 import unittest
 
 import pymupdf
-
-from doc_converter.core.model import (Block, Callout, Code, Figure, Footnote, Heading, ImageRef, Label, ListBlock,
-                                      ListItem, Note, Paragraph, Run, SectionDoc, Sidebar, Table)
+from doc_converter.core.model import (
+    Block,
+    Callout,
+    Code,
+    Figure,
+    Footnote,
+    Heading,
+    ImageRef,
+    Label,
+    ListBlock,
+    ListItem,
+    Note,
+    Paragraph,
+    Run,
+    SectionDoc,
+    Sidebar,
+    Table,
+)
 from doc_converter.core.sections import Section
 from doc_converter.core.verify import markup_emphasis, without_added
-from doc_converter.modules.serialize.markdown import (Markdown, added, extract_added, fmt_lines, has_emphasis, pre,
-                                                       render_runs)
+from doc_converter.modules.serialize.markdown import (
+    Markdown,
+    added,
+    extract_added,
+    fmt_lines,
+    has_emphasis,
+    pre,
+    render_runs,
+)
 from fixtures import markdown_config
 
 CALLOUT_HEADER = "*Callouts (added in conversion; line numbers count every line of the listing, blank lines included):*"

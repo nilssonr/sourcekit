@@ -5,11 +5,23 @@ from __future__ import annotations
 import unittest
 
 import pymupdf
-
-from fixtures import (BLACK, BLUE, BODY, CAPTION, CODE, CODE_SIZE, FIGURE_TEXT, LISTING_BAR, FakeBook, fill,
-                      figure_config, span, stroke, table_config)
-
 from doc_converter.modules.regions import figures, tables
+from fixtures import (
+    BLACK,
+    BLUE,
+    BODY,
+    CAPTION,
+    CODE,
+    CODE_SIZE,
+    FIGURE_TEXT,
+    LISTING_BAR,
+    FakeBook,
+    figure_config,
+    fill,
+    span,
+    stroke,
+    table_config,
+)
 
 RED = "#ff0000"
 

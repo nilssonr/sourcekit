@@ -144,12 +144,12 @@ def with_blank_lines(lines: list[CodeLine], cfg: ListingConfig, attr: str = "tex
     attr="marks" gives the emphasis marks of the same lines instead of their text."""
     out: list[str] = []
     pos: list[int] = []
-    for i, l in enumerate(lines):
-        if i > 0 and lines[i - 1].page == l.page:
-            for _ in range(round((l.baseline - lines[i - 1].baseline) / cfg.line_pitch) - 1):
+    for i, cl in enumerate(lines):
+        if i > 0 and lines[i - 1].page == cl.page:
+            for _ in range(round((cl.baseline - lines[i - 1].baseline) / cfg.line_pitch) - 1):
                 out.append("")
         pos.append(len(out))
-        out.append(getattr(l, attr))
+        out.append(getattr(cl, attr))
     return out, pos
 
 
@@ -171,6 +171,13 @@ def _blocks(callouts: list[Span]) -> list[list[Span]]:
     return blocks
 
 
+def _gap(a: pymupdf.Rect, b: pymupdf.Rect) -> float:
+    """Edge-to-edge distance between two rectangles (0 when they touch or overlap)."""
+    dx = max(a.x0 - b.x1, b.x0 - a.x1, 0)
+    dy = max(a.y0 - b.y1, b.y0 - a.y1, 0)
+    return (dx * dx + dy * dy) ** 0.5
+
+
 def _rect(spans: list[Span]) -> pymupdf.Rect:
     r = pymupdf.Rect(spans[0].x0, spans[0].y0, spans[0].x1, spans[0].y1)
     for s in spans[1:]:
@@ -188,7 +195,7 @@ def map_callouts(book: Book, pno: int, area: pymupdf.Rect, lines: list[CodeLine]
     blocks = _blocks(callout_spans)
     if not blocks:
         return []
-    centres = [(l.baseline - cfg.line_centre, line_index[i] + 1) for i, l in enumerate(lines)]
+    centres = [(cl.baseline - cfg.line_centre, line_index[i] + 1) for i, cl in enumerate(lines)]
     segs: list[pymupdf.Rect] = []
     heads: list[pymupdf.Rect] = []
     slants: list[pymupdf.Rect] = []
@@ -236,17 +243,11 @@ def map_callouts(book: Book, pno: int, area: pymupdf.Rect, lines: list[CodeLine]
             cb |= r
         if cb.width < 2 and cb.height < 2:
             continue
-
-        def dist(tb: pymupdf.Rect) -> float:
-            dx = max(tb.x0 - cb.x1, cb.x0 - tb.x1, 0)
-            dy = max(tb.y0 - cb.y1, cb.y0 - tb.y1, 0)
-            return (dx * dx + dy * dy) ** 0.5
-
-        cands = [i for i in range(len(blocks)) if dist(brects[i]) <= 12]
-        bi = min(range(len(blocks)), key=lambda i: dist(brects[i]))
+        cands = [i for i in range(len(blocks)) if _gap(brects[i], cb) <= 12]
+        bi = min(range(len(blocks)), key=lambda i: _gap(brects[i], cb))
         hs0 = [r for k, r in comp if k == "h"]
         # which side of the graphic is the code on? compare with the first character of the code lines beside it
-        beside = [l.x0 for l in lines if cb.y0 - 6 <= l.baseline - cfg.line_centre <= cb.y1 + 6] or [l.x0 for l in lines]
+        beside = [cl.x0 for cl in lines if cb.y0 - 6 <= cl.baseline - cfg.line_centre <= cb.y1 + 6] or [cl.x0 for cl in lines]
         code_on_left = cb.x1 > min(beside) + 1
         if not hs0 and len(cands) > 1:
             # brackets: the text sits beside the bar on the side away from the code
@@ -257,10 +258,7 @@ def map_callouts(book: Book, pno: int, area: pymupdf.Rect, lines: list[CodeLine]
                 for r in vs0:
                     if abs(r.x0 - edge) < 1.0:
                         tr |= r
-                saved = cb
-                cb = tr
-                bi = min(cands, key=lambda i: dist(brects[i]))
-                cb = saved
+                bi = min(cands, key=lambda i: _gap(brects[i], tr))
         if hs0 and len(cands) > 1:
             # several text blocks are close: the text belongs to the tail, the leader end farthest from the heads
             ends = []
@@ -275,14 +273,10 @@ def map_callouts(book: Book, pno: int, area: pymupdf.Rect, lines: list[CodeLine]
             if ends:
                 tail = max(ends, key=lambda pt: min(abs(pt - c) for c in hc))
                 tr = pymupdf.Rect(tail, tail)
-                saved = cb
-                cb = tr
-                bi = min(cands, key=lambda i: dist(brects[i]))
-                cb = saved
-        if dist(brects[bi]) > 12:
+                bi = min(cands, key=lambda i: _gap(brects[i], tr))
+        if _gap(brects[bi], cb) > 12:
             warn(f"p{pno}: callout graphic at {tuple(round(v) for v in cb)} has no text block near it")
             continue
-        tb = brects[bi]
         text_right = code_on_left
         co = results[bi]
         hs = [r for k, r in comp if k == "h"]

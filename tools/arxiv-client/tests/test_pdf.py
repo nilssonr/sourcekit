@@ -1,3 +1,4 @@
+import itertools
 import os
 import tempfile
 import unittest
@@ -11,6 +12,7 @@ from arxiv_client import (
     ThrottledError,
     ValidationError,
 )
+
 from tests.helpers import FakeClock, FakeOpener, FakeResponse, make_client, part_file_failing_after
 
 PDF = b"%PDF-1.5\n" + b"x" * 5000 + b"\n%%EOF"
@@ -174,7 +176,7 @@ class PdfTests(unittest.TestCase):
         results = self.client.download_pdfs(["2301.00001v1", "2301.00002v1", "2301.00003v1"], self.dir)
         self.assertEqual(len(results), 3)
         starts = [r.at for r in self.opener.requests]
-        self.assertTrue(all(b - a >= 15.0 for a, b in zip(starts, starts[1:])), starts)
+        self.assertTrue(all(b - a >= 15.0 for a, b in itertools.pairwise(starts)), starts)
 
     def test_download_pdfs_capped_at_10(self):
         with self.assertRaises(ValidationError):

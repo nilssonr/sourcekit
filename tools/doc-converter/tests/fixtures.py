@@ -13,7 +13,6 @@ from dataclasses import replace
 from types import SimpleNamespace
 
 import pymupdf
-
 from doc_converter.core.hyphens import Resolver
 from doc_converter.core.pdf import Char, OutlineEntry, Span, is_ws
 from doc_converter.core.rows import Row, RowConfig, Text

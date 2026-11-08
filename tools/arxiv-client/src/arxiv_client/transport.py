@@ -7,7 +7,7 @@ deadline; where possible the socket timeout is also tightened to the time remain
 
 from __future__ import annotations
 
-import http.client
+import contextlib
 import os
 import secrets
 import socket
@@ -84,10 +84,8 @@ class _UrllibResponse:
         return self._resp.read(n)
 
     def close(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self._resp.close()
-        except Exception:
-            pass
 
     def set_timeout(self, seconds: float) -> None:
         """Best effort: find the underlying socket and tighten its timeout."""
@@ -95,10 +93,8 @@ class _UrllibResponse:
         for _ in range(6):
             sock = getattr(obj, "_sock", None)
             if isinstance(sock, socket.socket):
-                try:
+                with contextlib.suppress(OSError):
                     sock.settimeout(max(0.01, seconds))
-                except OSError:
-                    pass
                 return
             nxt = getattr(obj, "fp", None) or getattr(obj, "raw", None)
             if nxt is None or nxt is obj:
@@ -241,10 +237,7 @@ class Transport:
                     body = self._read(raw, deadline, 1024 * 1024)
                 finally:
                     raw.close()
-            if status == 200:
-                signal = self._classify_200(headers, body, expect="pdf")
-            else:
-                signal = self._status_signal(status)
+            signal = self._classify_200(headers, body, expect="pdf") if status == 200 else self._status_signal(status)
             if signal is None:
                 self._raise_for_status(status, headers, body, url)
             attempt = self._backoff_or_raise(signal, attempt, deadline, headers, url)
@@ -361,10 +354,8 @@ class Transport:
                 raise ServerError("PDF download incomplete: got %d of %d bytes" % (size, expected_size))
             return tmp, size
         except BaseException:
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(tmp)
-            except OSError:
-                pass
             raise
 
     @staticmethod

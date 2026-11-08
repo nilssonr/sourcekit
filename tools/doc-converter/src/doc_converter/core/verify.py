@@ -21,6 +21,7 @@ import argparse
 import difflib
 import html
 import io
+import itertools
 import json
 import re
 import sys
@@ -32,9 +33,9 @@ from pathlib import Path
 
 import pymupdf
 
+from ..modules.split import outline
 from .hyphens import LETTER
 from .pdf import Book, Span
-from ..modules.split import outline
 from .profile import load as load_profile
 
 
@@ -67,7 +68,7 @@ def case_differences(expected: list[str], actual: list[str]) -> list[str]:
             by_word.setdefault(w.lower(), (Counter(), Counter()))[side][w] += 1
     pairs: Counter[tuple[str, str]] = Counter()
     for pdf, md in by_word.values():
-        pairs.update(zip(sorted((pdf - md).elements()), sorted((md - pdf).elements())))
+        pairs.update(zip(sorted((pdf - md).elements()), sorted((md - pdf).elements()), strict=False))
     return [f"{a}->{b}×{n}" for (a, b), n in pairs.items()]
 
 
@@ -186,7 +187,7 @@ def report(book: Book, book_text: str, p0: int, p1: int, skip_pages: set[int], c
     leftover_in = [c for c in ins if +c]
     moved = len(out_ops) - len(unpaired)
     lines.append(f"moves: {moved} stretches reappear elsewhere; unexplained: {len(unpaired)} out, {len(leftover_in)} in")
-    for tag, i1, i2, j1, j2 in unpaired:
+    for tag, i1, i2, _j1, _j2 in unpaired:
         lines.append(f"  UNPAIRED {tag} pdf[{i1}:{i2}]: {' '.join(expected[i1:i2])[:140]}")
     for c in leftover_in:
         lines.append(f"  UNPAIRED in md: {' '.join(sorted((+c).elements()))[:140]}")
@@ -285,14 +286,14 @@ def emphasis(book: Book, md: str, ranges: list[list], pages: list[int], cfg: Ver
                    key=lambda s: (s.page, s.baseline, s.x0))
     marked = markup_emphasis(md, ranges)
     lines, ok = [], True
-    for name, want, got in (("bold", lambda s: s.bold, marked[0]), ("italic", lambda s: s.italic, marked[1])):
+    for name, want, marked_text in (("bold", lambda s: s.bold, marked[0]), ("italic", lambda s: s.italic, marked[1])):
         pdf = "".join(re.sub(r"\s+", "", s.text) for s in spans if want(s))
-        got = re.sub(r"\s+", "", got)
+        got = re.sub(r"\s+", "", marked_text)
         if pdf == got:
             lines.append(f"{name}: {len(pdf)} characters, OK")
         else:
             ok = False
-            k = next((n for n, (a, c) in enumerate(zip(pdf, got)) if a != c), min(len(pdf), len(got)))
+            k = next((n for n, (a, c) in enumerate(zip(pdf, got, strict=False)) if a != c), min(len(pdf), len(got)))
             lines.append(f"{name}: DIFFERENT: pdf {len(pdf)} characters, markdown {len(got)}; first difference at "
                          f"{k}: pdf {pdf[max(0, k - 20):k + 20]!r} markdown {got[max(0, k - 20):k + 20]!r}")
     return ok, "; ".join(lines)
@@ -309,7 +310,7 @@ def coverage(files: list[dict], expected: dict[str, tuple[int, int]]) -> tuple[b
             problems.append(f"{file}: pages {got[file]} in the manifest, {pages} from the outline")
     problems += [f"unexpected file {f}" for f in got if f not in expected]
     ranges = sorted(got.values())
-    for (a0, a1), (b0, b1) in zip(ranges, ranges[1:]):
+    for (a0, a1), (b0, b1) in itertools.pairwise(ranges):
         if b0 <= a1:
             problems.append(f"pages {a0}-{a1} and {b0}-{b1} overlap")
         elif b0 != a1 + 1:
