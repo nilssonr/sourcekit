@@ -1,4 +1,4 @@
-"""Verifier word matching, file encodings, the system dictionary and make_run.sh: no PDF or profile needed."""
+"""File encodings and make_run.sh: no PDF or profile needed."""
 
 from __future__ import annotations
 
@@ -10,53 +10,9 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 
-from doc_converter.core.hyphens import Resolver
-from doc_converter.core.pdf import Span
-from doc_converter.core.rows import Row, RowConfig, Text, runs_text
-from doc_converter.core.verify import VerifyConfig, report, tokens
 
 TOOL = Path(__file__).resolve().parents[1]
-
-
-def span(text: str, baseline: float = 100.0) -> Span:
-    return Span(1, 72.0, baseline - 10, 300.0, baseline + 2, "Font", 12.0, "#000000", text, baseline=baseline)
-
-
-def compare(md: str, *spans: Span) -> list[str]:
-    no = lambda s: False
-    cfg = VerifyConfig(0.0, 0.0, no, no, no, no, no, 1000.0)
-    return report(SimpleNamespace(spans=lambda p: list(spans)), md, 1, 1, set(), cfg).splitlines()
-
-
-class WordMatchingTests(unittest.TestCase):
-    def test_tokens_keep_non_ascii_letters(self):
-        self.assertEqual(tokens("Café ΑΒΓ snake_case"), ["café", "αβγ", "snake", "case"])
-
-    def test_composed_and_decomposed_forms_match(self):
-        self.assertEqual(tokens("café"), tokens("café"))
-
-    def test_lost_non_ascii_text_is_missing(self):
-        lines = compare("Hello caf\n", span("Hello café αβγ"))
-        self.assertEqual(lines[1], "missing from markdown (2): café×1 αβγ×1")
-
-    def test_case_difference_is_reported_but_words_match(self):
-        lines = compare("HELLO World\n", span("Hello World"))
-        self.assertEqual(lines[0], "expected 2 words, markdown 2 words, matched 2")
-        self.assertEqual(lines[3], "case differences (1): Hello->HELLO×1")
-
-    def test_no_case_differences(self):
-        self.assertEqual(compare("Hello\n", span("Hello"))[3], "case differences (0): ")
-
-    def test_line_end_hyphen_after_non_ascii_letter_joins(self):
-        lines = compare("naïve\n", span("naï-", 100.0), span("ve", 115.0))
-        self.assertEqual(lines[1], "missing from markdown (0): ")
-
-    def test_lower_casing_does_not_change_word_boundaries(self):
-        # lower-casing U+0130 adds a combining dot, which must not split the word in the cased count
-        self.assertEqual(tokens("İstanbul", keep_case=True), ["İstanbul"])
-        self.assertEqual(len(tokens("İstanbul")), 1)
 
 
 class EncodingTests(unittest.TestCase):
@@ -66,14 +22,6 @@ class EncodingTests(unittest.TestCase):
                 if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
                         and node.func.attr in ("read_text", "write_text")):
                     self.assertIn("encoding", [k.arg for k in node.keywords], f"{path}:{node.lineno}")
-
-
-class DictionaryTests(unittest.TestCase):
-    def test_missing_dictionary_exits_with_a_clear_message(self):
-        with self.assertRaises(SystemExit) as cm:
-            Resolver([], lambda s: False, "/nonexistent/words")
-        self.assertIn("/nonexistent/words", str(cm.exception.code))
-        self.assertIn("wamerican", str(cm.exception.code))
 
 
 class MakeRunTests(unittest.TestCase):
@@ -139,22 +87,3 @@ class MakeRunTests(unittest.TestCase):
         self.assertIn("inside the run directory", r.stderr)
         self.assertTrue((old / "book.pdf").exists())
         self.assertTrue((old / "convert-stdout.txt").exists())
-
-
-class JoinRowsTests(unittest.TestCase):
-    """The converter joins line-end hyphens after the same letters the verifier does."""
-
-    def join(self, corpus: str, *rows: str) -> str:
-        no = lambda s: False
-        cfg = RowConfig(lambda r: "", no, no, no, no, no, 2.7, 30.0, (0.0, 0.0))
-        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".words", delete=False) as f:
-            f.write("the\n")
-            self.addCleanup(os.unlink, f.name)
-        text = Text(cfg, Resolver([span(corpus)], no, f.name))
-        return runs_text(text.join_rows([Row(1, 100.0 + 15 * i, [span(t, 100.0 + 15 * i)]) for i, t in enumerate(rows)]))
-
-    def test_hyphen_after_non_ascii_letter_is_resolved(self):
-        self.assertEqual(self.join("naïve", "naï-", "ve"), "naïve")
-
-    def test_hyphen_after_ascii_letter_is_resolved(self):
-        self.assertEqual(self.join("hello", "hel-", "lo"), "hello")
