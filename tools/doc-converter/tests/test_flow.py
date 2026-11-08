@@ -43,8 +43,8 @@ from fixtures import (
     stroke,
 )
 
-FULL = COLUMN_RIGHT          # a line whose ink reaches this is a full line
-TEXT_X = 84.0                # where list and note text starts, after a 12 pt marker
+FULL = COLUMN_RIGHT  # a line whose ink reaches this is a full line
+TEXT_X = 84.0  # where list and note text starts, after a 12 pt marker
 
 
 def shape(block) -> tuple:
@@ -57,7 +57,10 @@ def shape(block) -> tuple:
         case Label():
             return ("label", runs_text(block.inlines))
         case ListBlock():
-            return ("list", [(it.number, runs_text(it.inlines), [runs_text(s) for s in it.subitems]) for it in block.items])
+            return (
+                "list",
+                [(it.number, runs_text(it.inlines), [runs_text(s) for s in it.subitems]) for it in block.items],
+            )
         case Note():
             return ("note", block.label, runs_text(block.inlines), [shape(c) for c in block.continued])
         case Sidebar():
@@ -87,21 +90,39 @@ class FlowCase(unittest.TestCase):
 
 class ParagraphTests(FlowCase):
     def test_full_lines_and_a_short_last_line_form_one_paragraph(self):
-        book = FakeBook({1: [full("First line of the paragraph that", 100), full("fills the measure and goes on", 114),
-                             short("and ends here.", 128)]})
+        book = FakeBook(
+            {
+                1: [
+                    full("First line of the paragraph that", 100),
+                    full("fills the measure and goes on", 114),
+                    short("and ends here.", 128),
+                ]
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
-        self.assertEqual(blocks, [("para", "First line of the paragraph that fills the measure and goes on and ends here.")])
+        self.assertEqual(
+            blocks, [("para", "First line of the paragraph that fills the measure and goes on and ends here.")]
+        )
 
     def test_an_indented_line_starts_a_new_paragraph(self):
-        book = FakeBook({1: [full("The first paragraph is one full line.", 100),
-                             full("The second starts indented and", 114, x0=82.0), short("ends short.", 128)]})
+        book = FakeBook(
+            {
+                1: [
+                    full("The first paragraph is one full line.", 100),
+                    full("The second starts indented and", 114, x0=82.0),
+                    short("ends short.", 128),
+                ]
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
-        self.assertEqual(blocks, [("para", "The first paragraph is one full line."),
-                                  ("para", "The second starts indented and ends short.")])
+        self.assertEqual(
+            blocks,
+            [("para", "The first paragraph is one full line."), ("para", "The second starts indented and ends short.")],
+        )
 
     def test_a_short_line_ends_its_paragraph(self):
         book = FakeBook({1: [short("A short line.", 100), full("The next full line is a new paragraph.", 114)]})
@@ -111,17 +132,26 @@ class ParagraphTests(FlowCase):
         self.assertEqual(blocks, [("para", "A short line."), ("para", "The next full line is a new paragraph.")])
 
     def test_a_step_wider_than_the_paragraph_gap_starts_a_new_paragraph(self):
-        book = FakeBook({1: [full("A full line that is followed by a gap.", 100),
-                             full("A full line after an eighteen point gap.", 118)]})
+        book = FakeBook(
+            {
+                1: [
+                    full("A full line that is followed by a gap.", 100),
+                    full("A full line after an eighteen point gap.", 118),
+                ]
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
-        self.assertEqual(blocks, [("para", "A full line that is followed by a gap."),
-                                  ("para", "A full line after an eighteen point gap.")])
+        self.assertEqual(
+            blocks,
+            [("para", "A full line that is followed by a gap."), ("para", "A full line after an eighteen point gap.")],
+        )
 
     def test_a_paragraph_continues_across_a_page_break(self):
-        book = FakeBook({1: [full("The last line of page one is full and", 650)],
-                         2: [short("continues on page two.", 60, page=2)]})
+        book = FakeBook(
+            {1: [full("The last line of page one is full and", 650)], 2: [short("continues on page two.", 60, page=2)]}
+        )
 
         blocks, _ = self.assemble(book, pages=(1, 2))
 
@@ -129,19 +159,40 @@ class ParagraphTests(FlowCase):
 
     def test_the_most_common_body_left_edge_is_the_column(self):
         # every body line starts at 82, so 82 is the column and none of them is indented
-        book = FakeBook({1: [full("Lines that all start ten points right", 100, x0=82.0),
-                             full("of the configured column are not", 114, x0=82.0), short("indented.", 128, x0=82.0)]})
+        book = FakeBook(
+            {
+                1: [
+                    full("Lines that all start ten points right", 100, x0=82.0),
+                    full("of the configured column are not", 114, x0=82.0),
+                    short("indented.", 128, x0=82.0),
+                ]
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
-        self.assertEqual(blocks, [("para", "Lines that all start ten points right of the configured column are not indented.")])
+        self.assertEqual(
+            blocks, [("para", "Lines that all start ten points right of the configured column are not indented.")]
+        )
 
     def test_on_an_odd_page_the_right_edge_moves_by_odd_shift(self):
         # a line ending at 365 is full on an even page (edge 372 - slack 10) but not on an odd page (edge 381 - 10)
-        even = FakeBook({2: [span("A line ending at 365", baseline=100, page=2, x1=365.0),
-                             short("and the next line.", 114, page=2)]})
-        odd = FakeBook({3: [span("A line ending at 365", baseline=100, page=3, x1=365.0),
-                            short("and the next line.", 114, page=3)]})
+        even = FakeBook(
+            {
+                2: [
+                    span("A line ending at 365", baseline=100, page=2, x1=365.0),
+                    short("and the next line.", 114, page=2),
+                ]
+            }
+        )
+        odd = FakeBook(
+            {
+                3: [
+                    span("A line ending at 365", baseline=100, page=3, x1=365.0),
+                    short("and the next line.", 114, page=3),
+                ]
+            }
+        )
 
         on_even, _ = self.assemble(even, pages=(2, 2), odd_shift=9.0)
         on_odd, _ = self.assemble(odd, pages=(3, 3), odd_shift=9.0)
@@ -159,7 +210,10 @@ class ParagraphTests(FlowCase):
 
 class ListTests(FlowCase):
     def item(self, text: str, baseline: float, marker: str = "•", font: str = BULLET, page: int = 1):
-        return [span(marker, baseline=baseline, page=page, font=font), span(text, baseline=baseline, page=page, x0=TEXT_X)]
+        return [
+            span(marker, baseline=baseline, page=page, font=font),
+            span(text, baseline=baseline, page=page, x0=TEXT_X),
+        ]
 
     def test_bullet_rows_become_one_list_with_an_item_each(self):
         book = FakeBook({1: self.item("first item", 100) + self.item("second item", 116)})
@@ -169,7 +223,9 @@ class ListTests(FlowCase):
         self.assertEqual(blocks, [("list", [(None, "first item", []), (None, "second item", [])])])
 
     def test_a_body_line_aligned_with_the_item_text_continues_the_item(self):
-        book = FakeBook({1: self.item("an item whose text", 100) + [span("wraps to a second line", baseline=114, x0=TEXT_X)]})
+        book = FakeBook(
+            {1: self.item("an item whose text", 100) + [span("wraps to a second line", baseline=114, x0=TEXT_X)]}
+        )
 
         blocks, _ = self.assemble(book)
 
@@ -190,8 +246,12 @@ class ListTests(FlowCase):
         self.assertEqual(blocks, [("list", [(None, "an item", ["a sub-item"])])])
 
     def test_a_numbered_item_keeps_its_number(self):
-        book = FakeBook({1: self.item("first step", 100, marker="1", font=LIST_NUMBER)
-                         + self.item("second step", 116, marker="2", font=LIST_NUMBER)})
+        book = FakeBook(
+            {
+                1: self.item("first step", 100, marker="1", font=LIST_NUMBER)
+                + self.item("second step", 116, marker="2", font=LIST_NUMBER)
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
@@ -202,7 +262,9 @@ class ListTests(FlowCase):
 
         blocks, _ = self.assemble(book)
 
-        self.assertEqual(blocks, [("para", "An introductory sentence that ends in a colon:"), ("list", [(None, "an item", [])])])
+        self.assertEqual(
+            blocks, [("para", "An introductory sentence that ends in a colon:"), ("list", [(None, "an item", [])])]
+        )
 
 
 class NoteTests(FlowCase):
@@ -231,8 +293,12 @@ class NoteTests(FlowCase):
         self.assertEqual(blocks, [("note", "NOTE", "A one-line note.", []), ("para", "A paragraph.")])
 
     def test_a_bullet_closes_the_note(self):
-        book = FakeBook({1: self.note("NOTE", "A note before a list.", 100)
-                         + [span("•", baseline=114, font=BULLET), span("an item", baseline=114, x0=TEXT_X)]})
+        book = FakeBook(
+            {
+                1: self.note("NOTE", "A note before a list.", 100)
+                + [span("•", baseline=114, font=BULLET), span("an item", baseline=114, x0=TEXT_X)]
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
@@ -247,49 +313,90 @@ class SidebarTests(FlowCase):
         return span(text, baseline=baseline, page=page, font=SIDEBAR_TEXT, x0=x0, **kw)
 
     def test_a_title_row_and_its_text_rows_form_a_sidebar_with_one_paragraph(self):
-        book = FakeBook({1: [span("A sidebar", baseline=100, font=SIDEBAR_TITLE),
-                             self.sidebar_line("Sidebar text that is a full line", 114),
-                             self.sidebar_line("and a short last line.", 128, is_full=False)]})
+        book = FakeBook(
+            {
+                1: [
+                    span("A sidebar", baseline=100, font=SIDEBAR_TITLE),
+                    self.sidebar_line("Sidebar text that is a full line", 114),
+                    self.sidebar_line("and a short last line.", 128, is_full=False),
+                ]
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
-        self.assertEqual(blocks, [("sidebar", "A sidebar", [("para", "Sidebar text that is a full line and a short last line.")])])
+        self.assertEqual(
+            blocks, [("sidebar", "A sidebar", [("para", "Sidebar text that is a full line and a short last line.")])]
+        )
 
     def test_a_short_line_splits_sidebar_text_into_paragraphs(self):
-        book = FakeBook({1: [span("A sidebar", baseline=100, font=SIDEBAR_TITLE),
-                             self.sidebar_line("First paragraph.", 114, is_full=False),
-                             self.sidebar_line("Second paragraph.", 128, is_full=False)]})
+        book = FakeBook(
+            {
+                1: [
+                    span("A sidebar", baseline=100, font=SIDEBAR_TITLE),
+                    self.sidebar_line("First paragraph.", 114, is_full=False),
+                    self.sidebar_line("Second paragraph.", 128, is_full=False),
+                ]
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
-        self.assertEqual(blocks, [("sidebar", "A sidebar", [("para", "First paragraph."), ("para", "Second paragraph.")])])
+        self.assertEqual(
+            blocks, [("sidebar", "A sidebar", [("para", "First paragraph."), ("para", "Second paragraph.")])]
+        )
 
     def test_bullets_inside_a_sidebar_form_a_list_in_it(self):
-        book = FakeBook({1: [span("A sidebar", baseline=100, font=SIDEBAR_TITLE),
-                             span("•", baseline=114, font=BULLET), self.sidebar_line("one", 114, is_full=False, x0=TEXT_X),
-                             span("•", baseline=130, font=BULLET), self.sidebar_line("two", 130, is_full=False, x0=TEXT_X)]})
+        book = FakeBook(
+            {
+                1: [
+                    span("A sidebar", baseline=100, font=SIDEBAR_TITLE),
+                    span("•", baseline=114, font=BULLET),
+                    self.sidebar_line("one", 114, is_full=False, x0=TEXT_X),
+                    span("•", baseline=130, font=BULLET),
+                    self.sidebar_line("two", 130, is_full=False, x0=TEXT_X),
+                ]
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
         self.assertEqual(blocks, [("sidebar", "A sidebar", [("list", [(None, "one", []), (None, "two", [])])])])
 
     def test_a_body_line_closes_the_sidebar(self):
-        book = FakeBook({1: [span("A sidebar", baseline=100, font=SIDEBAR_TITLE),
-                             self.sidebar_line("Sidebar text.", 114, is_full=False), short("Body text.", 128)]})
+        book = FakeBook(
+            {
+                1: [
+                    span("A sidebar", baseline=100, font=SIDEBAR_TITLE),
+                    self.sidebar_line("Sidebar text.", 114, is_full=False),
+                    short("Body text.", 128),
+                ]
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
         self.assertEqual(blocks, [("sidebar", "A sidebar", [("para", "Sidebar text.")]), ("para", "Body text.")])
 
     def test_a_continued_label_reopens_the_sidebar_from_the_previous_page(self):
-        book = FakeBook({1: [span("A sidebar", baseline=100, font=SIDEBAR_TITLE),
-                             self.sidebar_line("Text on page one.", 114, is_full=False)],
-                         2: [span("(continued)", baseline=60, page=2, font=CONTINUED),
-                             self.sidebar_line("Text on page two.", 74, page=2, is_full=False)]})
+        book = FakeBook(
+            {
+                1: [
+                    span("A sidebar", baseline=100, font=SIDEBAR_TITLE),
+                    self.sidebar_line("Text on page one.", 114, is_full=False),
+                ],
+                2: [
+                    span("(continued)", baseline=60, page=2, font=CONTINUED),
+                    self.sidebar_line("Text on page two.", 74, page=2, is_full=False),
+                ],
+            }
+        )
 
         blocks, _ = self.assemble(book, pages=(1, 2))
 
-        self.assertEqual(blocks, [("sidebar", "A sidebar", [("para", "Text on page one."), ("para", "Text on page two.")])])
+        self.assertEqual(
+            blocks, [("sidebar", "A sidebar", [("para", "Text on page one."), ("para", "Text on page two.")])]
+        )
 
     def test_a_continued_label_with_nothing_to_continue_warns(self):
         book = FakeBook({1: [span("(continued)", baseline=100, font=CONTINUED)]})
@@ -322,13 +429,23 @@ class FigureTests(FlowCase):
 
     def test_a_figure_inside_an_open_paragraph_is_emitted_after_it(self):
         # the figure sits between two full lines of one paragraph; the paragraph stays whole
-        book = FakeBook({1: [full("A paragraph whose lines surround", 380), full("the figure art and", 394),
-                             short("carry on past it.", 408)]}, drawings=self.ART)
+        book = FakeBook(
+            {
+                1: [
+                    full("A paragraph whose lines surround", 380),
+                    full("the figure art and", 394),
+                    short("carry on past it.", 408),
+                ]
+            },
+            drawings=self.ART,
+        )
 
         blocks, _ = self.assemble(book, page_figures={1: ("map", 0)}, descriptions={"map": "A map."})
 
-        self.assertEqual(blocks, [("para", "A paragraph whose lines surround the figure art and carry on past it."),
-                                  ("figure", "map")])
+        self.assertEqual(
+            blocks,
+            [("para", "A paragraph whose lines surround the figure art and carry on past it."), ("figure", "map")],
+        )
 
     def test_a_figure_without_a_description_warns(self):
         book = FakeBook({1: []}, drawings=self.ART)
@@ -354,7 +471,9 @@ class HeadingTests(FlowCase):
         self.assertEqual(blocks, [("h3", "A heading")])
 
     def test_a_second_heading_row_close_below_continues_the_heading(self):
-        book = FakeBook({1: [span("Refactoring toward", baseline=100, font=H2), span("valuable tests", baseline=114, font=H2)]})
+        book = FakeBook(
+            {1: [span("Refactoring toward", baseline=100, font=H2), span("valuable tests", baseline=114, font=H2)]}
+        )
 
         blocks, _ = self.assemble(book)
 
@@ -382,7 +501,9 @@ class HeadingTests(FlowCase):
         self.assertEqual(blocks, [("h2", "First"), ("h2", "Second")])
 
     def test_two_title_rows_of_an_untitled_section_become_one_heading_joined_by_a_colon(self):
-        book = FakeBook({1: [span("Part 1", baseline=100, font=TITLE), span("The bigger picture", baseline=140, font=TITLE)]})
+        book = FakeBook(
+            {1: [span("Part 1", baseline=100, font=TITLE), span("The bigger picture", baseline=140, font=TITLE)]}
+        )
 
         blocks, _ = self.assemble(book)
 
@@ -403,15 +524,23 @@ class HeadingTests(FlowCase):
         self.assertEqual(blocks, [("h2", "Preface")])
 
     def test_small_capitals_below_the_size_limit_are_lower_cased(self):
-        book = FakeBook({1: [span("T", baseline=100, font=SMALLCAPS, size=9.0),
-                             span("HIS CHAPTER", baseline=100, font=SMALLCAPS, size=7.0, x0=77.0)]})
+        book = FakeBook(
+            {
+                1: [
+                    span("T", baseline=100, font=SMALLCAPS, size=9.0),
+                    span("HIS CHAPTER", baseline=100, font=SMALLCAPS, size=7.0, x0=77.0),
+                ]
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
         self.assertEqual(blocks, [("h4", "This chapter")])
 
     def test_a_drop_cap_is_attached_to_the_paragraph_that_follows(self):
-        book = FakeBook({1: [span("T", baseline=100, font=DROPCAP, size=44.0), short("he rest of the sentence.", 100, x0=100.0)]})
+        book = FakeBook(
+            {1: [span("T", baseline=100, font=DROPCAP, size=44.0), short("he rest of the sentence.", 100, x0=100.0)]}
+        )
 
         blocks, _ = self.assemble(book)
 
@@ -427,18 +556,35 @@ class HeadingTests(FlowCase):
 
 class CoversTests(FlowCase):
     def test_a_covers_title_and_its_items_become_a_label_and_a_list(self):
-        book = FakeBook({1: [span("This chapter covers", baseline=100, font=COVERS_TITLE),
-                             span("•", baseline=116, font=COVERS_BULLET), span("The goal", baseline=116, x0=TEXT_X),
-                             span("•", baseline=132, font=COVERS_BULLET), span("The cost", baseline=132, x0=TEXT_X)]})
+        book = FakeBook(
+            {
+                1: [
+                    span("This chapter covers", baseline=100, font=COVERS_TITLE),
+                    span("•", baseline=116, font=COVERS_BULLET),
+                    span("The goal", baseline=116, x0=TEXT_X),
+                    span("•", baseline=132, font=COVERS_BULLET),
+                    span("The cost", baseline=132, x0=TEXT_X),
+                ]
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
-        self.assertEqual(blocks, [("label", "This chapter covers"), ("list", [(None, "The goal", []), (None, "The cost", [])])])
+        self.assertEqual(
+            blocks, [("label", "This chapter covers"), ("list", [(None, "The goal", []), (None, "The cost", [])])]
+        )
 
     def test_a_covers_continuation_row_extends_the_last_item(self):
-        book = FakeBook({1: [span("This chapter covers", baseline=100, font=COVERS_TITLE),
-                             span("•", baseline=116, font=COVERS_BULLET), span("An item that", baseline=116, x0=TEXT_X),
-                             span("wraps", baseline=130, font=COVERS_CONT, x0=TEXT_X)]})
+        book = FakeBook(
+            {
+                1: [
+                    span("This chapter covers", baseline=100, font=COVERS_TITLE),
+                    span("•", baseline=116, font=COVERS_BULLET),
+                    span("An item that", baseline=116, x0=TEXT_X),
+                    span("wraps", baseline=130, font=COVERS_CONT, x0=TEXT_X),
+                ]
+            }
+        )
 
         blocks, _ = self.assemble(book)
 
@@ -455,8 +601,16 @@ class CoversTests(FlowCase):
 
 class SkippedRowTests(FlowCase):
     def test_running_headers_page_numbers_and_footnote_text_produce_no_block(self):
-        book = FakeBook({1: [span("Running header", baseline=30), span("12", baseline=680, font=PAGENUM),
-                             span("Footnote text", baseline=640, font=FOOTNOTE_TEXT), short("Body.", 100)]})
+        book = FakeBook(
+            {
+                1: [
+                    span("Running header", baseline=30),
+                    span("12", baseline=680, font=PAGENUM),
+                    span("Footnote text", baseline=640, font=FOOTNOTE_TEXT),
+                    short("Body.", 100),
+                ]
+            }
+        )
 
         blocks, warnings = self.assemble(book)
 
@@ -506,10 +660,16 @@ class CodeTests(FlowCase):
         self.assertEqual(blocks, [("code", ["int a = 1;", "int b = 2;"]), ("para", "Prose after.")])
 
     def test_code_inside_a_sidebar_box_belongs_to_the_sidebar(self):
-        book = FakeBook({1: [span("A sidebar", baseline=100, font=SIDEBAR_TITLE),
-                             span("Some text.", baseline=114, font=SIDEBAR_TEXT),
-                             self.code("x = 1", 130, x0=80.0)]},
-                        drawings={1: [fill(60, 90, 390, 150, SIDEBAR_BG)]})
+        book = FakeBook(
+            {
+                1: [
+                    span("A sidebar", baseline=100, font=SIDEBAR_TITLE),
+                    span("Some text.", baseline=114, font=SIDEBAR_TEXT),
+                    self.code("x = 1", 130, x0=80.0),
+                ]
+            },
+            drawings={1: [fill(60, 90, 390, 150, SIDEBAR_BG)]},
+        )
 
         blocks, _ = self.assemble(book)
 
@@ -526,10 +686,18 @@ class CodeTests(FlowCase):
 
     def test_code_with_a_callout_is_named_after_its_page_label_and_numbered_from_the_second_block(self):
         # the callouts have no arrow graphics, so each block also warns that its callout has none
-        book = FakeBook({1: [self.code("a = 1", 100), span("First", baseline=100, font=CALLOUT, x0=200.0),
-                             short("Prose between.", 130),
-                             self.code("b = 2", 160), span("Second", baseline=160, font=CALLOUT, x0=200.0)]},
-                        labels={1: "12"})
+        book = FakeBook(
+            {
+                1: [
+                    self.code("a = 1", 100),
+                    span("First", baseline=100, font=CALLOUT, x0=200.0),
+                    short("Prose between.", 130),
+                    self.code("b = 2", 160),
+                    span("Second", baseline=160, font=CALLOUT, x0=200.0),
+                ]
+            },
+            labels={1: "12"},
+        )
         asm, _ = assembler(self, book)
 
         doc = asm.section(Section("sec", "sec.md", (1, 1)))
@@ -541,8 +709,10 @@ class CodeTests(FlowCase):
 
 class FootnoteTests(FlowCase):
     def footnote(self, num: str, text: str, baseline: float, page: int = 1):
-        return [span(num, baseline=baseline, page=page, font=FN_MARKER, size=FN_START_SIZE),
-                span(text, baseline=baseline, page=page, font=FOOTNOTE_TEXT, x0=78.0)]
+        return [
+            span(num, baseline=baseline, page=page, font=FN_MARKER, size=FN_START_SIZE),
+            span(text, baseline=baseline, page=page, font=FOOTNOTE_TEXT, x0=78.0),
+        ]
 
     def footnotes(self, book: FakeBook, pages=(1, 1)):
         asm, _ = assembler(self, book)
@@ -555,13 +725,19 @@ class FootnoteTests(FlowCase):
         self.assertEqual(self.footnotes(book), [("1", "A footnote.")])
 
     def test_a_footnote_text_row_on_the_same_page_continues_the_footnote(self):
-        book = FakeBook({1: self.footnote("1", "A footnote that", 640) + [span("wraps.", baseline=652, font=FOOTNOTE_TEXT)]})
+        book = FakeBook(
+            {1: self.footnote("1", "A footnote that", 640) + [span("wraps.", baseline=652, font=FOOTNOTE_TEXT)]}
+        )
 
         self.assertEqual(self.footnotes(book), [("1", "A footnote that wraps.")])
 
     def test_footnote_text_on_another_page_does_not_continue_it(self):
-        book = FakeBook({1: self.footnote("1", "Ends on page one.", 640),
-                         2: [span("Unrelated small text.", baseline=60, page=2, font=FOOTNOTE_TEXT)]})
+        book = FakeBook(
+            {
+                1: self.footnote("1", "Ends on page one.", 640),
+                2: [span("Unrelated small text.", baseline=60, page=2, font=FOOTNOTE_TEXT)],
+            }
+        )
 
         self.assertEqual(self.footnotes(book, pages=(1, 2)), [("1", "Ends on page one.")])
 

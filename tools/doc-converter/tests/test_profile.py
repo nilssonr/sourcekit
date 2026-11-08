@@ -29,8 +29,10 @@ class LoadTests(unittest.TestCase):
         self.assertEqual(prof.data_dir, Path(d).resolve() / "data")
 
     def test_a_profile_that_sets_its_own_data_directory_keeps_it(self):
-        d = self.package("from pathlib import Path\nfrom doc_converter.core.profile import Profile\n"
-                         "PROFILE = Profile('fake', *[None] * 8, data_dir=Path('/elsewhere'))\n")
+        d = self.package(
+            "from pathlib import Path\nfrom doc_converter.core.profile import Profile\n"
+            "PROFILE = Profile('fake', *[None] * 8, data_dir=Path('/elsewhere'))\n"
+        )
 
         prof = load(d)
 
@@ -50,13 +52,17 @@ class LoadTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             load(d)
 
-        self.assertEqual(cm.exception.code, f"profile {Path(d).resolve()}: __init__.py must define PROFILE = Profile(...)")
+        self.assertEqual(
+            cm.exception.code, f"profile {Path(d).resolve()}: __init__.py must define PROFILE = Profile(...)"
+        )
 
     def test_a_name_that_is_neither_a_directory_nor_a_known_profile_exits(self):
         with self.assertRaises(SystemExit) as cm:
             profile_dir("no-such-profile-anywhere")
 
-        self.assertTrue(str(cm.exception.code).startswith("profile not found: no-such-profile-anywhere"), cm.exception.code)
+        self.assertTrue(
+            str(cm.exception.code).startswith("profile not found: no-such-profile-anywhere"), cm.exception.code
+        )
 
 
 if __name__ == "__main__":

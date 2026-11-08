@@ -171,10 +171,7 @@ def parse_entry(entry: ET.Element) -> Paper:
         # arxiv:primary_category has only @term; no @scheme (doc section 2.4).
         primary_term = (primary.get("term") or "").strip() or None
 
-    dois = dedupe(
-        (text_of(d) or "")
-        for d in entry.findall(_AX + "doi") + entry.findall(_AX + "DOI")
-    )
+    dois = dedupe((text_of(d) or "") for d in entry.findall(_AX + "doi") + entry.findall(_AX + "DOI"))
     journal_ref = normalize_space(
         text_of(entry.find(_AX + "journal_ref")) or text_of(entry.find(_AX + "journal_reference"))
     )

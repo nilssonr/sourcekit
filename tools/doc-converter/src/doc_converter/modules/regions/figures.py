@@ -19,16 +19,17 @@ DPI = 216
 @dataclass(frozen=True)
 class FigureConfig:
     """The book's figure style (set by the profile)."""
-    header_band: float                        # drawings and text above this belong to the running header
-    ignore_fills: frozenset[str]              # fill/stroke colours that are never figure art (bars, boxes)
-    caption_word: str                         # caption starts with this word ("Figure")
-    id_pattern: str                           # the figure id inside the caption start
-    listing_fonts: tuple[str, ...]            # font prefixes of code and callouts below a listing bar
+
+    header_band: float  # drawings and text above this belong to the running header
+    ignore_fills: frozenset[str]  # fill/stroke colours that are never figure art (bars, boxes)
+    caption_word: str  # caption starts with this word ("Figure")
+    id_pattern: str  # the figure id inside the caption start
+    listing_fonts: tuple[str, ...]  # font prefixes of code and callouts below a listing bar
     is_caption_font: Callable[[Span], bool]
     is_caption_start: Callable[[Span], bool]
     is_figure_text: Callable[[Span], bool]
-    listings: ListingConfig                   # listing areas are excluded from figure art
-    tables: tabmod.TableConfig                # table regions are excluded from figure art
+    listings: ListingConfig  # listing areas are excluded from figure art
+    tables: tabmod.TableConfig  # table regions are excluded from figure art
 
 
 @dataclass(eq=False)
@@ -48,8 +49,10 @@ class Figure:
 
 def caption_block(spans: list[Span], start: Span, cfg: FigureConfig) -> list[Span]:
     """The caption's spans: the start span's row and the following caption-font rows."""
-    caps = sorted((s for s in spans if cfg.is_caption_font(s) and s.y0 >= start.y0 - 1 and s.x1 > start.x0 - 2),
-                  key=lambda s: (s.baseline, s.x0))
+    caps = sorted(
+        (s for s in spans if cfg.is_caption_font(s) and s.y0 >= start.y0 - 1 and s.x1 > start.x0 - 2),
+        key=lambda s: (s.baseline, s.x0),
+    )
     out = [s for s in caps if abs(s.baseline - start.baseline) < 1.5]
     last = start.baseline
     for s in caps:
@@ -141,11 +144,15 @@ def detect(book: Book, pno: int, warn, cfg: FigureConfig) -> list[Figure]:
         cap_rects.append(r)
     clusters = [c for c in _clusters(_ink(book, pno, excl, cfg)) if c.width * c.height > 60]
     cap_ids = {id(s) for cb in caps.values() for s in cb}
-    prose = [s for s in spans if s.text.strip() and s.y0 > cfg.header_band and not cfg.is_figure_text(s)
-             and id(s) not in cap_ids]
+    prose = [
+        s
+        for s in spans
+        if s.text.strip() and s.y0 > cfg.header_band and not cfg.is_figure_text(s) and id(s) not in cap_ids
+    ]
     used: set[int] = set()
     figs = []
     for st, cr in zip(starts, cap_rects, strict=True):
+
         def dist(c: pymupdf.Rect, cr: pymupdf.Rect = cr) -> float:
             dx = max(c.x0 - cr.x1, cr.x0 - c.x1, 0)
             if c.y1 <= cr.y0 + 2:
@@ -155,6 +162,7 @@ def detect(book: Book, pno: int, warn, cfg: FigureConfig) -> list[Figure]:
             else:
                 dy = 0
             return (dx * dx + dy * dy) ** 0.5
+
         cand = sorted((i for i in range(len(clusters)) if i not in used), key=lambda i: dist(clusters[i]))
         if not cand:
             warn(f"p{pno}: no figure art near caption {st.text.strip()!r}")
@@ -212,8 +220,11 @@ def render(book: Book, pno: int, box: pymupdf.Rect, keep, dest: str, rotate: int
         page.add_redact_annot(r + (0.3, 0.6, -0.3, -0.6), fill=False)
         n += 1
     if n:
-        page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE,
-                              text=pymupdf.PDF_REDACT_TEXT_REMOVE)
+        page.apply_redactions(
+            images=pymupdf.PDF_REDACT_IMAGE_NONE,
+            graphics=pymupdf.PDF_REDACT_LINE_ART_NONE,
+            text=pymupdf.PDF_REDACT_TEXT_REMOVE,
+        )
     m = pymupdf.Matrix(DPI / 72, DPI / 72).prerotate(rotate)
     page.get_pixmap(matrix=m, clip=box).save(dest)
     tmp.close()

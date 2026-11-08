@@ -68,8 +68,7 @@ def parse_id(text: str) -> ArxivId:
         expected_digits = 4 if ym <= 201412 else 5
         if len(num) != expected_digits:
             raise ValidationError(
-                "invalid arXiv ID %r: %s IDs have %d-digit numbers"
-                % (text, m.group("yymm"), expected_digits)
+                "invalid arXiv ID %r: %s IDs have %d-digit numbers" % (text, m.group("yymm"), expected_digits)
             )
         if int(num) == 0:
             raise ValidationError("invalid arXiv ID %r: sequence number is zero" % text)

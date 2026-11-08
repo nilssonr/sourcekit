@@ -183,10 +183,13 @@ class DecisionLogTests(unittest.TestCase):
 
         log = r.log_dicts()
 
-        self.assertEqual(log, [
-            {"a": "hel", "b": "lo", "keep": False, "why": "book-joined", "where": "p7"},
-            {"a": "foo", "b": "bar", "keep": False, "why": "code-joined", "where": "p9"},
-        ])
+        self.assertEqual(
+            log,
+            [
+                {"a": "hel", "b": "lo", "keep": False, "why": "book-joined", "where": "p7"},
+                {"a": "foo", "b": "bar", "keep": False, "why": "code-joined", "where": "p9"},
+            ],
+        )
 
 
 class MissingDictionaryTests(unittest.TestCase):

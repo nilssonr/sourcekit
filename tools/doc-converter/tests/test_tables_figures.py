@@ -70,16 +70,27 @@ class TableDetectTests(unittest.TestCase):
         return span("Table 1.1 Things", font=CAPTION, baseline=190)
 
     def header_cells(self):
-        return [span("Name", x0=80, baseline=210), span("Size", x0=180, baseline=210), span("Note", x0=280, baseline=210)]
+        return [
+            span("Name", x0=80, baseline=210),
+            span("Size", x0=180, baseline=210),
+            span("Note", x0=280, baseline=210),
+        ]
 
     def body_cells(self):
-        return [span("a", x0=80, baseline=230), span("b", x0=180, baseline=230), span("c", x0=280, baseline=230),
-                span("a2", x0=80, baseline=242), span("d", x0=80, baseline=260)]
+        return [
+            span("a", x0=80, baseline=230),
+            span("b", x0=180, baseline=230),
+            span("c", x0=280, baseline=230),
+            span("a2", x0=80, baseline=242),
+            span("d", x0=80, baseline=260),
+        ]
 
     def test_header_spans_are_assigned_to_columns_by_the_vertical_rules(self):
         name, size, note = self.header_cells()
-        book = FakeBook(pages={1: [self.caption(), name, size, note, *self.body_cells()]},
-                        drawings={1: self.rules() + self.vertical_rules()})
+        book = FakeBook(
+            pages={1: [self.caption(), name, size, note, *self.body_cells()]},
+            drawings={1: self.rules() + self.vertical_rules()},
+        )
 
         found = tables.detect(book, 1, [].append, table_config())
 
@@ -87,8 +98,10 @@ class TableDetectTests(unittest.TestCase):
 
     def test_body_rows_split_where_the_baseline_step_exceeds_the_row_gap(self):
         a, b, c, a2, d = self.body_cells()
-        book = FakeBook(pages={1: [self.caption(), *self.header_cells(), a, b, c, a2, d]},
-                        drawings={1: self.rules() + self.vertical_rules()})
+        book = FakeBook(
+            pages={1: [self.caption(), *self.header_cells(), a, b, c, a2, d]},
+            drawings={1: self.rules() + self.vertical_rules()},
+        )
 
         found = tables.detect(book, 1, [].append, table_config())
 
@@ -96,16 +109,19 @@ class TableDetectTests(unittest.TestCase):
 
     def test_a_caption_just_above_the_region_gives_the_id_and_caption_spans(self):
         cap = self.caption()
-        book = FakeBook(pages={1: [cap, *self.header_cells(), *self.body_cells()]},
-                        drawings={1: self.rules() + self.vertical_rules()})
+        book = FakeBook(
+            pages={1: [cap, *self.header_cells(), *self.body_cells()]},
+            drawings={1: self.rules() + self.vertical_rules()},
+        )
 
         found = tables.detect(book, 1, [].append, table_config())
 
         self.assertEqual([(t.id, t.caption) for t in found], [("1.1", [cap])])
 
     def test_a_table_without_a_caption_gets_a_page_based_id(self):
-        book = FakeBook(pages={1: [*self.header_cells(), *self.body_cells()]},
-                        drawings={1: self.rules() + self.vertical_rules()})
+        book = FakeBook(
+            pages={1: [*self.header_cells(), *self.body_cells()]}, drawings={1: self.rules() + self.vertical_rules()}
+        )
 
         found = tables.detect(book, 1, [].append, table_config())
 
@@ -113,8 +129,9 @@ class TableDetectTests(unittest.TestCase):
 
     def test_a_table_without_a_caption_is_reported(self):
         warnings: list[str] = []
-        book = FakeBook(pages={1: [*self.header_cells(), *self.body_cells()]},
-                        drawings={1: self.rules() + self.vertical_rules()})
+        book = FakeBook(
+            pages={1: [*self.header_cells(), *self.body_cells()]}, drawings={1: self.rules() + self.vertical_rules()}
+        )
 
         tables.detect(book, 1, warnings.append, table_config())
 
@@ -130,7 +147,9 @@ class TableDetectTests(unittest.TestCase):
 
     def test_missing_vertical_rules_are_reported(self):
         warnings: list[str] = []
-        book = FakeBook(pages={1: [self.caption(), *self.header_cells(), *self.body_cells()]}, drawings={1: self.rules()})
+        book = FakeBook(
+            pages={1: [self.caption(), *self.header_cells(), *self.body_cells()]}, drawings={1: self.rules()}
+        )
 
         tables.detect(book, 1, warnings.append, table_config())
 
@@ -139,8 +158,10 @@ class TableDetectTests(unittest.TestCase):
     def test_a_body_span_crossing_a_column_rule_is_reported(self):
         warnings: list[str] = []
         crossing = span("crosses it", x0=150, baseline=230)
-        book = FakeBook(pages={1: [self.caption(), *self.header_cells(), crossing]},
-                        drawings={1: self.rules() + self.vertical_rules()})
+        book = FakeBook(
+            pages={1: [self.caption(), *self.header_cells(), crossing]},
+            drawings={1: self.rules() + self.vertical_rules()},
+        )
 
         tables.detect(book, 1, warnings.append, table_config())
 

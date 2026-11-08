@@ -18,34 +18,38 @@ from .listings import ListingConfig, hexrgb, listing_bars, listing_parts
 @dataclass(frozen=True)
 class PageConfig:
     """Region detection on a page (set by the profile)."""
+
     figures: figmod.FigureConfig
     tables: tabmod.TableConfig
     listings: ListingConfig
-    sidebar_fill: str                          # background fill of sidebar boxes
-    sidebar_min_height: float                  # lower fills of that colour are not sidebar boxes
+    sidebar_fill: str  # background fill of sidebar boxes
+    sidebar_min_height: float  # lower fills of that colour are not sidebar boxes
     is_figure_text: Callable[[Span], bool]
     is_code_block: Callable[[Span], bool]
-    is_code_font: Callable[[Span], bool]       # whitespace in this font continues a code run
+    is_code_font: Callable[[Span], bool]  # whitespace in this font continues a code run
     is_callout: Callable[[Span], bool]
-    code_run_gap: float                        # a larger baseline step starts a new code run
-    code_run_break: float                      # non-code text this far below the run ends it
-    callout_window: float                      # callouts this close above/below a code run belong to it
+    code_run_gap: float  # a larger baseline step starts a new code run
+    code_run_break: float  # non-code text this far below the run ends it
+    callout_window: float  # callouts this close above/below a code run belong to it
 
 
 @dataclass
 class PageContent:
-    spans: list[Span]                          # every span on the page
+    spans: list[Span]  # every span on the page
     sidebar_boxes: list[pymupdf.Rect]
-    items: list[tuple[float, str, object]]     # (top, kind, object) sorted by top; kinds:
-                                               # fig, table, listing (bar, head, body), code (ink, callouts), row
+    items: list[tuple[float, str, object]]  # (top, kind, object) sorted by top; kinds:
+    # fig, table, listing (bar, head, body), code (ink, callouts), row
 
 
-def page_content(book: Book, p: int, cfg: PageConfig, text: Text, page_figure: tuple[str, int] | None,
-                 warn) -> PageContent:
+def page_content(
+    book: Book, p: int, cfg: PageConfig, text: Text, page_figure: tuple[str, int] | None, warn
+) -> PageContent:
     pf = book.spans(p)
-    sidebar_boxes = [d["rect"] for d in book.drawings(p)
-                     if d["type"] == "f" and hexrgb(d.get("fill")) == cfg.sidebar_fill
-                     and d["rect"].height > cfg.sidebar_min_height]
+    sidebar_boxes = [
+        d["rect"]
+        for d in book.drawings(p)
+        if d["type"] == "f" and hexrgb(d.get("fill")) == cfg.sidebar_fill and d["rect"].height > cfg.sidebar_min_height
+    ]
     used: set[int] = set()
     items: list[tuple[float, str, object]] = []
 

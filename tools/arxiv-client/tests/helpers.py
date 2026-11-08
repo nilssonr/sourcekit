@@ -173,8 +173,7 @@ def make_feed(entries: List[str], total: Optional[int] = None, start: int = 0, i
         '<link href="https://arxiv.org/api/query" type="application/atom+xml"/>'
         "<opensearch:itemsPerPage>%d</opensearch:itemsPerPage>"
         "<opensearch:totalResults>%d</opensearch:totalResults>"
-        "<opensearch:startIndex>%d</opensearch:startIndex>%s</feed>"
-        % (items_per_page, total, start, "".join(entries))
+        "<opensearch:startIndex>%d</opensearch:startIndex>%s</feed>" % (items_per_page, total, start, "".join(entries))
     ).encode("utf-8")
 
 

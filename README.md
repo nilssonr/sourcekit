@@ -46,8 +46,9 @@ cd tools/doc-converter && uv run python -m unittest discover -s tests
 
 The tool READMEs describe the opt-in live and regression tests.
 
-Every pull request runs both commands above on GitHub Actions (`.github/workflows/ci.yml`). The opt-in tests
-stay skipped there: nothing in CI touches the network or needs the book PDF.
+Every pull request runs both commands above, and the lint commands below, on GitHub Actions
+(`.github/workflows/ci.yml`). The opt-in tests stay skipped there: nothing in CI touches the network or needs
+the book PDF.
 
 ## Lint
 

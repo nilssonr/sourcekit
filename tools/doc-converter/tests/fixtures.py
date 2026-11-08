@@ -26,14 +26,14 @@ from doc_converter.modules.serialize.markdown import MarkdownConfig
 from doc_converter.modules.split.outline import FrontMatter, SectionRule, SplitConfig, slug
 
 # ---------------------------------------------------------------- geometry
-CW = 5.0                 # character advance of span()
-COLUMN_LEFT = 72.0       # text column on every page (odd_shift is 0 unless a test sets it)
-COLUMN_RIGHT = 372.0     # a line whose ink reaches this is a full line
-HEADER_BAND = 40.0       # baselines above this are running headers
+CW = 5.0  # character advance of span()
+COLUMN_LEFT = 72.0  # text column on every page (odd_shift is 0 unless a test sets it)
+COLUMN_RIGHT = 372.0  # a line whose ink reaches this is a full line
+HEADER_BAND = 40.0  # baselines above this are running headers
 PAGE_RECT = pymupdf.Rect(0, 0, 450, 700)
-LINE_PITCH = 10.0        # code line spacing
+LINE_PITCH = 10.0  # code line spacing
 BODY_SIZE = 10.0
-CODE_SIZE = 8.0          # code blocks; inline code is INLINE_CODE_SIZE in the same font
+CODE_SIZE = 8.0  # code blocks; inline code is INLINE_CODE_SIZE in the same font
 INLINE_CODE_SIZE = 9.0
 
 # ---------------------------------------------------------------- colours (drawing fills)
@@ -56,16 +56,30 @@ TITLE, DROPCAP, H2, H3, SMALLCAPS, MAP_TITLE = "Title", "Dropcap", "Head2", "Hea
 COVERS_TITLE, COVERS_CONT = "CoversTitle", "CoversCont"
 SIDEBAR_TITLE, SIDEBAR_TEXT, CONTINUED = "SidebarTitle", "SidebarText", "Continued"
 PAGENUM = "PageNum"
-FN_MARKER = "FnMarker"           # footnote reference in the text; size <= FN_START_SIZE starts a footnote
+FN_MARKER = "FnMarker"  # footnote reference in the text; size <= FN_START_SIZE starts a footnote
 FOOTNOTE_TEXT = "FootnoteText"
 FN_START_SIZE = 5.0
 
 ROLE_BY_FONT = {
-    BULLET: "bullet", LIST_NUMBER: "bullet", COVERS_BULLET: "covers-item",
-    NOTE_LABEL: "note-start", TITLE: "title", DROPCAP: "dropcap", H2: "h2", H3: "h3",
-    SMALLCAPS: "smallcaps", MAP_TITLE: "map-title", COVERS_TITLE: "covers-title", COVERS_CONT: "covers-cont",
-    SIDEBAR_TITLE: "sidebar-title", SIDEBAR_TEXT: "sidebar-text", CONTINUED: "continued",
-    CAPTION: "caption", PAGENUM: "pagenum", FOOTNOTE_TEXT: "footnote-cont", EPIGRAPH: "epigraph",
+    BULLET: "bullet",
+    LIST_NUMBER: "bullet",
+    COVERS_BULLET: "covers-item",
+    NOTE_LABEL: "note-start",
+    TITLE: "title",
+    DROPCAP: "dropcap",
+    H2: "h2",
+    H3: "h3",
+    SMALLCAPS: "smallcaps",
+    MAP_TITLE: "map-title",
+    COVERS_TITLE: "covers-title",
+    COVERS_CONT: "covers-cont",
+    SIDEBAR_TITLE: "sidebar-title",
+    SIDEBAR_TEXT: "sidebar-text",
+    CONTINUED: "continued",
+    CAPTION: "caption",
+    PAGENUM: "pagenum",
+    FOOTNOTE_TEXT: "footnote-cont",
+    EPIGRAPH: "epigraph",
 }
 
 
@@ -104,6 +118,7 @@ def is_caption_font(s: Span) -> bool:
 
 def is_caption_start(s: Span) -> bool:
     import re
+
     return is_caption_font(s) and re.match(r"^\s*(Figure|Table)\s+\d+\.\d+", s.text) is not None
 
 
@@ -165,8 +180,17 @@ def role(r: Row) -> str:
 
 
 # ---------------------------------------------------------------- spans, rows, drawings
-def span(text: str, *, page: int = 1, x0: float = COLUMN_LEFT, x1: float | None = None, baseline: float = 100.0,
-         font: str = BODY, size: float = BODY_SIZE, color: str = BLACK) -> Span:
+def span(
+    text: str,
+    *,
+    page: int = 1,
+    x0: float = COLUMN_LEFT,
+    x1: float | None = None,
+    baseline: float = 100.0,
+    font: str = BODY,
+    size: float = BODY_SIZE,
+    color: str = BLACK,
+) -> Span:
     """A span with one Char per character. ``x1`` stretches the characters so the span ends there
     (``x1=COLUMN_RIGHT`` makes a full line); otherwise each character advances CW."""
     cw = (x1 - x0) / len(text) if x1 is not None and text else CW
@@ -187,13 +211,18 @@ def row(*spans: Span, cls: str | None = None) -> Row:
 
 def rgb(hex_colour: str) -> tuple[float, float, float]:
     h = hex_colour.lstrip("#")
-    return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    return tuple(int(h[i : i + 2], 16) / 255 for i in (0, 2, 4))
 
 
 def fill(x0: float, y0: float, x1: float, y1: float, colour: str, items: int = 1) -> dict:
     """A filled vector drawing as PyMuPDF reports it (fill as 0-1 floats)."""
-    return {"type": "f", "rect": pymupdf.Rect(x0, y0, x1, y1), "fill": rgb(colour), "color": None,
-            "items": [("l",)] * items}
+    return {
+        "type": "f",
+        "rect": pymupdf.Rect(x0, y0, x1, y1),
+        "fill": rgb(colour),
+        "color": None,
+        "items": [("l",)] * items,
+    }
 
 
 def stroke(x0: float, y0: float, x1: float, y1: float, colour: str) -> dict:
@@ -214,8 +243,14 @@ class FakeBook:
     """What the PDF-free modules read from a Book: spans and drawings per page, the outline, page labels
     and the page rectangle. ``spans(p)`` returns the same list each time, because callers key on ``id(span)``."""
 
-    def __init__(self, pages: dict[int, list[Span]] | None = None, *, drawings: dict[int, list[dict]] | None = None,
-                 outline: list[OutlineEntry] = (), labels: dict[int, str] | None = None):
+    def __init__(
+        self,
+        pages: dict[int, list[Span]] | None = None,
+        *,
+        drawings: dict[int, list[dict]] | None = None,
+        outline: list[OutlineEntry] = (),
+        labels: dict[int, str] | None = None,
+    ):
         self._pages = {p: list(spans) for p, spans in (pages or {}).items()}
         self._drawings = drawings or {}
         self._outline = list(outline)
@@ -250,70 +285,178 @@ class FakeBook:
 
 # ---------------------------------------------------------------- configs
 def listing_config(**over) -> ListingConfig:
-    return replace(ListingConfig(bar_fill=LISTING_BAR, is_code_block=is_code_block, is_callout=is_callout,
-                                 column_left=column_left, char_width=CW, line_pitch=LINE_PITCH, line_centre=2.0,
-                                 bar_min_width=100, callout_ink=BLACK), **over)
+    return replace(
+        ListingConfig(
+            bar_fill=LISTING_BAR,
+            is_code_block=is_code_block,
+            is_callout=is_callout,
+            column_left=column_left,
+            char_width=CW,
+            line_pitch=LINE_PITCH,
+            line_centre=2.0,
+            bar_min_width=100,
+            callout_ink=BLACK,
+        ),
+        **over,
+    )
 
 
 def table_config(**over) -> TableConfig:
-    return replace(TableConfig(header_fill=BLUE, rule_fill=BLACK, row_gap=13.0, caption_word="Table",
-                               id_pattern=r"\d+\.\d+", is_caption_font=is_caption_font,
-                               is_caption_start=is_caption_start, is_figure_text=is_figure_text), **over)
+    return replace(
+        TableConfig(
+            header_fill=BLUE,
+            rule_fill=BLACK,
+            row_gap=13.0,
+            caption_word="Table",
+            id_pattern=r"\d+\.\d+",
+            is_caption_font=is_caption_font,
+            is_caption_start=is_caption_start,
+            is_figure_text=is_figure_text,
+        ),
+        **over,
+    )
 
 
 def figure_config(**over) -> FigureConfig:
-    return replace(FigureConfig(header_band=HEADER_BAND, ignore_fills=frozenset({LISTING_BAR, SIDEBAR_BG, BLUE, "#ffffff"}),
-                                caption_word="Figure", id_pattern=r"\d+\.\d+", listing_fonts=(CODE, CALLOUT),
-                                is_caption_font=is_caption_font, is_caption_start=is_caption_start,
-                                is_figure_text=is_figure_text, listings=listing_config(), tables=table_config()), **over)
+    return replace(
+        FigureConfig(
+            header_band=HEADER_BAND,
+            ignore_fills=frozenset({LISTING_BAR, SIDEBAR_BG, BLUE, "#ffffff"}),
+            caption_word="Figure",
+            id_pattern=r"\d+\.\d+",
+            listing_fonts=(CODE, CALLOUT),
+            is_caption_font=is_caption_font,
+            is_caption_start=is_caption_start,
+            is_figure_text=is_figure_text,
+            listings=listing_config(),
+            tables=table_config(),
+        ),
+        **over,
+    )
 
 
 def page_config(**over) -> PageConfig:
-    return replace(PageConfig(figures=figure_config(), tables=table_config(), listings=listing_config(),
-                              sidebar_fill=SIDEBAR_BG, sidebar_min_height=20, is_figure_text=is_figure_text,
-                              is_code_block=is_code_block, is_code_font=is_code_font, is_callout=is_callout,
-                              code_run_gap=23.0, code_run_break=2.7, callout_window=15), **over)
+    return replace(
+        PageConfig(
+            figures=figure_config(),
+            tables=table_config(),
+            listings=listing_config(),
+            sidebar_fill=SIDEBAR_BG,
+            sidebar_min_height=20,
+            is_figure_text=is_figure_text,
+            is_code_block=is_code_block,
+            is_code_font=is_code_font,
+            is_callout=is_callout,
+            code_run_gap=23.0,
+            code_run_break=2.7,
+            callout_window=15,
+        ),
+        **over,
+    )
 
 
 def row_config(**over) -> RowConfig:
-    return replace(RowConfig(role=role, is_fn_marker=is_fn_marker, is_bullet=is_bullet, is_list_number=is_list_number,
-                             is_inline_label=is_note_label, is_code_font=is_code_font, row_tol=2.7, dropcap_size=40,
-                             fn_attach=(-1.0, 5.0)), **over)
+    return replace(
+        RowConfig(
+            role=role,
+            is_fn_marker=is_fn_marker,
+            is_bullet=is_bullet,
+            is_list_number=is_list_number,
+            is_inline_label=is_note_label,
+            is_code_font=is_code_font,
+            row_tol=2.7,
+            dropcap_size=40,
+            fn_attach=(-1.0, 5.0),
+        ),
+        **over,
+    )
 
 
 def flow_config(**over) -> FlowConfig:
-    return replace(FlowConfig(page=page_config(), column_left=column_left, column_right=column_right, odd_shift=0.0,
-                              right_edge={"body": COLUMN_RIGHT, "sidebar": COLUMN_RIGHT - 12, "note": COLUMN_RIGHT - 24},
-                              right_slack=10.0, sidebar_quote_indent=12.0, listing_continue_top=70, gap_sidebar=15,
-                              gap_list=16, gap_note=15, gap_para=17, align_tol=4, indent_min=7, heading_merge_gap=18,
-                              smallcaps_lower_max=8.5, is_body_text=is_body_text, is_note_label=is_note_label,
-                              is_bullet=is_bullet, is_list_number=is_list_number, is_code_block=is_code_block,
-                              is_callout=is_callout, is_figure_text=is_figure_text, is_listing_head=is_listing_head,
-                              is_fn_start_marker=is_fn_start_marker, listing_id_pattern=r"^Listing (\d+\.\d+)",
-                              skip_pages=frozenset(), page_figures={}), **over)
+    return replace(
+        FlowConfig(
+            page=page_config(),
+            column_left=column_left,
+            column_right=column_right,
+            odd_shift=0.0,
+            right_edge={"body": COLUMN_RIGHT, "sidebar": COLUMN_RIGHT - 12, "note": COLUMN_RIGHT - 24},
+            right_slack=10.0,
+            sidebar_quote_indent=12.0,
+            listing_continue_top=70,
+            gap_sidebar=15,
+            gap_list=16,
+            gap_note=15,
+            gap_para=17,
+            align_tol=4,
+            indent_min=7,
+            heading_merge_gap=18,
+            smallcaps_lower_max=8.5,
+            is_body_text=is_body_text,
+            is_note_label=is_note_label,
+            is_bullet=is_bullet,
+            is_list_number=is_list_number,
+            is_code_block=is_code_block,
+            is_callout=is_callout,
+            is_figure_text=is_figure_text,
+            is_listing_head=is_listing_head,
+            is_fn_start_marker=is_fn_start_marker,
+            listing_id_pattern=r"^Listing (\d+\.\d+)",
+            skip_pages=frozenset(),
+            page_figures={},
+        ),
+        **over,
+    )
 
 
 def markdown_config(**over) -> MarkdownConfig:
-    return replace(MarkdownConfig(figure_caption=(r"^Figure (\d+\.\d+)\s*", r"**Figure \1** "),
-                                  table_caption=(r"^Table (\d+\.\d+)\s*", r"**Table \1** "),
-                                  listing_title=(r"^(Listing \d+\.\d+)\s*", r"\1 ")), **over)
+    return replace(
+        MarkdownConfig(
+            figure_caption=(r"^Figure (\d+\.\d+)\s*", r"**Figure \1** "),
+            table_caption=(r"^Table (\d+\.\d+)\s*", r"**Table \1** "),
+            listing_title=(r"^(Listing \d+\.\d+)\s*", r"\1 "),
+        ),
+        **over,
+    )
 
 
 def verify_config(**over) -> VerifyConfig:
-    return replace(VerifyConfig(header_band=HEADER_BAND, superscript_max=6.6, is_figure_text=is_figure_text,
-                                is_bullet_glyph=is_bullet, is_page_number=is_page_number, is_code_block=is_code_block,
-                                is_continuation_label=is_continuation_label, column_gap=12.0), **over)
+    return replace(
+        VerifyConfig(
+            header_band=HEADER_BAND,
+            superscript_max=6.6,
+            is_figure_text=is_figure_text,
+            is_bullet_glyph=is_bullet,
+            is_page_number=is_page_number,
+            is_code_block=is_code_block,
+            is_continuation_label=is_continuation_label,
+            column_gap=12.0,
+        ),
+        **over,
+    )
 
 
 def split_config(**over) -> SplitConfig:
     """Parts are level-1 bookmarks, chapters level-2, content ends at the level-1 "index" bookmark."""
-    return replace(SplitConfig(
-        rules=[
-            SectionRule(1, r"Part (\d+)—(.+)", lambda m: (f"part-{m[1]}", f"part-{m[1]}-{slug(m[2])}.md", "", "")),
-            SectionRule(2, r"(\d+) (.+)", lambda m: (f"ch{int(m[1]):02d}", f"chapter-{int(m[1]):02d}-{slug(m[2])}.md",
-                                                     f"Chapter {m[1]}: {m[2]}", f"Chapter {m[1]}: ")),
-        ],
-        end=(1, "index"), front=None), **over)
+    return replace(
+        SplitConfig(
+            rules=[
+                SectionRule(1, r"Part (\d+)—(.+)", lambda m: (f"part-{m[1]}", f"part-{m[1]}-{slug(m[2])}.md", "", "")),
+                SectionRule(
+                    2,
+                    r"(\d+) (.+)",
+                    lambda m: (
+                        f"ch{int(m[1]):02d}",
+                        f"chapter-{int(m[1]):02d}-{slug(m[2])}.md",
+                        f"Chapter {m[1]}: {m[2]}",
+                        f"Chapter {m[1]}: ",
+                    ),
+                ),
+            ],
+            end=(1, "index"),
+            front=None,
+        ),
+        **over,
+    )
 
 
 def front_matter(**over) -> FrontMatter:
@@ -340,8 +483,9 @@ def text(case: unittest.TestCase, **resolver_kw) -> Text:
     return Text(row_config(), resolver(case, **resolver_kw))
 
 
-def assembler(case: unittest.TestCase, book: FakeBook, descriptions: dict[str, str] | None = None,
-              corpus=(), **flow_over) -> tuple[Assembler, list[str]]:
+def assembler(
+    case: unittest.TestCase, book: FakeBook, descriptions: dict[str, str] | None = None, corpus=(), **flow_over
+) -> tuple[Assembler, list[str]]:
     """An Assembler over ``book`` and the list its warnings go to. ``corpus`` seeds the hyphen resolver."""
     warnings: list[str] = []
     asm = Assembler(book, flow_config(**flow_over), text(case, corpus=corpus), descriptions or {}, warnings.append)

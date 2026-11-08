@@ -62,7 +62,10 @@ class CodeLinesTests(unittest.TestCase):
 
         lines = code_lines(spans, [].append, listing_config())
 
-        self.assertEqual([(line.page, line.baseline, line.text) for line in lines], [(1, 100.0, "a"), (1, 110.0, "b"), (2, 100.0, "c")])
+        self.assertEqual(
+            [(line.page, line.baseline, line.text) for line in lines],
+            [(1, 100.0, "a"), (1, 110.0, "b"), (2, 100.0, "c")],
+        )
 
     def test_a_line_starts_at_its_first_inked_character(self):
         spans = [code("  foo", 100)]
@@ -106,8 +109,11 @@ class CodeLinesTests(unittest.TestCase):
                 self.assertEqual(lines[0].marks, mark)
 
     def test_a_space_between_two_bold_words_is_bold(self):
-        spans = [code("new", 100, font=CODE_BOLD), code(" ", 100, x0=COLUMN_LEFT + 3 * CW),
-                 code("Foo", 100, x0=COLUMN_LEFT + 4 * CW, font=CODE_BOLD)]
+        spans = [
+            code("new", 100, font=CODE_BOLD),
+            code(" ", 100, x0=COLUMN_LEFT + 3 * CW),
+            code("Foo", 100, x0=COLUMN_LEFT + 4 * CW, font=CODE_BOLD),
+        ]
 
         lines = code_lines(spans, [].append, listing_config())
 
@@ -173,7 +179,11 @@ class ListingPartsTests(unittest.TestCase):
 
     def body(self):
         """Two code lines with a callout beside the first, sorted by (baseline, x0)."""
-        return [code("int a;", 80), span("Sets a", x0=300, baseline=80, font=CALLOUT, size=CODE_SIZE), code("int b;", 90)]
+        return [
+            code("int a;", 80),
+            span("Sets a", x0=300, baseline=80, font=CALLOUT, size=CODE_SIZE),
+            code("int b;", 90),
+        ]
 
     def test_spans_centred_in_the_bar_are_the_head(self):
         head = self.head()
@@ -256,9 +266,14 @@ class CalloutTests(unittest.TestCase):
 
 class MapCalloutsTests(unittest.TestCase):
     """Four code lines with baselines 100-130 (centres 98-128), callout text to the right of the code."""
+
     AREA = pymupdf.Rect(0, 90, 450, 140)
-    LINES: ClassVar[list[CodeLine]] = [CodeLine("int a;", 100.0, 1, COLUMN_LEFT), CodeLine("int b;", 110.0, 1, COLUMN_LEFT),
-             CodeLine("int c;", 120.0, 1, COLUMN_LEFT), CodeLine("int d;", 130.0, 1, COLUMN_LEFT)]
+    LINES: ClassVar[list[CodeLine]] = [
+        CodeLine("int a;", 100.0, 1, COLUMN_LEFT),
+        CodeLine("int b;", 110.0, 1, COLUMN_LEFT),
+        CodeLine("int c;", 120.0, 1, COLUMN_LEFT),
+        CodeLine("int d;", 130.0, 1, COLUMN_LEFT),
+    ]
     INDEX: ClassVar[list[int]] = [0, 1, 2, 3]
 
     def callout(self, baseline: float, x0: float = 300):
@@ -281,8 +296,13 @@ class MapCalloutsTests(unittest.TestCase):
 
     def test_two_arrowheads_on_one_leader_name_both_lines(self):
         text = self.callout(100)
-        drawings = [leader(150, 97.8, 290, 98.2), leader(199.8, 98, 200.2, 118), leader(150, 117.8, 200, 118.2),
-                    arrowhead(148, 98), arrowhead(148, 118)]
+        drawings = [
+            leader(150, 97.8, 290, 98.2),
+            leader(199.8, 98, 200.2, 118),
+            leader(150, 117.8, 200, 118.2),
+            arrowhead(148, 98),
+            arrowhead(148, 118),
+        ]
         book = FakeBook(drawings={1: drawings})
 
         callouts = self.map(book, [text], [])

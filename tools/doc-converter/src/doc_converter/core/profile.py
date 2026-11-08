@@ -29,15 +29,15 @@ REPO = Path(__file__).resolve().parents[3]
 @dataclass
 class Profile:
     name: str
-    split: SplitConfig            # how the PDF's outline becomes output files
-    rows: RowConfig               # spans -> rows -> runs; includes the row role function
-    flow: FlowConfig              # rows and regions -> blocks
-    markdown: MarkdownConfig      # caption formats
+    split: SplitConfig  # how the PDF's outline becomes output files
+    rows: RowConfig  # spans -> rows -> runs; includes the row role function
+    flow: FlowConfig  # rows and regions -> blocks
+    markdown: MarkdownConfig  # caption formats
     listings: ListingConfig
     figures: FigureConfig
     tables: TableConfig
     verify: VerifyConfig
-    skip_pages: set[int] = field(default_factory=set)          # pages inside a section range that are not converted
+    skip_pages: set[int] = field(default_factory=set)  # pages inside a section range that are not converted
     page_figures: dict[int, tuple[str, int]] = field(default_factory=dict)  # page -> (figure id, rotation)
     data_dir: Path | None = None
 

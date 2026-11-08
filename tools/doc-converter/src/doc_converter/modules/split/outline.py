@@ -16,6 +16,7 @@ class SectionRule:
     """Bookmarks at `level` whose title matches `pattern` start a section; `make` builds its
     (id, file, title, title_added) from the match. A title of "" means the heading is taken from the
     page; title_added is the leading part of the title that is not book text."""
+
     level: int
     pattern: str
     make: Callable[[re.Match[str]], tuple[str, str, str, str]]
@@ -25,20 +26,20 @@ class SectionRule:
 class FrontMatter:
     id: str
     file: str
-    title: str         # all of it is added in conversion
-    first_page: int    # the front matter runs from here to the page before the first section
+    title: str  # all of it is added in conversion
+    first_page: int  # the front matter runs from here to the page before the first section
     heading_shift: int = 0
 
 
 @dataclass(frozen=True)
 class SplitConfig:
     rules: list[SectionRule]
-    end: tuple[int, str]          # (level, exact title) of the bookmark where content ends, e.g. the index
+    end: tuple[int, str]  # (level, exact title) of the bookmark where content ends, e.g. the index
     front: FrontMatter | None = None
 
 
 def slug(text: str) -> str:
-    """"What is a unit test?" -> "what-is-a-unit-test"."""
+    """ "What is a unit test?" -> "what-is-a-unit-test"."""
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 

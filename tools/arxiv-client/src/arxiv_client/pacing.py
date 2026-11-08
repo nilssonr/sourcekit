@@ -129,7 +129,7 @@ class BlockStore:
         try:
             with open(self.path, encoding="utf-8") as f:
                 return float(f.read().strip() or 0)
-        except (OSError, ValueError):
+        except OSError, ValueError:
             return 0.0
 
 
@@ -211,9 +211,7 @@ class MemoryGate:
         finally:
             self._unlock()
 
-    def _wait_needed(
-        self, lanes: Dict[str, float], intervals: Dict[str, float], waited: Dict[str, float]
-    ) -> float:
+    def _wait_needed(self, lanes: Dict[str, float], intervals: Dict[str, float], waited: Dict[str, float]) -> float:
         now = self._wall()
         wait = 0.0
         for lane, interval in intervals.items():
@@ -320,7 +318,7 @@ class FileGate(MemoryGate):
             os.lseek(self._fd, 0, os.SEEK_SET)
             data = json.loads(os.read(self._fd, 4096).decode("utf-8") or "{}")
             return {str(k): float(v) for k, v in data.items()}
-        except (OSError, ValueError, AttributeError, TypeError):
+        except OSError, ValueError, AttributeError, TypeError:
             return {}  # unreadable or corrupt: the in-memory lanes still apply
 
     def _write(self, lanes: Dict[str, float]) -> None:

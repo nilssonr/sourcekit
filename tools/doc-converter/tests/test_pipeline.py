@@ -33,9 +33,18 @@ class ConvertTests(unittest.TestCase):
     def profile(self) -> Profile:
         data_dir = Path(tempfile.mkdtemp(prefix="profile-data-"))
         self.addCleanup(shutil.rmtree, data_dir)
-        return Profile(name="fake", split=split_config(), rows=row_config(), flow=flow_config(),
-                       markdown=markdown_config(), listings=listing_config(), figures=figure_config(),
-                       tables=table_config(), verify=verify_config(), data_dir=data_dir)
+        return Profile(
+            name="fake",
+            split=split_config(),
+            rows=row_config(),
+            flow=flow_config(),
+            markdown=markdown_config(),
+            listings=listing_config(),
+            figures=figure_config(),
+            tables=table_config(),
+            verify=verify_config(),
+            data_dir=data_dir,
+        )
 
     def out_dir(self) -> Path:
         out = Path(tempfile.mkdtemp(prefix="convert-out-")) / "out"
@@ -45,12 +54,20 @@ class ConvertTests(unittest.TestCase):
     def book(self) -> FakeBook:
         """Chapter 1 on pages 1-2, chapter 2 on page 3, the index on page 4."""
         book = FakeBook(
-            {1: [span("The goal", baseline=100, font=TITLE),
-                 span("A full first line of the only paragraph", baseline=150, x1=COLUMN_RIGHT),
-                 span("and its short second line.", baseline=164)],
-             2: [span("Page two.", baseline=100, page=2)],
-             3: [span("Chapter two text.", baseline=100, page=3)]},
-            outline=[OutlineEntry(2, "1 The goal", 1), OutlineEntry(2, "2 What is a test", 3), OutlineEntry(1, "index", 4)],
+            {
+                1: [
+                    span("The goal", baseline=100, font=TITLE),
+                    span("A full first line of the only paragraph", baseline=150, x1=COLUMN_RIGHT),
+                    span("and its short second line.", baseline=164),
+                ],
+                2: [span("Page two.", baseline=100, page=2)],
+                3: [span("Chapter two text.", baseline=100, page=3)],
+            },
+            outline=[
+                OutlineEntry(2, "1 The goal", 1),
+                OutlineEntry(2, "2 What is a test", 3),
+                OutlineEntry(1, "index", 4),
+            ],
         )
         book.path = dictionary_file(self)  # run-info hashes the input file
         return book
@@ -60,11 +77,15 @@ class ConvertTests(unittest.TestCase):
 
         convert(self.book(), self.profile(), out, dict_path=dictionary_file(self))
 
-        self.assertEqual((out / "chapter-01-the-goal.md").read_text(encoding="utf-8"),
-                         "# Chapter 1: The goal\n\nA full first line of the only paragraph and its short second line.\n\n"
-                         "Page two.\n")
-        self.assertEqual((out / "chapter-02-what-is-a-test.md").read_text(encoding="utf-8"),
-                         "# Chapter 2: What is a test\n\nChapter two text.\n")
+        self.assertEqual(
+            (out / "chapter-01-the-goal.md").read_text(encoding="utf-8"),
+            "# Chapter 1: The goal\n\nA full first line of the only paragraph and its short second line.\n\n"
+            "Page two.\n",
+        )
+        self.assertEqual(
+            (out / "chapter-02-what-is-a-test.md").read_text(encoding="utf-8"),
+            "# Chapter 2: What is a test\n\nChapter two text.\n",
+        )
 
     def test_the_manifest_lists_each_file_with_its_pages_and_added_ranges(self):
         out = self.out_dir()
@@ -72,10 +93,21 @@ class ConvertTests(unittest.TestCase):
         convert(self.book(), self.profile(), out, dict_path=dictionary_file(self))
 
         manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
-        self.assertEqual(manifest, {"profile": "fake", "files": [
-            {"file": "chapter-01-the-goal.md", "pages": [1, 2], "skip_pages": [], "added": [[2, 13, "title"]]},
-            {"file": "chapter-02-what-is-a-test.md", "pages": [3, 3], "skip_pages": [], "added": [[2, 13, "title"]]},
-        ]})
+        self.assertEqual(
+            manifest,
+            {
+                "profile": "fake",
+                "files": [
+                    {"file": "chapter-01-the-goal.md", "pages": [1, 2], "skip_pages": [], "added": [[2, 13, "title"]]},
+                    {
+                        "file": "chapter-02-what-is-a-test.md",
+                        "pages": [3, 3],
+                        "skip_pages": [],
+                        "added": [[2, 13, "title"]],
+                    },
+                ],
+            },
+        )
 
     def test_the_result_counts_the_blocks_written_per_file(self):
         out = self.out_dir()
@@ -100,9 +132,17 @@ class ConvertTests(unittest.TestCase):
 
         convert(self.book(), self.profile(), out, dict_path=words)
 
-        self.assertEqual(sorted(p.name for p in out.iterdir() if p.suffix != ".md"),
-                         ["figure-labels.json", "hyphen-decisions.json", "illustrations", "manifest.json",
-                          "run-info.json", "warnings.txt"])
+        self.assertEqual(
+            sorted(p.name for p in out.iterdir() if p.suffix != ".md"),
+            [
+                "figure-labels.json",
+                "hyphen-decisions.json",
+                "illustrations",
+                "manifest.json",
+                "run-info.json",
+                "warnings.txt",
+            ],
+        )
         info = json.loads((out / "run-info.json").read_text(encoding="utf-8"))
         self.assertEqual(info["dictionary"], words)
         self.assertEqual(info["profile"], "fake")

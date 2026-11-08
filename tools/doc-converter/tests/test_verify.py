@@ -98,8 +98,12 @@ class PageTextTests(unittest.TestCase):
         self.assertEqual(out, " Body")
 
     def test_a_wide_gap_splits_a_row_into_columns_read_row_by_row(self):
-        spans = [span("code", baseline=100), span("callout", baseline=100, x0=200),
-                 span("line2", baseline=110), span("note", baseline=110, x0=200)]
+        spans = [
+            span("code", baseline=100),
+            span("callout", baseline=100, x0=200),
+            span("line2", baseline=110),
+            span("note", baseline=110, x0=200),
+        ]
 
         out = page_text(spans, self.cfg)
 
@@ -151,7 +155,9 @@ class ReportTests(unittest.TestCase):
     def test_a_case_difference_is_reported_while_the_words_match(self):
         lines = self._compare("HELLO World\n", span("Hello World"))
 
-        self.assertEqual(lines[0:4:3], ["expected 2 words, markdown 2 words, matched 2", "case differences (1): Hello->HELLO×1"])
+        self.assertEqual(
+            lines[0:4:3], ["expected 2 words, markdown 2 words, matched 2", "case differences (1): Hello->HELLO×1"]
+        )
 
     def test_no_case_differences_is_an_empty_list(self):
         lines = self._compare("Hello\n", span("Hello"))
@@ -176,8 +182,10 @@ class ReportTests(unittest.TestCase):
     def test_a_stretch_that_reappears_nowhere_is_unpaired(self):
         lines = self._compare("alpha gamma\n", span("alpha beta gamma"))
 
-        self.assertEqual(lines[5:7], ["moves: 0 stretches reappear elsewhere; unexplained: 1 out, 0 in",
-                                      "  UNPAIRED delete pdf[1:2]: beta"])
+        self.assertEqual(
+            lines[5:7],
+            ["moves: 0 stretches reappear elsewhere; unexplained: 1 out, 0 in", "  UNPAIRED delete pdf[1:2]: beta"],
+        )
 
     def test_a_skipped_page_is_left_out(self):
         book = FakeBook(pages={1: [span("one", page=1)], 2: [span("two", page=2)]})
@@ -226,7 +234,11 @@ class CoverageTests(unittest.TestCase):
 
     def test_a_gap_an_overlap_and_a_missing_file_each_fail_with_their_message(self):
         cases = (
-            ("gap", [{"file": "a.md", "pages": [2, 9]}, {"file": "b.md", "pages": [11, 20]}], "pages 10-10 are in no file"),
+            (
+                "gap",
+                [{"file": "a.md", "pages": [2, 9]}, {"file": "b.md", "pages": [11, 20]}],
+                "pages 10-10 are in no file",
+            ),
             ("overlap", [{"file": "a.md", "pages": [2, 12]}, {"file": "b.md", "pages": [11, 20]}], "overlap"),
             ("missing", [{"file": "a.md", "pages": [2, 10]}], "missing file b.md"),
         )
@@ -237,7 +249,11 @@ class CoverageTests(unittest.TestCase):
                 self.assertEqual((ok, message in text), (False, True), text)
 
     def test_a_file_the_outline_does_not_know_is_unexpected(self):
-        files = [{"file": "a.md", "pages": [2, 10]}, {"file": "b.md", "pages": [11, 20]}, {"file": "c.md", "pages": [21, 30]}]
+        files = [
+            {"file": "a.md", "pages": [2, 10]},
+            {"file": "b.md", "pages": [11, 20]},
+            {"file": "c.md", "pages": [21, 30]},
+        ]
 
         ok, text = coverage(files, self.EXPECTED)
 

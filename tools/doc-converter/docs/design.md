@@ -100,21 +100,21 @@ The package is `profiles/manning_unit_testing/`: its own local git repository, g
 PROFILE = Profile(
     name="manning_unit_testing",
     split=SplitConfig(
-        levels={1: "part", 2: "chapter"},       # measured: parts at outline level 1, chapters at level 2
+        levels={1: "part", 2: "chapter"},  # measured: parts at outline level 1, chapters at level 2
         front=FrontMatter(first_page=2, title="Front matter", file="front-matter.md"),
-        stop_at="index",                        # the outline entry that ends the content
+        stop_at="index",  # the outline entry that ends the content
         skip_pages={3, 4, 6, *range(7, 16)},
         page_figures={2: ("chapter-map", 90)},
-        file_name=slug_rule,                    # "chapter-01-the-goal-of-unit-testing.md"
-        title=title_rule,                       # "Chapter 1: …" with the prefix marked as added
+        file_name=slug_rule,  # "chapter-01-the-goal-of-unit-testing.md"
+        title=title_rule,  # "Chapter 1: …" with the prefix marked as added
     ),
-    furniture=is_furniture,                     # header band < 46 pt; bold page numbers
-    styles=STYLES,                              # today's styles.py predicates and constants
+    furniture=is_furniture,  # header band < 46 pt; bold page numbers
+    styles=STYLES,  # today's styles.py predicates and constants
     detectors=[figures(FIG_CFG), figure_text_sweep, tables(TABLE_CFG), listings(LST_CFG), code_runs(CODE_CFG)],
-    role=classify,                              # today's classify(), moved unchanged
-    flow=FlowConfig(...),                       # full_right widths 453.3/441.3/465.3, odd-page shift 9,
-                                                # gaps 14.7/16/17.3/23.3, top<70, indent 6.7, slack 9.3
-    data_dir=Path(__file__).parent / "data",    # descriptions.json (hand-written, never overwritten)
+    role=classify,  # today's classify(), moved unchanged
+    flow=FlowConfig(...),  # full_right widths 453.3/441.3/465.3, odd-page shift 9,
+    # gaps 14.7/16/17.3/23.3, top<70, indent 6.7, slack 9.3
+    data_dir=Path(__file__).parent / "data",  # descriptions.json (hand-written, never overwritten)
 )
 ```
 

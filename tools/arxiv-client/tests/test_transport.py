@@ -71,7 +71,9 @@ class RequestShapeTests(unittest.TestCase):
 class ThrottleSignalTests(unittest.TestCase):
     def test_rate_exceeded_200_is_throttling_not_parsed(self):
         clock = FakeClock()
-        opener = FakeOpener(clock, [FakeResponse(200, b"Rate exceeded.", {"content-type": "text/plain"}) for _ in range(3)])
+        opener = FakeOpener(
+            clock, [FakeResponse(200, b"Rate exceeded.", {"content-type": "text/plain"}) for _ in range(3)]
+        )
         with self.assertRaises(ThrottledError) as cm:
             transport(clock, opener).get(URL, pacer(clock))
         self.assertEqual(cm.exception.kind, "rate-exceeded-200")
@@ -161,7 +163,9 @@ class ThrottleSignalTests(unittest.TestCase):
 
     def test_other_non_xml_200_is_malformed_not_throttling(self):
         clock = FakeClock()
-        opener = FakeOpener(clock, [FakeResponse(200, b"Service temporarily unavailable", {"content-type": "text/html"})])
+        opener = FakeOpener(
+            clock, [FakeResponse(200, b"Service temporarily unavailable", {"content-type": "text/html"})]
+        )
         with self.assertRaises(MalformedResponseError):
             transport(clock, opener).get(URL, pacer(clock))
         self.assertEqual(len(opener.requests), 1)
@@ -209,11 +213,18 @@ class GateTests(unittest.TestCase):
             def respond(rec):
                 events.append("open")
                 return LoggedResponse(events, 200, body, headers)
+
             return respond
 
         opener = FakeOpener(clock, [step(b"Rate exceeded.", {}), step(OK, {"content-type": "application/atom+xml"})])
-        t = Transport("test-agent/1.0", opener=opener, clock=clock.monotonic, sleep=sleep,
-                      block_store=MemoryBlockStore(wall=clock.wall), gate=RecordingGate(clock, events))
+        t = Transport(
+            "test-agent/1.0",
+            opener=opener,
+            clock=clock.monotonic,
+            sleep=sleep,
+            block_store=MemoryBlockStore(wall=clock.wall),
+            gate=RecordingGate(clock, events),
+        )
         t.get(URL, Pacer(3.0, clock.monotonic, sleep))
         first = events[: events.index("unlock") + 1]
         self.assertEqual(first[0], "lock")
@@ -236,8 +247,9 @@ class GateTests(unittest.TestCase):
             pass
         events.clear()
         opener = FakeOpener(clock, [])
-        t = Transport("test-agent/1.0", opener=opener, clock=clock.monotonic, sleep=clock.sleep,
-                      block_store=store, gate=gate)
+        t = Transport(
+            "test-agent/1.0", opener=opener, clock=clock.monotonic, sleep=clock.sleep, block_store=store, gate=gate
+        )
         with self.assertRaises(ThrottledError):
             t.get(URL, pacer(clock))
         with self.assertRaises(ThrottledError):
@@ -314,7 +326,9 @@ class TimeoutAndNetworkTests(unittest.TestCase):
 
     def test_timeout_during_read(self):
         clock = FakeClock()
-        opener = FakeOpener(clock, [FakeResponse(200, OK, {"content-type": "application/atom+xml"}, read_error=socket.timeout("x"))])
+        opener = FakeOpener(
+            clock, [FakeResponse(200, OK, {"content-type": "application/atom+xml"}, read_error=socket.timeout("x"))]
+        )
         with self.assertRaises(ArxivTimeoutError):
             transport(clock, opener).get(URL, pacer(clock))
 

@@ -40,19 +40,30 @@ class Resolver:
             with open(dict_path, encoding="utf-8", errors="replace") as f:
                 self.dict = {w.strip().lower() for w in f}
         except OSError as e:
-            sys.exit(f"cannot read the system dictionary {dict_path} ({e.strerror}); hyphen decisions need it. "
-                     "On Debian or Ubuntu: apt-get install wamerican")
+            sys.exit(
+                f"cannot read the system dictionary {dict_path} ({e.strerror}); hyphen decisions need it. "
+                "On Debian or Ubuntu: apt-get install wamerican"
+            )
         self.log: list[Decision] = []
         self.code_hyphenated = Counter(
-            w.lower() for sp in spans if is_code(sp)
-            for w in re.findall(rf"{LETTER}+-{LETTER}+", sp.text))
+            w.lower() for sp in spans if is_code(sp) for w in re.findall(rf"{LETTER}+-{LETTER}+", sp.text)
+        )
 
     @staticmethod
     def _stems(w: str) -> list[str]:
         w = w.lower()
-        return [w, re.sub(r"ies$", "y", w), re.sub(r"es$", "", w), re.sub(r"s$", "", w), re.sub(r"ed$", "", w),
-                re.sub(r"ed$", "e", w), re.sub(r"ing$", "", w), re.sub(r"ing$", "e", w), re.sub(r"ly$", "", w),
-                re.sub(r"est$", "", w)]
+        return [
+            w,
+            re.sub(r"ies$", "y", w),
+            re.sub(r"es$", "", w),
+            re.sub(r"s$", "", w),
+            re.sub(r"ed$", "", w),
+            re.sub(r"ed$", "e", w),
+            re.sub(r"ing$", "", w),
+            re.sub(r"ing$", "e", w),
+            re.sub(r"ly$", "", w),
+            re.sub(r"est$", "", w),
+        ]
 
     def _is_word(self, w: str) -> bool:
         if not hasattr(self, "_corpus_stems"):

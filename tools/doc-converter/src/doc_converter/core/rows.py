@@ -17,25 +17,26 @@ from .pdf import Span, is_ws
 @dataclass(eq=False)
 class Row:
     page: int
-    top: float           # baseline (drop-cap rows: glyph top)
+    top: float  # baseline (drop-cap rows: glyph top)
     spans: list[Span]
     left: float = 0.0
     right: float = 0.0
-    cls: str = ""        # role, from the profile's role function
+    cls: str = ""  # role, from the profile's role function
 
 
 @dataclass(frozen=True)
 class RowConfig:
     """How spans become rows and runs (set by the profile)."""
-    role: Callable[[Row], str]                 # row -> role name
-    is_fn_marker: Callable[[Span], bool]       # superscript footnote reference
-    is_bullet: Callable[[Span], bool]          # bullet glyph (not text)
-    is_list_number: Callable[[Span], bool]     # list item number (not text)
-    is_inline_label: Callable[[Span], bool]    # label spans left out of the text (note labels)
-    is_code_font: Callable[[Span], bool]       # code text -> "code" runs
-    row_tol: float                             # baselines this close form one row
-    dropcap_size: float                        # spans this size or larger are drop caps (own row, top = glyph top)
-    fn_attach: tuple[float, float]             # a footnote marker joins the row whose baseline is this far below it
+
+    role: Callable[[Row], str]  # row -> role name
+    is_fn_marker: Callable[[Span], bool]  # superscript footnote reference
+    is_bullet: Callable[[Span], bool]  # bullet glyph (not text)
+    is_list_number: Callable[[Span], bool]  # list item number (not text)
+    is_inline_label: Callable[[Span], bool]  # label spans left out of the text (note labels)
+    is_code_font: Callable[[Span], bool]  # code text -> "code" runs
+    row_tol: float  # baselines this close form one row
+    dropcap_size: float  # spans this size or larger are drop caps (own row, top = glyph top)
+    fn_attach: tuple[float, float]  # a footnote marker joins the row whose baseline is this far below it
 
 
 def _ink_right(s: Span) -> float:
@@ -123,8 +124,9 @@ class Text:
                 fc = next((x for x in rs if x.t.strip()), None)
                 cm = re.search(rf"({LETTER}+)-\s*$", last.t) if last and last.s == "code" else None
                 if cm and fc and fc.s == "code" and re.match(rf"{LETTER}", fc.t.lstrip()):
-                    if self.resolver.resolve_code(cm.group(1), re.match(rf"{LETTER}+", fc.t.lstrip()).group(0),
-                                                  f"p{r.page}"):
+                    if self.resolver.resolve_code(
+                        cm.group(1), re.match(rf"{LETTER}+", fc.t.lstrip()).group(0), f"p{r.page}"
+                    ):
                         last.t = last.t.rstrip()
                     else:
                         last.t = last.t.rstrip()[:-1]

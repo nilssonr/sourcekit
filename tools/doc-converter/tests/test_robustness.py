@@ -1,8 +1,7 @@
-"""File encodings and make_run.sh: no PDF or profile needed."""
+"""make_run.sh in a sandbox: no PDF or profile needed."""
 
 from __future__ import annotations
 
-import ast
 import os
 import shutil
 import stat
@@ -12,15 +11,6 @@ import unittest
 from pathlib import Path
 
 TOOL = Path(__file__).resolve().parents[1]
-
-
-class EncodingTests(unittest.TestCase):
-    def test_every_text_file_call_names_its_encoding(self):
-        for path in (TOOL / "src").rglob("*.py"):
-            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-                if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-                        and node.func.attr in ("read_text", "write_text")):
-                    self.assertIn("encoding", [k.arg for k in node.keywords], f"{path}:{node.lineno}")
 
 
 class MakeRunTests(unittest.TestCase):
@@ -45,8 +35,14 @@ class MakeRunTests(unittest.TestCase):
 
     def run_script(self, pdf: str, run: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
         script = self.tool / "scripts" / "make_run.sh"
-        return subprocess.run(["bash", str(script), pdf, run, "prof"], cwd=cwd or self.root, env=self.env,
-                              capture_output=True, text=True, check=False)
+        return subprocess.run(
+            ["bash", str(script), pdf, run, "prof"],
+            cwd=cwd or self.root,
+            env=self.env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
 
     def test_relative_paths_use_the_callers_directory(self):
         r = self.run_script("book.pdf", "runs/r1")

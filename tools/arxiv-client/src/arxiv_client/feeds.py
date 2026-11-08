@@ -22,9 +22,7 @@ _DC = "{%s}" % DC
 
 # Spec feedQuery pattern, one part at a time.
 _CATEGORY_RE = re.compile(r"^[A-Za-z-]+(\.[A-Za-z-]+)?$")
-_DESCRIPTION_PREFIX = re.compile(
-    r"^\s*arXiv:\S+\s+Announce Type:\s*\S+\s*(?:Abstract:\s*)?", re.IGNORECASE
-)
+_DESCRIPTION_PREFIX = re.compile(r"^\s*arXiv:\S+\s+Announce Type:\s*\S+\s*(?:Abstract:\s*)?", re.IGNORECASE)
 
 
 def validate_categories(categories: Sequence[str]) -> List[str]:

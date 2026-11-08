@@ -48,8 +48,17 @@ class SectionsTests(unittest.TestCase):
 
         out = sections(book, split_config())
 
-        self.assertEqual(out["ch02"], Section("ch02", "chapter-02-what-is-a-unit-test.md", (20, 39),
-                                              "Chapter 2: What is a unit test?", 0, "Chapter 2: "))
+        self.assertEqual(
+            out["ch02"],
+            Section(
+                "ch02",
+                "chapter-02-what-is-a-unit-test.md",
+                (20, 39),
+                "Chapter 2: What is a unit test?",
+                0,
+                "Chapter 2: ",
+            ),
+        )
 
     def test_bookmarks_at_or_after_the_end_page_are_ignored(self):
         book = FakeBook(outline=OUTLINE + [OutlineEntry(2, "3 At the end", 40), OutlineEntry(2, "4 After the end", 45)])
@@ -66,7 +75,9 @@ class SectionsTests(unittest.TestCase):
         self.assertEqual(list(out), ["part-1", "ch01", "ch02"])
 
     def test_a_title_that_only_starts_like_a_rule_is_ignored(self):
-        cfg = split_config(rules=[SectionRule(2, r"Appendix ([A-Z])", lambda m: (f"app-{m[1]}", f"appendix-{m[1]}.md", "", ""))])
+        cfg = split_config(
+            rules=[SectionRule(2, r"Appendix ([A-Z])", lambda m: (f"app-{m[1]}", f"appendix-{m[1]}.md", "", ""))]
+        )
         book = FakeBook(outline=[OutlineEntry(2, "Appendix A", 5), OutlineEntry(2, "Appendix B: Notes", 8), INDEX])
 
         out = sections(book, cfg)
@@ -74,8 +85,12 @@ class SectionsTests(unittest.TestCase):
         self.assertEqual(list(out), ["app-A"])
 
     def test_the_first_matching_rule_wins(self):
-        cfg = split_config(rules=[SectionRule(2, r"(\d+) (.+)", lambda m: ("first", "first.md", "", "")),
-                                  SectionRule(2, r"\d+ .+", lambda m: ("second", "second.md", "", ""))])
+        cfg = split_config(
+            rules=[
+                SectionRule(2, r"(\d+) (.+)", lambda m: ("first", "first.md", "", "")),
+                SectionRule(2, r"\d+ .+", lambda m: ("second", "second.md", "", "")),
+            ]
+        )
         book = FakeBook(outline=[CHAPTER_1, INDEX])
 
         out = sections(book, cfg)
@@ -100,8 +115,16 @@ class SectionsTests(unittest.TestCase):
         cases = (
             ("no end bookmark", [CHAPTER_1], "no level-1 bookmark"),
             ("no matching bookmark", [OutlineEntry(1, "Preface", 3), INDEX], "no outline bookmark matches"),
-            ("two sections on one page", [CHAPTER_1, OutlineEntry(2, "2 Same page", 7), INDEX], "not strictly increasing"),
-            ("duplicate section id", [OutlineEntry(2, "3 A", 5), OutlineEntry(2, "3 B", 7), INDEX], "duplicate section id"),
+            (
+                "two sections on one page",
+                [CHAPTER_1, OutlineEntry(2, "2 Same page", 7), INDEX],
+                "not strictly increasing",
+            ),
+            (
+                "duplicate section id",
+                [OutlineEntry(2, "3 A", 5), OutlineEntry(2, "3 B", 7), INDEX],
+                "duplicate section id",
+            ),
         )
         for name, outline, message in cases:
             with self.subTest(name), self.assertRaisesRegex(ValueError, message):
