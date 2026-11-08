@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import unittest
 
-from book_converter.core.verify import coverage, markup_emphasis, without_added
-from book_converter.modules.regions.listings import _fill_space_marks
-from book_converter.modules.serialize.markdown import added, extract_added, has_emphasis, pre
+from doc_converter.core.verify import coverage, markup_emphasis, without_added
+from doc_converter.modules.regions.listings import _fill_space_marks
+from doc_converter.modules.serialize.markdown import added, extract_added, has_emphasis, pre
 
 
 class AddedMaterialTests(unittest.TestCase):
@@ -53,8 +53,8 @@ class CodeEmphasisTests(unittest.TestCase):
 
 class QuoteTests(unittest.TestCase):
     def test_code_lines_starting_with_gt_stay_inside_the_quote(self):
-        from book_converter.core.model import Code, Paragraph, Run, Sidebar
-        from book_converter.modules.serialize.markdown import Markdown, MarkdownConfig
+        from doc_converter.core.model import Code, Paragraph, Run, Sidebar
+        from doc_converter.modules.serialize.markdown import Markdown, MarkdownConfig
         md = Markdown(MarkdownConfig(("x", "x"), ("x", "x"), ("x", "x")))
         out = md.block(Sidebar([Run("T", "")], [Paragraph([Run("p", "")]), Code([">foo", "> bar"], ["", ""])]))
         self.assertEqual(out, "> **T**\n>\n> p\n>\n> ```\n> >foo\n> > bar\n> ```")

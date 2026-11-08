@@ -1,9 +1,10 @@
 """Command line.
 
-  uv run convert --input <pdf> --output <dir> --profile <name|dir> [--sections ID...]
-  uv run census  --input <pdf> --pages <first>-<last>     font x size x colour histogram (profile authoring)
+  doc-converter convert --input <pdf> --output <dir> --profile <name|dir> [--sections ID...]
+  doc-converter verify  --input <pdf> --output <dir> --profile <name|dir> [--report-dir DIR]
+  doc-converter census  --input <pdf> --pages <first>-<last>     font x size x colour histogram (profile authoring)
 
-verify has its own entry point (core/verify.py).
+verify lives in core/verify.py.
 """
 
 from __future__ import annotations
@@ -17,15 +18,16 @@ from pathlib import Path
 from .core import pipeline
 from .core.pdf import Book
 from .core.profile import load as load_profile
+from .core.verify import main as verify
 
 
-def convert() -> None:
-    ap = argparse.ArgumentParser(prog="convert", description="Convert a PDF into Markdown using a profile.")
+def convert(argv: list[str] | None = None) -> None:
+    ap = argparse.ArgumentParser(prog="doc-converter convert", description="Convert a PDF into Markdown using a profile.")
     ap.add_argument("--input", required=True, help="the PDF to convert")
     ap.add_argument("--output", required=True, help="directory for everything the run generates")
     ap.add_argument("--profile", required=True, help="profile name (under profiles/) or directory")
     ap.add_argument("--sections", nargs="+", metavar="ID", help="section ids to convert (default: all)")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     prof = load_profile(args.profile)
     book = Book(args.input)
     known = pipeline.section_ids(book, prof)
@@ -45,11 +47,11 @@ def convert() -> None:
         print("  " + w)
 
 
-def census() -> None:
-    ap = argparse.ArgumentParser(prog="census", description="Histogram of font x size x colour, with sample text.")
+def census(argv: list[str] | None = None) -> None:
+    ap = argparse.ArgumentParser(prog="doc-converter census", description="Histogram of font x size x colour, with sample text.")
     ap.add_argument("--input", required=True, help="the PDF")
     ap.add_argument("--pages", required=True, help="PDF page range, e.g. 16-296")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     m = re.fullmatch(r"(\d+)-(\d+)", args.pages)
     if not m:
         sys.exit(f"--pages must look like 16-296, not {args.pages!r}")
@@ -65,3 +67,17 @@ def census() -> None:
             st[2] = (st[2] + " | " + s.text.strip())[:60] if st[2] else s.text.strip()[:60]
     for (font, size, color), (n, chars, sample) in sorted(stats.items(), key=lambda kv: -kv[1][1]):
         print(f"{n:5} {chars:6}  {font:28} {size:6.2f} {color}  {sample}")
+
+
+COMMANDS = {"convert": convert, "verify": verify, "census": census}
+USAGE = f"usage: doc-converter {{{','.join(COMMANDS)}}} [options]   (doc-converter <command> --help for details)"
+
+
+def main(argv: list[str] | None = None) -> None:
+    argv = sys.argv[1:] if argv is None else argv
+    if not argv or argv[0] in ("-h", "--help"):
+        print(USAGE)
+        sys.exit(0 if argv else 2)
+    if argv[0] not in COMMANDS:
+        sys.exit(f"unknown command {argv[0]!r}\n{USAGE}")
+    COMMANDS[argv[0]](argv[1:])

@@ -1,7 +1,7 @@
 """Full conversion compared with a saved reference run (scripts/compare_ref.sh).
 
-Runs only when BOOK_REF points at a reference directory (e.g. ~/temp/book-converter-ref/manning-v2),
-the PDF is present (BOOK_PDF) and the profile exists. Takes about 15 s.
+Runs only when DOC_CONVERTER_REF points at a reference run directory (made by scripts/make_run.sh),
+DOC_CONVERTER_PDF points at the PDF and the profile exists. Takes about 15 s.
 """
 
 from __future__ import annotations
@@ -12,15 +12,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from book_converter.core.profile import REPO
+from doc_converter.core.profile import REPO
 
-PDF = os.environ.get("BOOK_PDF", str(Path.home() / "temp/Manning.Unit.Testing.Principles.Practices.and.Patterns.2020.1.pdf"))
-REF = os.environ.get("BOOK_REF", "")
+PDF = os.environ.get("DOC_CONVERTER_PDF", "")
+REF = os.environ.get("DOC_CONVERTER_REF", "")
 PROFILE = "manning_unit_testing"
 
 
-@unittest.skipUnless(REF and Path(REF).expanduser().is_dir(), "BOOK_REF not set to a reference directory")
-@unittest.skipUnless(Path(PDF).exists(), "book PDF not available")
+@unittest.skipUnless(REF and Path(REF).expanduser().is_dir(), "DOC_CONVERTER_REF not set to a reference directory")
+@unittest.skipUnless(PDF and Path(PDF).is_file(), "DOC_CONVERTER_PDF not set to the PDF")
 @unittest.skipUnless((REPO / "profiles" / PROFILE).is_dir(), f"profile {PROFILE} not available")
 class RegressionTest(unittest.TestCase):
     def test_output_matches_reference(self):

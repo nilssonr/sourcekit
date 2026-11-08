@@ -54,7 +54,7 @@ def profile_dir(name: str) -> Path:
 
 def load(name: str) -> Profile:
     d = profile_dir(name).resolve()
-    modname = f"book_converter_profile_{d.name}"
+    modname = f"doc_converter_profile_{d.name}"
     mod = sys.modules.get(modname)
     if mod is None:
         spec = importlib.util.spec_from_file_location(modname, d / "__init__.py", submodule_search_locations=[str(d)])

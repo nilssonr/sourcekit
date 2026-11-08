@@ -8,7 +8,7 @@ compared with the Markdown minus the added material listed in the run's manifest
 Also: the files' page ranges must match the profile's outline split and be contiguous (coverage),
 and an independent whole-book count compares PyMuPDF's separate word extraction with all files.
 
-Usage: uv run verify --input <pdf> --output <dir> --profile <name|dir> [--report-dir DIR]
+Usage: doc-converter verify --input <pdf> --output <dir> --profile <name|dir> [--report-dir DIR]
 
 Reports go to stdout, or to --report-dir: <file>.md.txt per file, coverage.txt, emphasis.txt,
 independent.txt.
@@ -300,13 +300,13 @@ def coverage(files: list[dict], expected: dict[str, tuple[int, int]]) -> tuple[b
     return not problems, "\n".join([head] + ["  " + p for p in problems]) + "\n"
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(prog="verify", description="Compare converted Markdown with the PDF's words.")
+def main(argv: list[str] | None = None) -> None:
+    ap = argparse.ArgumentParser(prog="doc-converter verify", description="Compare converted Markdown with the PDF's words.")
     ap.add_argument("--input", required=True, help="the PDF that was converted")
     ap.add_argument("--output", required=True, help="the conversion's output directory")
     ap.add_argument("--profile", required=True, help="profile name (under profiles/) or directory")
     ap.add_argument("--report-dir", help="write one report per section file here instead of to stdout")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     prof = load_profile(args.profile)
     book = Book(args.input)
     out = Path(args.output)

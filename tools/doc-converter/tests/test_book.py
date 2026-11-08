@@ -1,6 +1,6 @@
 """Regression tests against the book PDF (skipped when it is not present).
 
-Set BOOK_PDF to the PDF path; defaults to ~/temp/Manning.Unit.Testing.Principles.Practices.and.Patterns.2020.1.pdf.
+Set DOC_CONVERTER_PDF to the PDF path (Manning, Unit Testing: Principles, Practices, and Patterns, 2020).
 Needs the git-ignored profile profiles/manning_unit_testing/ (skipped when it is absent).
 Run: uv run python -m unittest -v
 """
@@ -13,17 +13,17 @@ from pathlib import Path
 
 import pymupdf
 
-from book_converter.modules.regions import figures, tables
-from book_converter.modules.split import outline
-from book_converter.modules.regions.listings import code_lines, listing_bars, listing_parts, map_callouts, with_blank_lines
-from book_converter.core.pdf import Book
-from book_converter.core.profile import REPO, load as load_profile
+from doc_converter.modules.regions import figures, tables
+from doc_converter.modules.split import outline
+from doc_converter.modules.regions.listings import code_lines, listing_bars, listing_parts, map_callouts, with_blank_lines
+from doc_converter.core.pdf import Book
+from doc_converter.core.profile import REPO, load as load_profile
 
-PDF = os.environ.get("BOOK_PDF", str(Path.home() / "temp/Manning.Unit.Testing.Principles.Practices.and.Patterns.2020.1.pdf"))
+PDF = os.environ.get("DOC_CONVERTER_PDF", "")
 PROFILE_DIR = REPO / "profiles" / "manning_unit_testing"
 
 
-@unittest.skipUnless(Path(PDF).exists(), "book PDF not available")
+@unittest.skipUnless(PDF and Path(PDF).is_file(), "DOC_CONVERTER_PDF not set to the PDF")
 @unittest.skipUnless(PROFILE_DIR.is_dir(), "profile manning_unit_testing not available")
 class BookTests(unittest.TestCase):
     @classmethod
@@ -108,10 +108,10 @@ class BookTests(unittest.TestCase):
         self.assertEqual(self.book.page_label(23), "1")
 
     def test_blocks_record_their_source(self):
-        from book_converter.core.hyphens import Resolver
-        from book_converter.core.model import Heading, Note, Sidebar
-        from book_converter.core.rows import Text
-        from book_converter.modules.assemble.flow import Assembler
+        from doc_converter.core.hyphens import Resolver
+        from doc_converter.core.model import Heading, Note, Sidebar
+        from doc_converter.core.rows import Text
+        from doc_converter.modules.assemble.flow import Assembler
         sec = outline.sections(self.book, self.prof.split)["ch01"]
         text = Text(self.prof.rows, Resolver(self.book.all_spans(1, self.book.page_count), self.prof.rows.is_code_font))
         doc = Assembler(self.book, self.prof.flow, text, {}, lambda w: None).section(sec)

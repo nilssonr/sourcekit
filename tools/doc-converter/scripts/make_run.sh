@@ -19,6 +19,6 @@ cd "$(dirname "$0")/.."
 
 rm -rf "$RUN"
 mkdir -p "$RUN"
-uv run --quiet convert --input "$PDF" --output "$RUN/out" --profile "$PROFILE" > "$RUN/convert-stdout.txt"
-uv run --quiet verify --input "$PDF" --output "$RUN/out" --profile "$PROFILE" --report-dir "$RUN/verify"
+uv run --quiet doc-converter convert --input "$PDF" --output "$RUN/out" --profile "$PROFILE" > "$RUN/convert-stdout.txt"
+uv run --quiet doc-converter verify --input "$PDF" --output "$RUN/out" --profile "$PROFILE" --report-dir "$RUN/verify"
 echo "run written to $RUN"
