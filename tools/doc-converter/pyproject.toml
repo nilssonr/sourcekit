@@ -1,0 +1,20 @@
+[project]
+name = "book-converter"
+version = "0.1.0"
+description = "Convert a born-digital book PDF into verbatim Markdown, with a verifier"
+authors = [
+    { name = "Robin Nilsson", email = "robin.ingemar.nilsson@gmail.com" }
+]
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "pymupdf>=2.1,<2.2",
+]
+
+[project.scripts]
+convert = "book_converter.cli:convert"
+verify = "book_converter.core.verify:main"
+census = "book_converter.cli:census"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
