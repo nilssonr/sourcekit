@@ -140,6 +140,39 @@ class TimeoutFlagTests(unittest.TestCase):
                 self.assertIn("--timeout", error_payload(run)["message"])
 
 
+class BatchResumeTests(unittest.TestCase):
+    BATCH = ({"title": "one"}, {"label": "two", "title": "second"}, {"title": "three"})
+
+    def failed_at_second(self, failure):
+        return run_cli(["batch", "-"], [feed_of("2401.00001", total=1), failure], stdin=json.dumps(self.BATCH))
+
+    def test_a_timeout_or_throttle_lists_the_failed_and_unstarted_queries(self):
+        for failure, code in ((socket.timeout("timed out"), 6), (FakeResponse(406, b"", {}), 4)):
+            with self.subTest(code):
+                run = self.failed_at_second(failure)
+                self.assertEqual(run.code, code, run.err)
+                payload = error_payload(run)
+                self.assertEqual([q["label"] for q in payload["completed"]], ["q1"])
+                self.assertEqual(
+                    payload["remaining"], [{"label": "two", "title": "second"}, {"title": "three", "label": "q3"}]
+                )
+
+    def test_remaining_can_be_sent_back_and_keeps_its_labels(self):
+        remaining = error_payload(self.failed_at_second(socket.timeout("timed out")))["remaining"]
+        run = run_cli(
+            ["batch", "-"],
+            [feed_of("2401.00002", total=1), feed_of("2401.00003", total=1)],
+            stdin=json.dumps(remaining),
+        )
+        self.assertEqual(run.code, 0, run.err)
+        self.assertEqual([q["label"] for q in json.loads(run.out)["queries"]], ["two", "q3"])
+
+    def test_another_error_has_no_remaining(self):
+        payload = error_payload(self.failed_at_second(FakeResponse(500, b"", {})))
+        self.assertEqual(payload["error"], "server_error")
+        self.assertNotIn("remaining", payload)
+
+
 class CommandTests(unittest.TestCase):
     def test_search_prints_the_query_and_its_papers_as_json(self):
         run = run_cli(
