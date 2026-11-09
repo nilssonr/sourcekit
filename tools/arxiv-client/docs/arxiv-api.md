@@ -85,8 +85,12 @@ Measured on 2026-11-09 by comparing `totalResults` and the echoed query for pair
 | Input | What the server does | Evidence | So |
 |---|---|---|---|
 | A word | **Stems it.** `transformer`, `transformers`, `transformation` and `transform` are one term. So are `diffuse` and `diffusion`. | `ti:` each of the four returns the same 34,913 papers. | A single word can't separate "transformer" from "transformation". Add a second term or a phrase. |
-| A stopword | **Not indexed in titles and abstracts.** `a`, `an`, `the`, `of`, `for`, `with`, `on`, `in`, `and`, `to`, `by`, `is`, `are`, `be`, `this` and `that` were tested. `from` and `we` are not stopwords. | `ti:a`, `ti:the` and `ti:of` each match 0 papers. `all:is` matches 26, from other fields. `all:attention AND all:is` matches 0. | **Never AND a stopword.** `all:attention AND all:is AND all:all AND all:you AND all:need` returns 0, while the phrase `all:"attention is all you need"` returns 47. |
+| A stopword | **Not indexed in titles and abstracts.** There are 33: a, an, and, are, as, at, be, but, by, for, if, in, into, is, it, no, not, of, on, or, such, that, the, their, then, there, these, they, this, to, was, will, with. `from`, `we`, `all` and `you` are not stopwords. | `ti:WORD` matches 0 papers for each of the 33. `all:is` matches 26, from other fields. `all:attention AND all:is` matches 0. | **Never AND a stopword.** `all:attention AND all:is AND all:all AND all:you AND all:need` returns 0, while the phrase `all:"attention is all you need"` returns 47. |
 | A stopword inside a phrase | Dropped from the phrase. | `ti:"the transformer"` returns the same 34,913 as `ti:transformer`. | Phrases are safe with stopwords. |
+| A stopword inside a hyphenated word | Ignored. | `ti:state-of-the-art` 1,166. `ti:"state of the art"` 1,128. | No need to quote it. |
+| A trailing `?` | **A wildcard for one character.** | `ti:attention?` 2. `ti:attention` 14,795. | Remove a question mark from a person's words. |
+| A trailing comma | Ignored. | `ti:attention,` 14,795. | |
+| A possessive `'s` | Narrows the match. | `all:Maldacena's` 982. `all:Maldacena` 1,171. | Remove the `'s`. |
 | Upper or lower case | Ignored, for words, names and categories. | `cat:cs.lg` = `cat:CS.LG` = `cat:cs.LG` (297,729). | |
 | A hyphenated word, unquoted | **Split and ANDed** in that field. | `ti:self-attention` = `ti:self AND ti:attention` (1,254). | Quote it to keep the parts adjacent. |
 | A hyphenated word, quoted | A phrase of the parts. | `ti:"self-attention"` = `ti:"self attention"` (1,036). | |
@@ -458,6 +462,11 @@ This section turns §2.2 into a procedure for a caller that starts from a person
 25 of the requests were a phrase or a sentence. Sent as `all:` words joined with `AND`:
 - **19 returned 0 results.** 18 of them contained a stopword. The 19th ANDed four content words.
 - **The other 6 returned 1 to 745 results**, and none had the intended paper in the first 10.
+
+**The client has since changed.** Free text (`--all`, or a plain string in the library) now has its stopwords dropped, and an uppercase operator word in it is rejected. The 19 requests were sent again as typed:
+- **14 returned results**, from 1 to 471.
+- **The intended paper was in the first 10 for 4 of the 13** that had one.
+- The words that still sink a query are the ones about the request: *paper*, *study*, *recent*, *latest*. So the rest of this section still applies.
 
 Build the query instead:
 1. **Drop stopwords** (§2.2), and drop the words that describe the request and not the paper: *paper*, *study*, *review*, *work*, *latest*, *recent*, *new*, *arXiv*.
