@@ -5,6 +5,33 @@ from arxiv_client import Q, ValidationError
 from arxiv_client.query import STOPWORDS, encode_params, parse_free_text, to_search_query
 
 
+class ArchiveCategoryTests(unittest.TestCase):
+    def test_an_archive_with_no_bare_papers_becomes_a_wildcard(self):
+        for archive in ("cs", "math", "physics", "q-fin", "stat", "eess", "econ", "nlin"):
+            with self.subTest(archive):
+                self.assertEqual(str(Q.category(archive)), "cat:%s.*" % archive)
+
+    def test_an_archive_with_bare_papers_also_matches_the_bare_name(self):
+        for archive in ("astro-ph", "cond-mat", "q-bio"):
+            with self.subTest(archive):
+                self.assertEqual(str(Q.category(archive)), "cat:%s OR cat:%s.*" % (archive, archive))
+
+    def test_the_archive_name_is_matched_in_any_case(self):
+        self.assertEqual(str(Q.category("CS")), "cat:cs.*")
+
+    def test_a_subcategory_or_an_archive_without_subcategories_is_unchanged(self):
+        for category in ("cs.LG", "hep-th", "cs.*"):
+            with self.subTest(category):
+                self.assertEqual(str(Q.category(category)), "cat:%s" % category)
+
+    def test_phrase_and_raw_stay_literal(self):
+        self.assertEqual(str(Q.phrase("category", "cs")), 'cat:"cs"')
+        self.assertEqual(str(Q.raw("cat:cs")), "cat:cs")
+
+    def test_the_or_form_is_grouped_when_combined(self):
+        self.assertEqual(str(Q.title("x") & Q.category("q-bio")), "ti:x AND (cat:q-bio OR cat:q-bio.*)")
+
+
 class QueryBuilderTests(unittest.TestCase):
     def test_field_prefixes(self):
         self.assertEqual(str(Q.title("transformer")), "ti:transformer")

@@ -20,6 +20,7 @@ import argparse
 import datetime as _dt
 import json
 import os
+import re
 import sys
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence, TextIO, Tuple
 
@@ -99,7 +100,14 @@ def _build_parser() -> argparse.ArgumentParser:
             default=[],
             metavar="TEXT",
             help="field search (repeatable; multi-word text is a phrase; "
-            "on a single word a trailing * or ? is a wildcard)",
+            "on a single word a trailing * or ? is a wildcard)"
+            + (
+                "; use a surname, or a surname and first name: arXiv rarely matches initials"
+                if flag == "author"
+                else "; a bare archive such as cs covers its subcategories"
+                if flag == "category"
+                else ""
+            ),
         )
     s.add_argument(
         "--id",
@@ -223,6 +231,16 @@ def _search_spec(args: argparse.Namespace) -> Dict[str, Any]:
     return spec
 
 
+def _author_warnings(spec: Dict[str, Any], prefix: str = "") -> List[str]:
+    """One warning per author value holding an initial, which arXiv rarely matches."""
+    return [
+        'arxiv: warning: %sauthor "%s" has an initial, and arXiv rarely matches initials. '
+        "Use a surname, or a surname and first name." % (prefix, value)
+        for value in _strings("author", spec.get("author"))
+        if any(len(word) == 1 and word.isalpha() for word in re.split(r"[\s_.]+", value))
+    ]
+
+
 def _load_batch(path: str, stdin: TextIO) -> List[Dict[str, Any]]:
     try:
         if path == "-":
@@ -304,7 +322,9 @@ def _explain(target: Dict[str, Any], results, notes: TextNotes) -> None:
     target.update(notes.to_dict())
 
 
-def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[object, Optional[str]]:
+def _run_batch(
+    args: argparse.Namespace, client: ArxivClient, stdin: TextIO, warnings: List[str]
+) -> Tuple[object, Optional[str]]:
     items = _load_batch(args.file, stdin)
     # Build and validate every query before sending any request.
     planned = []
@@ -328,6 +348,7 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
             results = client.search(q, max_results=max_results, sort_by=SORTS[sort], sort_order=order)
         except ValidationError as e:
             raise ValidationError("batch item %d (%s): %s" % (i + 1, label, e)) from None
+        warnings.extend(_author_warnings(item, "%s: " % label))
         planned.append((label, q, results, max_results, sort, order, _text_notes(item)))
 
     if args.dry_run:
@@ -382,12 +403,15 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
     return result, "\n".join(lines)
 
 
-def _run(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[object, Optional[str]]:
-    """Returns (JSON result, compact text or None)."""
+def _run(
+    args: argparse.Namespace, client: ArxivClient, stdin: TextIO, warnings: List[str]
+) -> Tuple[object, Optional[str]]:
+    """Returns (JSON result, compact text or None). Adds to ``warnings`` the lines for stderr."""
     if args.command == "search":
         spec = _search_spec(args)
         q = _build_query(spec)
         notes = _text_notes(spec)
+        warnings.extend(_author_warnings(spec))
         results = client.search(
             q, max_results=args.max, sort_by=SORTS[args.sort], sort_order=args.order, strict=args.strict
         )
@@ -417,7 +441,7 @@ def _run(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[
             lines.extend(notes.lines())
         return result, "\n".join(lines + [_compact_line(p) for p in found])
     if args.command == "batch":
-        return _run_batch(args, client, stdin)
+        return _run_batch(args, client, stdin, warnings)
     if args.command == "fetch":
         fetched = client.fetch(args.ids)
         result = {
@@ -457,9 +481,10 @@ def main(
         stderr.write(json.dumps({"error": "validation", "message": "--abstract-chars must be 0 or more"}) + "\n")
         return 2
     user_agent = args.user_agent or os.environ.get("ARXIV_USER_AGENT") or DEFAULT_USER_AGENT
+    warnings: List[str] = []
     try:
         client = (client_factory or ArxivClient)(user_agent)
-        result, compact = _run(args, client, stdin)
+        result, compact = _run(args, client, stdin, warnings)
     except ArxivError as e:
         code, kind = 1, "error"
         for cls, c, k in EXIT_CODES:
@@ -479,6 +504,9 @@ def main(
             payload["papers"] = getattr(e, "completed_papers", {})
         stderr.write(json.dumps(payload, ensure_ascii=False) + "\n")
         return code
+    # Only on success: on failure stderr holds exactly one JSON error.
+    for warning in warnings:
+        stderr.write(warning + "\n")
     if getattr(args, "format", "json") == "compact" and compact is not None:
         stdout.write(compact + "\n")
     else:
