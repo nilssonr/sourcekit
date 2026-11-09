@@ -2,7 +2,7 @@
 
 Mapped on 2026-11-07 (a Saturday) from the official docs plus about 140 live requests. Every request was throttled to at most 1 per 3.5 s with one connection at a time, per arXiv's terms of use.
 
-Extended on 2026-11-08 (a Sunday, 19:14 to 20:22 America/New_York) with about 400 more requests sent through the client: every CLI command, a matrix of query syntax (§2.2), and 32 loosely worded requests run through a ladder of queries (§8, §9).
+Extended on 2026-11-08 (a Sunday, 19:14 to 20:50 America/New_York) with about 450 more requests sent through the client: every CLI command, a matrix of query syntax (§2.2), and 32 loosely worded requests run through a ladder of queries (§8, §9).
 
 Tags: **[obs]** observed in a live capture · **[doc]** stated in info.arxiv.org docs · **[src]** read in arXiv's open-source code · **[inf]** inference, not verified · **[unmeasured]** tried but no answer, or not tried.
 
@@ -226,7 +226,7 @@ Detection: check the HTTP status first. In the body, an error entry's `id` start
 
 Per arXiv staff on the API group, limits change over time (2026-02-27), blocks "expire automatically" (2026-05-14), and limits were added on new traffic, bringing more 429s and 503s (2026-06-03). Problems come in **waves** (2023-10, 2024-03, 2026-03): retries during a wave tend to fail again.
 
-**Waves, as observed [obs].** One session on Sunday 2026-11-08, from 19:14 to 20:22 America/New_York, sent about 400 requests through the client, never faster than one per 3 s and never two at once. It still met four bad spells:
+**Waves, as observed [obs].** One session on Sunday 2026-11-08, from 19:14 to 20:50 America/New_York, sent about 450 requests through the client, never faster than one per 3 s and never two at once. It still met five bad spells:
 
 | When (UTC, 2026-11-09) | What happened |
 |---|---|
@@ -234,6 +234,7 @@ Per arXiv staff on the API group, limits change over time (2026-02-27), blocks "
 | 00:33–00:42 | Three different queries in a row got 429, each again after a 65 s wait. Nine throttled calls. |
 | 00:49–00:59 | One query got 429 four times across 10 minutes, with waits of 65 s and then 185 s. The queries sent just before and just after it succeeded. |
 | 01:00–01:17 | Most requests got no response within 10 s. From 01:18, more than 60 requests in a row were answered. |
+| 01:26–01:29 | Two queries not yet in the CDN got 429, and again after a 65 s wait. A query that was in the CDN was answered in the same minute. |
 
 - Between the spells, a request took 0.5–3 s, and a repeated URL took about 0.2 s (a CDN hit).
 - **Our own pace did not cause these.** They match what arXiv staff describe as server-wide capacity. The last spell began at 01:00 UTC, which is 20:00 Eastern, the hour §6 already says to avoid.
@@ -470,12 +471,13 @@ Build the query instead:
 |---|---|---|
 | An arXiv ID | `fetch` or `get` | 3 of 3 found in one request, with or without a version. |
 | A coined name, such as *Design2Code* or *ProtTrans* | `--all NAME` | Rank 1 of 8, and rank 1 of 3. |
-| A coined name that later papers reuse, such as *SWE-bench* or *LK-99* | `--raw 'ti:NAME OR abs:NAME' --sort submitted --order ascending` | By relevance the original was not in the first 10 (`all:SWE-bench` 745 results, `ti:SWE-bench` 39). Earliest first it was rank 1, both times. The LK-99 original does not have the name in its title, so `ti:` alone (19 results) cannot find it. |
+| A coined name that later papers reuse, such as *SWE-bench*, *BERT* or *Mamba* | `--title NAME --any-category FIELD --sort submitted --order ascending` | By relevance the original was not in the first 10 (`all:SWE-bench` 745 results, `ti:SWE-bench` 39). With the field and earliest first it was rank 1 for all three, out of 37, 1,244 and 307. |
+| The same, and the name is a unique string, such as *LK-99* | `--raw 'ti:NAME OR abs:NAME' --sort submitted --order ascending` | Rank 1 of 60. This original does not have the name in its title, so `ti:` alone (19 results) cannot find it. **Not for a name that is also a word or an older acronym:** for *BERT* (7,343 results) and *Mamba* (2,354) the earliest results were unrelated papers from before the name existed. |
 | An author and a topic | `--author SURNAME --title WORD` | Rank 1 in 4 of 5 and rank 3 in the fifth, with 1 to 6 results. |
 | An author and a topic, and no word from the title | `--author SURNAME --all WORD` | Rank 1 or 2 in 4 of 5, with 3 to 8 results. The fifth missed: *AdS/CFT* was coined after the paper it names, so the paper does not contain it. |
 | Two authors | `--author A --author B` | 7 results, rank 4. With a title phrase added: rank 1 of 4. |
 | The exact title | `--title "PHRASE"` | Rank 1 of 36, rank 2 of 3, and not in the first 10 of 438. Later papers reuse a famous title. Earliest first (§9.3): rank 1, rank 1 and rank 2. |
-| A description with no name | The two most distinctive words or phrases, each in `--title` | With the content words in `--all`: 85 to 1,925 results, and rank 3 to 5 or not in the first 10. With two of them in the title: 5 results and rank 1, 11 results and rank 4, and 151 results and rank 4. |
+| A description with no name | The longest phrase the description could share with the title, in `--title`. Failing that, the two most distinctive words, each in `--title` | With the content words in `--all`: 85 to 1,925 results, and rank 3 to 5 or not in the first 10. With two of them in the title: 5 results and rank 1, 11 results and rank 4, and 151 results and rank 4. |
 | A topic | `--title "CORE PHRASE" --abstract QUALIFIER` | 27 to 152 results, on topic from the first one, for 4 topics. With the content words in `--all`: 29 to 471 results, and an off-topic paper in the first two for 2 of the 4. |
 | A topic, newest wanted | The same with `--sort submitted` | Newest first. For 4 of 4 topics the first six results were from the current year, with no date filter. |
 | One bare word | See §9. | |
@@ -490,7 +492,20 @@ Build the query instead:
 - **Looking for a topic:** 20 to 150 results is a list worth reading. Above about 200, add an `--abstract` qualifier or a date. Below about 20, remove the least distinctive term.
 - **0 results:** look for a stopword, a term too many, or an accented title word (§2.2). Then remove one term.
 
-### 8.4 Cost and failure
+### 8.4 Checked on requests not used to build it
+
+The table in §8.2 was then run, one query each, on 11 requests that had not been used to build it.
+
+| Kind | Result |
+|---|---|
+| Author and title word (2) | Rank 1 of 2, both times. |
+| Exact title (2) | Rank 1 of 1. Earliest first: rank 1 of 2,220. |
+| Topic (2) | 43 results and 5 results. On topic, except one of the 5. |
+| Topic, newest wanted (1) | 729 results, the first six from the last three weeks. |
+| Description (2) | Two title words: rank 3 of 13, and not in the first 5 of 35. For the second, a title phrase gave 2 results: the paper and its appendix. |
+| Coined name that later papers reuse (2) | **Failed** as first written, with `ti:NAME OR abs:NAME`. Rank 1 for both after the name moved to the title and the field was added. §8.2 has the corrected rule. |
+
+### 8.5 Cost and failure
 
 - **Up to 100 results cost one request**, because the client's page is 100. To see how results spread across fields or authors, ask for 100 with `--format compact` or `--abstract-chars 0`.
 - **To count, send `--max 1`** and read `total_results`.
@@ -546,7 +561,7 @@ The same holds for people. `au:Hinton` returns 775 papers:
 
 ### 9.3 When not to ask
 
-- **"The X paper" usually means the original.** Sort earliest first before asking: `--sort submitted --order ascending`. That put the original at rank 1 for 5 of 6 well-known papers. The sixth was at rank 2, behind an unrelated 2017 paper: `ti:"low-rank adaptation"` also matches *Low-Rank Adaptive*, because of stemming.
+- **"The X paper" usually means the original.** Sort earliest first before asking: `--sort submitted --order ascending`. That put the original at rank 1 for 8 of 9 well-known papers. The ninth was at rank 2, behind an unrelated 2017 paper: `ti:"low-rank adaptation"` also matches *Low-Rank Adaptive*, because of stemming. A name that is also a word needs the field as well (§8.2).
 - **"Recent", "latest", "new":** sort newest first. Ask for a window only when the count is too large to read.
 - **One result, or a first result whose title is the phrase:** fetch it.
 - **Ask once per search**, offer at most four options, put the best-supported one first, and show the counts.
