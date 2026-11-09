@@ -2,7 +2,7 @@
 
 Mapped on 2026-11-07 (a Saturday) from the official docs plus about 140 live requests. Every request was throttled to at most 1 per 3.5 s with one connection at a time, per arXiv's terms of use.
 
-Extended on 2026-11-08 (a Sunday, 19:14 to 20:50 America/New_York) with about 450 more requests sent through the client: every CLI command, a matrix of query syntax (§2.2), and 32 loosely worded requests run through a ladder of queries (§8, §9).
+Extended on 2026-11-08 (a Sunday, 19:14 to 20:41 America/New_York) with about 450 more requests sent through the client: every CLI command, a matrix of query syntax (§2.2), and 32 loosely worded requests run through a ladder of queries (§8, §9).
 
 Tags: **[obs]** observed in a live capture · **[doc]** stated in info.arxiv.org docs · **[src]** read in arXiv's open-source code · **[inf]** inference, not verified · **[unmeasured]** tried but no answer, or not tried.
 
@@ -226,7 +226,7 @@ Detection: check the HTTP status first. In the body, an error entry's `id` start
 
 Per arXiv staff on the API group, limits change over time (2026-02-27), blocks "expire automatically" (2026-05-14), and limits were added on new traffic, bringing more 429s and 503s (2026-06-03). Problems come in **waves** (2023-10, 2024-03, 2026-03): retries during a wave tend to fail again.
 
-**Waves, as observed [obs].** One session on Sunday 2026-11-08, from 19:14 to 20:50 America/New_York, sent about 450 requests through the client, never faster than one per 3 s and never two at once. It still met five bad spells:
+**Waves, as observed [obs].** One session on Sunday 2026-11-08, from 19:14 to 20:41 America/New_York, sent about 450 requests through the client, never faster than one per 3 s and never two at once. It still met five bad spells:
 
 | When (UTC, 2026-11-09) | What happened |
 |---|---|
@@ -482,7 +482,7 @@ Build the query instead:
 | A topic, newest wanted | The same with `--sort submitted` | Newest first. For 4 of 4 topics the first six results were from the current year, with no date filter. |
 | One bare word | See §9. | |
 
-- **A description can share no word with the paper.** "The paper that replaced RNNs with attention" has no word of the title *Attention Is All You Need* except one. The query that found it used a word from its abstract. A caller that does not already know the paper has to ask (§9).
+- **A description can share almost nothing with the title.** "The paper that replaced RNNs with attention" shares one word with *Attention Is All You Need*. The query that found it used a word from its abstract. A caller that does not already know the paper has to ask (§9).
 - **A date window bounds the count.** It is not needed for recency. "This year" is `--from YYYY0101`.
 - **A category rarely helps a query that already has a title phrase**: 28 → 22, 152 → 149, 27 → 27. It is the only fix for a word that several fields use: `ti:homogenization` went from 9,006 to 124 with three `cs` categories.
 
