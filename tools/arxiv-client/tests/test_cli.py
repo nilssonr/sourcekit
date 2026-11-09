@@ -64,6 +64,49 @@ def error_payload(run: CliRun) -> dict:
     return json.loads(run.err)
 
 
+class AuthorWarningTests(unittest.TestCase):
+    def test_an_author_with_an_initial_warns_on_stderr_and_is_sent_as_typed(self):
+        for value in ("G Hinton", "Hinton_G", "G. E. Hinton", "Geoffrey E Hinton"):
+            with self.subTest(value):
+                run = run_cli(["search", "--author", value], [feed_of("2401.00001", total=1)])
+                self.assertEqual(run.code, 0, run.err)
+                self.assertEqual(len(run.err.splitlines()), 1)
+                self.assertIn("initial", run.err)
+                self.assertIn(value, run.err)
+                self.assertEqual(json.loads(run.out)["count"], 1)
+
+    def test_a_name_without_an_initial_does_not_warn(self):
+        for value in ("Hinton", "Geoffrey Hinton", "del_maestro", "O'Brien", "H*"):
+            with self.subTest(value):
+                run = run_cli(["search", "--author", value], [feed_of("2401.00001", total=1)])
+                self.assertEqual(run.err, "")
+
+    def test_a_dry_run_warns_too(self):
+        run = run_cli(["search", "--author", "G Hinton", "--dry-run"], [])
+        self.assertIn("initial", run.err)
+        self.assertTrue(json.loads(run.out)["dry_run"])
+
+    def test_a_batch_warning_names_the_query(self):
+        stdin = json.dumps([{"label": "one", "author": ["Hinton", "G Hinton"]}])
+        run = run_cli(["batch", "-"], [feed_of("2401.00001", total=1)], stdin=stdin)
+        self.assertEqual(run.code, 0, run.err)
+        self.assertEqual(len(run.err.splitlines()), 1)
+        self.assertIn("one: ", run.err)
+
+    def test_a_failed_command_leaves_only_the_json_error_on_stderr(self):
+        run = run_cli(["search", "--author", "G Hinton"], [socket.timeout("timed out")])
+        self.assertEqual(error_payload(run)["error"], "timeout")
+
+
+class ArchiveCategoryTests(unittest.TestCase):
+    def test_a_bare_archive_is_expanded_in_every_category_input(self):
+        run = run_cli(["search", "--category", "cs", "--any-category", "stat", "--dry-run"], [])
+        self.assertEqual(json.loads(run.out)["query"], "cat:cs.* AND cat:stat.*")
+        batch = json.dumps([{"category": "cs"}])
+        run = run_cli(["batch", "-", "--dry-run"], [], stdin=batch)
+        self.assertEqual(json.loads(run.out)["queries"][0]["query"], "cat:cs.*")
+
+
 class CommandTests(unittest.TestCase):
     def test_search_prints_the_query_and_its_papers_as_json(self):
         run = run_cli(

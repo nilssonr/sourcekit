@@ -35,6 +35,13 @@ FIELDS = {
     "all": "all",
 }
 
+# Archives divided into subcategories: ``cat:cs`` matches nothing, ``cat:cs.*`` the whole archive.
+ARCHIVES_WITH_SUBCATEGORIES = frozenset(
+    {"astro-ph", "cond-mat", "cs", "econ", "eess", "math", "nlin", "physics", "q-bio", "q-fin", "stat"}
+)
+# The archives that also have papers filed under the bare name, which ``X.*`` does not match
+# (docs/arxiv-api.md section 2.2: cat:astro-ph 105,380, cat:cond-mat 14,215, cat:q-bio 1,356).
+_ARCHIVES_WITH_BARE_PAPERS = frozenset({"astro-ph", "cond-mat", "q-bio"})
 _OPERATOR_WORDS = {"AND", "OR", "NOT", "ANDNOT", "TO"}
 # Words arXiv does not index in titles and abstracts (docs/arxiv-api.md section 2.2). Each one
 # was measured: ``ti:<word>`` matches 0 papers, so ANDing it into a query returns nothing.
@@ -173,6 +180,12 @@ class Q:
             raise ValidationError("unknown field %r; use one of %s" % (name, ", ".join(FIELDS)))
         if name == "id":
             return cls.id(text)
+        if name == "category":
+            archive = _clean(text).lower()
+            if archive in _ARCHIVES_WITH_BARE_PAPERS:
+                return cls("cat:%s" % archive) | cls("cat:%s.*" % archive)
+            if archive in ARCHIVES_WITH_SUBCATEGORIES:
+                return cls("cat:%s.*" % archive)
         return cls(_term(FIELDS[name], text))
 
     @classmethod
