@@ -175,6 +175,7 @@ The client isn't thread-safe. Use one call at a time.
 - A download is accepted only with an `application/pdf` Content-Type and a `%PDF-` header.
 - It's written to a temporary `.part` file and renamed into place once complete.
 - The default size cap is 50 MB.
+- A file already on disk is not downloaded again. For an unversioned ID with some version on disk, one query request (covering every such ID in the call) finds the latest version. If that version is on disk it is reported as `skipped`, without touching the PDF host. If the lookup fails, the PDF is requested as usual.
 
 ## Where it runs
 
