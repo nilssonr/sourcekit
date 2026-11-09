@@ -109,6 +109,35 @@ class CommandTests(unittest.TestCase):
         self.assertIn("20231399 is not a calendar date", error_payload(run)["message"])
         self.assertEqual(run.opener.requests, [])
 
+    def test_search_by_id_prefix_sends_an_id_term(self):
+        run = run_cli(["search", "--id", "1706.037*", "--category", "cs.CL"], [feed_of("1706.03762")])
+        self.assertEqual(run.code, 0, run.err)
+        self.assertEqual(run.opener.requests[0].params["search_query"], ["cat:cs.CL AND id:1706.037*"])
+
+    def test_search_by_a_versioned_or_old_style_id_is_a_validation_error_naming_fetch(self):
+        for bad in ("1706.03762v5", "hep-th/9901001"):
+            with self.subTest(bad=bad):
+                run = run_cli(["search", "--id", bad], [])
+                self.assertEqual(run.code, 2)
+                self.assertIn("arxiv fetch %s" % bad, error_payload(run)["message"])
+                self.assertEqual(run.opener.requests, [])
+
+    def test_ascending_order_without_a_date_sort_is_a_validation_error_and_nothing_is_sent(self):
+        for extra in ([], ["--dry-run"], ["--sort", "relevance"]):
+            with self.subTest(extra=extra):
+                run = run_cli(["search", "--title", "x", "--order", "ascending", *extra], [])
+                self.assertEqual(run.code, 2)
+                self.assertEqual(error_payload(run)["error"], "validation")
+                self.assertIn("--sort submitted", error_payload(run)["message"])
+                self.assertEqual(run.opener.requests, [])
+
+    def test_ascending_order_with_a_date_sort_is_sent(self):
+        run = run_cli(
+            ["search", "--title", "x", "--sort", "submitted", "--order", "ascending"], [feed_of("2401.00001")]
+        )
+        self.assertEqual(run.code, 0, run.err)
+        self.assertEqual(run.opener.requests[0].params["sortOrder"], ["ascending"])
+
     def test_search_without_a_filter_is_a_validation_error(self):
         run = run_cli(["search"], [])
         self.assertEqual(run.code, 2)
@@ -175,6 +204,26 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(run.user_agents, ["flag-agent/3"])
         self.assertEqual(run.opener.requests[0].headers["user-agent"], "flag-agent/3")
 
+    def test_the_user_agent_flag_is_accepted_after_the_subcommand(self):
+        argvs = (
+            ["get", "2401.00001", "--user-agent", "flag-agent/3"],
+            ["search", "--title", "x", "--user-agent", "flag-agent/3"],
+            ["fetch", "--user-agent", "flag-agent/3", "2401.00001"],
+            ["feed", "cs.AI", "--user-agent", "flag-agent/3"],
+        )
+        for argv in argvs:
+            with self.subTest(command=argv[0]), mock.patch.dict(os.environ, {"ARXIV_USER_AGENT": "env-agent/2"}):
+                step = xml_response(fixture("atom_weekday.xml")) if argv[0] == "feed" else feed_of("2401.00001")
+                run = run_cli(argv, [step])
+                self.assertEqual(run.code, 0, run.err)
+                self.assertEqual(run.user_agents, ["flag-agent/3"])
+
+    def test_a_user_agent_after_the_subcommand_beats_one_before_it(self):
+        run = run_cli(
+            ["--user-agent", "before/1", "get", "2401.00001", "--user-agent", "after/2"], [feed_of("2401.00001")]
+        )
+        self.assertEqual(run.user_agents, ["after/2"])
+
     def test_python_dash_m_entry_point_prints_help(self):
         # --help needs no network.
         proc = subprocess.run(
@@ -233,6 +282,41 @@ class ExplainAndDryRunTests(unittest.TestCase):
         run = run_cli(["batch", "-", "--dry-run"], [], stdin=stdin)
         data = json.loads(run.out)
         self.assertEqual([q["dropped_words"] for q in data["queries"]], [["the"], []])
+
+    def test_a_batch_item_with_ascending_order_and_no_date_sort_is_named_and_nothing_is_sent(self):
+        stdin = json.dumps([{"label": "fine", "title": "x"}, {"label": "bad", "title": "y", "order": "ascending"}])
+        run = run_cli(["batch", "-"], [], stdin=stdin)
+        self.assertEqual(run.code, 2)
+        self.assertIn("batch item 2 (bad): ascending order needs a date sort", error_payload(run)["message"])
+        self.assertEqual(run.opener.requests, [])
+
+    def test_a_batch_item_can_search_by_id(self):
+        run = run_cli(["batch", "-", "--dry-run"], [], stdin=json.dumps([{"id": "1706.037*"}]))
+        self.assertEqual(run.code, 0, run.err)
+        self.assertEqual(json.loads(run.out)["queries"][0]["query"], "id:1706.037*")
+
+    def test_fetch_explain_lists_the_failed_request_and_the_unversioned_retry(self):
+        steps = [
+            xml_response(fixture("query_error_500.xml"), status=500),
+            xml_response(make_feed([make_entry("hep-th/9901001", 3, category="hep-th")])),
+        ]
+        run = run_cli(["fetch", "hep-th/9901001v1", "--explain"], steps)
+        self.assertEqual(run.code, 0, run.err)
+        urls = json.loads(run.out)["request_urls"]
+        self.assertEqual(urls, [r.url for r in run.opener.requests])
+        self.assertIn("id_list=hep-th%2F9901001v1&", urls[0])
+        self.assertIn("id_list=hep-th%2F9901001&", urls[1])
+
+    def test_compact_fetch_explain_ends_with_a_line_per_request(self):
+        run = run_cli(["fetch", "2401.00001", "--explain", "--format", "compact"], [feed_of("2401.00001")])
+        self.assertEqual(
+            run.out.splitlines(),
+            ["2401.00001 | 2024-01-01 | cs.LG | Paper 2401.00001", "# request: %s" % run.opener.requests[0].url],
+        )
+
+    def test_fetch_without_explain_has_no_request_urls(self):
+        run = run_cli(["fetch", "2401.00001"], [feed_of("2401.00001")])
+        self.assertEqual(sorted(json.loads(run.out)), ["not_found", "papers"])
 
     def test_a_batch_item_with_an_operator_word_is_named_and_nothing_is_sent(self):
         stdin = json.dumps([{"label": "fine", "all": "transformer"}, {"label": "bad", "all": "attention OR vision"}])
@@ -458,6 +542,19 @@ class OutputFormatTests(unittest.TestCase):
         paper = json.loads(run.out)["papers"][0]
         self.assertEqual(paper["summary"], "An abstract.")
         self.assertEqual(paper["authors"], [{"name": "Someone"}])
+
+    def test_compact_get_output_is_one_line(self):
+        run = run_cli(["get", "2401.00001", "--format", "compact"], [feed_of("2401.00001")])
+        self.assertEqual(run.code, 0, run.err)
+        self.assertEqual(run.out.splitlines(), ["2401.00001 | 2024-01-01 | cs.LG | Paper 2401.00001"])
+
+    def test_get_abstract_chars_cuts_or_drops_the_abstract(self):
+        entry = [make_entry("2401.00001", summary="word " * 100)]
+        cut = run_cli(["get", "2401.00001", "--abstract-chars", "200"], [xml_response(make_feed(entry))])
+        self.assertTrue(json.loads(cut.out)["summary"].endswith("…"))
+        self.assertLessEqual(len(json.loads(cut.out)["summary"]), 201)
+        dropped = run_cli(["get", "2401.00001", "--abstract-chars", "0"], [xml_response(make_feed(entry))])
+        self.assertNotIn("summary", json.loads(dropped.out))
 
     def test_get_json_drops_empty_affiliations(self):
         run = run_cli(["get", "2401.00001"], [feed_of("2401.00001")])

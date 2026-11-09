@@ -3,9 +3,10 @@
     arxiv search --title "attention is all you need" --max 5
     arxiv search --all "protein folding" --category q-bio.BM --sort submitted
     arxiv search --abstract homogenization --any-category cs.HC --any-category cs.CL --format compact
+    arxiv search --id "1706.037*" --format compact
     arxiv batch queries.json --format compact
     arxiv fetch 1706.03762 hep-th/9901001v1 --abstract-chars 300
-    arxiv get 2301.00001
+    arxiv get 2301.00001 --format compact
     arxiv feed cs.AI cs.LG
     arxiv pdf 2301.00001 --out ./papers
 
@@ -49,7 +50,7 @@ EXIT_CODES = (
 
 SORTS = {"relevance": "relevance", "submitted": "submittedDate", "updated": "lastUpdatedDate"}
 ORDERS = ("descending", "ascending")
-FIELDS = ("title", "author", "abstract", "comment", "journal_ref", "category", "report_number")
+FIELDS = ("title", "author", "abstract", "comment", "journal_ref", "category", "report_number", "id")
 QUERY_KEYS = FIELDS + ("all", "raw", "any_category", "from", "to")
 BATCH_KEYS = QUERY_KEYS + ("label", "max", "sort", "order")
 MAX_BATCH_QUERIES = 20
@@ -80,11 +81,16 @@ def _add_output_flags(parser: argparse.ArgumentParser) -> None:
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="arxiv", description="Query arXiv; prints JSON.")
-    p.add_argument("--user-agent", help="User-Agent header (default: $ARXIV_USER_AGENT or %s)" % DEFAULT_USER_AGENT)
+    user_agent_help = "User-Agent header (default: $ARXIV_USER_AGENT or %s)" % DEFAULT_USER_AGENT
+    p.add_argument("--user-agent", help=user_agent_help)
+    # The flag is also accepted after the subcommand. SUPPRESS keeps a subparser that was not
+    # given the flag from overwriting the value given before the subcommand.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--user-agent", default=argparse.SUPPRESS, help=user_agent_help)
     sub = p.add_subparsers(dest="command")
     sub.required = True
 
-    s = sub.add_parser("search", help="search the query API")
+    s = sub.add_parser("search", parents=[common], help="search the query API")
     for flag in ("title", "author", "abstract", "comment", "journal-ref", "category", "report-number"):
         s.add_argument(
             "--" + flag,
@@ -93,6 +99,13 @@ def _build_parser() -> argparse.ArgumentParser:
             metavar="TEXT",
             help="field search (repeatable; multi-word text is a phrase)",
         )
+    s.add_argument(
+        "--id",
+        action="append",
+        default=[],
+        metavar="ID",
+        help="an unversioned new-style ID, or the start of one with a trailing * (1706.037*); repeatable",
+    )
     s.add_argument(
         "--all",
         action="append",
@@ -111,29 +124,38 @@ def _build_parser() -> argparse.ArgumentParser:
     s.add_argument("--from", dest="date_from", metavar="YYYYMMDD", help="submitted on or after (GMT)")
     s.add_argument("--to", dest="date_to", metavar="YYYYMMDD", help="submitted on or before (GMT)")
     s.add_argument("--sort", choices=sorted(SORTS), default="relevance")
-    s.add_argument("--order", choices=("descending", "ascending"), default="descending")
+    s.add_argument(
+        "--order",
+        choices=("descending", "ascending"),
+        default="descending",
+        help="ascending needs --sort submitted or --sort updated",
+    )
     s.add_argument("--max", type=int, default=10, help="maximum results (default 10)")
     s.add_argument("--strict", action="store_true", help="fail instead of truncating at 10000")
     _add_query_flags(s)
     _add_output_flags(s)
 
-    b = sub.add_parser("batch", help="run several searches in one call; papers deduplicated across them")
+    b = sub.add_parser(
+        "batch", parents=[common], help="run several searches in one call; papers deduplicated across them"
+    )
     b.add_argument("file", help="JSON list of query objects, or - for stdin (see the README)")
     _add_query_flags(b)
     _add_output_flags(b)
 
-    f = sub.add_parser("fetch", help="fetch papers by ID")
+    f = sub.add_parser("fetch", parents=[common], help="fetch papers by ID")
     f.add_argument("ids", nargs="+")
+    f.add_argument("--explain", action="store_true", help="add request_urls (every URL requested) to the output")
     _add_output_flags(f)
 
-    g = sub.add_parser("get", help="fetch one paper by ID")
+    g = sub.add_parser("get", parents=[common], help="fetch one paper by ID")
     g.add_argument("id")
+    _add_output_flags(g)
 
-    fe = sub.add_parser("feed", help="today's announcements")
+    fe = sub.add_parser("feed", parents=[common], help="today's announcements")
     fe.add_argument("categories", nargs="+")
     fe.add_argument("--rss", action="store_true", help="use the RSS feed instead of Atom")
 
-    pd = sub.add_parser("pdf", help="download PDFs (personal/research use; max 10 per call)")
+    pd = sub.add_parser("pdf", parents=[common], help="download PDFs (personal/research use; max 10 per call)")
     pd.add_argument("ids", nargs="+")
     pd.add_argument("--out", required=True, help="destination directory")
     pd.add_argument("--overwrite", action="store_true")
@@ -390,9 +412,13 @@ def _run(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[
         lines = [_compact_line(p) for p in fetched.papers.values()]
         if fetched.not_found:
             lines.append("# not found: %s" % " ".join(fetched.not_found))
+        if args.explain:
+            result["request_urls"] = list(fetched.request_urls)
+            lines.extend("# request: %s" % url for url in fetched.request_urls)
         return result, "\n".join(lines)
     if args.command == "get":
-        return _paper_dict(client.get(args.id)), None
+        paper = client.get(args.id)
+        return _paper_dict(paper, args.abstract_chars), _compact_line(paper)
     if args.command == "feed":
         return client.feed(args.categories, fmt="rss" if args.rss else "atom").to_dict(), None
     if args.command == "pdf":

@@ -47,6 +47,23 @@ class SearchPageTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             self.client.search_page("x", sort_by="lastUpdated")
 
+    def test_ascending_order_by_relevance_is_refused_and_nothing_is_sent(self):
+        # arXiv accepts it and returns the least relevant papers first.
+        calls = (
+            lambda: self.client.search_page("x", sort_order="ascending"),
+            lambda: self.client.search("x", sort_order="ascending"),
+            lambda: self.client.query_url("x", sort_by="relevance", sort_order="ascending"),
+        )
+        for call in calls:
+            with self.assertRaisesRegex(ValidationError, "ascending order needs a date sort"):
+                call()
+        self.assertEqual(self.opener.requests, [])
+
+    def test_ascending_order_by_last_update_is_sent(self):
+        self.opener.add(xml_response(make_feed([])))
+        self.client.search_page("x", sort_by="lastUpdatedDate", sort_order="ascending")
+        self.assertEqual(self.opener.requests[0].params["sortOrder"], ["ascending"])
+
     def test_max_results_clamped_below_10000(self):
         self.opener.add(xml_response(make_feed([])))
         self.client.search_page("x", start=9950, max_results=200)
@@ -219,6 +236,26 @@ class FetchTests(unittest.TestCase):
         self.assertIsNone(result.papers["2401.00001"].requested_version)
         self.assertEqual(self.opener.requests[1].params["id_list"], ["hep-th/9901001,2401.00001"])
         self.assertEqual(len(self.opener.requests), 2)
+
+    def test_fetch_lists_the_url_of_every_request(self):
+        self.opener.add(xml_response(make_feed([make_entry("2401.00001")])))
+        result = self.client.fetch(["2401.00001", "2401.00002"])
+        self.assertEqual(result.request_urls, [self.opener.requests[0].url])
+        self.assertIn("id_list=2401.00001,2401.00002", result.request_urls[0])
+
+    def test_after_the_fallback_the_failed_url_and_the_retry_are_both_listed(self):
+        self.opener.add(
+            xml_response(fixture("query_error_500.xml"), status=500),
+            xml_response(make_feed([make_entry("hep-th/9901001", 3, category="hep-th")])),
+        )
+        result = self.client.fetch(["hep-th/9901001v1"])
+        self.assertEqual(result.request_urls, [r.url for r in self.opener.requests])
+        self.assertIn("id_list=hep-th%2F9901001v1&", result.request_urls[0])
+        self.assertIn("id_list=hep-th%2F9901001&", result.request_urls[1])
+
+    def test_fetch_to_dict_does_not_include_the_request_urls(self):
+        self.opener.add(xml_response(make_feed([make_entry("2401.00001")])))
+        self.assertEqual(sorted(self.client.fetch(["2401.00001"]).to_dict()), ["not_found", "papers"])
 
     def test_fallback_lists_version_above_latest_as_not_found(self):
         self.opener.add(

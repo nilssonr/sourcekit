@@ -57,6 +57,11 @@ def _check_sort(sort_by: str, sort_order: str) -> None:
         raise ValidationError("sort_by must be one of %s" % ", ".join(SORT_BY))
     if sort_order not in SORT_ORDER:
         raise ValidationError("sort_order must be one of %s" % ", ".join(SORT_ORDER))
+    if sort_by == "relevance" and sort_order == "ascending":
+        raise ValidationError(
+            "ascending order needs a date sort: with relevance it returns the least relevant papers first. "
+            "Use --sort submitted or --sort updated (sort_by submittedDate or lastUpdatedDate in the library)"
+        )
 
 
 class SearchResults:
@@ -305,7 +310,8 @@ class ArxivClient:
         """Fetch papers by ID. Results are keyed by the ID strings you passed in.
 
         IDs that don't exist are listed in ``not_found``. Any invalid ID raises
-        ValidationError before a request is sent.
+        ValidationError before a request is sent. ``request_urls`` lists every URL
+        requested, including one that failed and was retried.
         """
         if isinstance(ids, str):
             ids = [ids]
@@ -328,10 +334,11 @@ class ArxivClient:
 
         pacer = self._pacer()
         matched: Dict[ArxivId, Paper] = {}
+        urls: List[str] = []
         for i in range(0, len(unique), ID_CHUNK_SIZE):
-            matched.update(self._fetch_chunk(unique[i : i + ID_CHUNK_SIZE], pacer))
+            matched.update(self._fetch_chunk(unique[i : i + ID_CHUNK_SIZE], pacer, urls))
 
-        result = FetchResult(papers={}, not_found=[])
+        result = FetchResult(papers={}, not_found=[], request_urls=urls)
         for raw, aid in parsed:
             paper = matched.get(aid)
             if paper is None:
@@ -341,9 +348,13 @@ class ArxivClient:
                 result.papers[raw] = paper
         return result
 
-    def _fetch_chunk(self, chunk: List[ArxivId], pacer: Pacer) -> Dict[ArxivId, Paper]:
+    def _fetch_chunk(self, chunk: List[ArxivId], pacer: Pacer, urls: List[str]) -> Dict[ArxivId, Paper]:
+        """Fetch one chunk. Each URL is added to ``urls`` before it is requested, so a
+        request that fails is listed too."""
+        ids = [str(a) for a in chunk]
+        urls.append(self.query_url(id_list=ids, max_results=len(ids)))
         try:
-            page = self.search_page(id_list=[str(a) for a in chunk], max_results=len(chunk), _pacer=pacer)
+            page = self.search_page(id_list=ids, max_results=len(ids), _pacer=pacer)
             return _match_ids(chunk, page.papers, fallback=frozenset())
         except ServerError as e:
             affected = frozenset(a for a in chunk if a.old_style and a.version is not None)
@@ -356,6 +367,7 @@ class ArxivClient:
             s = str(a.unversioned() if a in affected else a)
             if s not in retry_ids:
                 retry_ids.append(s)
+        urls.append(self.query_url(id_list=retry_ids, max_results=len(retry_ids)))
         page = self.search_page(id_list=retry_ids, max_results=len(retry_ids), _pacer=pacer)
         return _match_ids(chunk, page.papers, fallback=affected)
 

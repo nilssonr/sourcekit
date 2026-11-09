@@ -24,11 +24,12 @@ arxiv search --title "attention is all you need" --max 5
 arxiv search --all "protein folding" --category q-bio.BM --sort submitted --max 20
 arxiv search --author Hinton --from 20230101 --to 20231231
 arxiv search --abstract homogenization --any-category cs.HC --any-category cs.CL --format compact
+arxiv search --id '1706.037*' --format compact    # every paper whose ID starts with 1706.037
 arxiv search --all "protein folding" --explain    # adds the query as arXiv parsed it
 arxiv search --title "low-rank adaptation" --dry-run   # prints the query and URL, sends nothing
 arxiv batch queries.json --format compact   # or - to read the list from stdin
 arxiv fetch 1706.03762 hep-th/9901001v1 --abstract-chars 300
-arxiv get 2301.00001
+arxiv get 2301.00001 --format compact
 arxiv feed cs.AI cs.LG          # add --rss for the RSS feed
 arxiv pdf 2301.00001 --out ./papers
 ```
@@ -39,20 +40,25 @@ arxiv pdf 2301.00001 --out ./papers
   - **Why stopwords are dropped:** arXiv does not index them, so one stopword in an `AND` query returns nothing. `--explain` and `--dry-run` list the dropped words as `dropped_words`.
   - **An uppercase `AND`, `OR`, `NOT` or `ANDNOT` is rejected** (exit 2), because free text has no operators. Use `--raw` for a boolean query, or put the word in double quotes to search for it.
   - **Dropping stopwords does not make a sentence a good query.** Words about the request, such as *paper* or *recent*, are still ANDed. See [`docs/arxiv-api.md`](docs/arxiv-api.md) §8.
+- `--id` searches by ID and can be repeated. It takes an unversioned new-style ID, or the start of one with a trailing `*`: `--id '1706.037*'` finds the 100 papers with that prefix.
+  - **A versioned ID (`1706.03762v5`) or an old-style ID (`hep-th/9901001`) is rejected** (exit 2), because an `id:` search matches neither. Use `fetch` or `get` for those.
 - `--any-category` can be repeated. Its values are joined with `OR`, so `--any-category cs.HC --any-category cs.CV` matches papers in either. (`--category` values are joined with `AND`, like the other field flags.)
 - `--from` and `--to` take a GMT date as `YYYYMMDD`, optionally followed by `HHMM` or `HHMMSS`. A date-only value covers the whole day. A date or time that isn't on the calendar, such as `20231399`, is rejected (exit 2): arXiv would answer it with HTTP 500.
 - `--raw` is passed through verbatim.
 - All filters are joined with `AND`.
 
+**Sorting:** `--sort` is `relevance` (the default), `submitted` or `updated`. `--order ascending` needs `--sort submitted` or `--sort updated`. With relevance it is rejected (exit 2), because arXiv would return the least relevant papers first.
+
 **Checking a query** (`search` and `batch`):
 - `--explain` adds three fields to the output. `server_query` is the query as arXiv parsed it, read from the feed title. `request_urls` lists the URL of each page requested. `dropped_words` lists the stopwords left out of `--all` text. In compact output, `server_query` is a second header line, and the dropped words are a third when there are any.
   - arXiv rewrites some input without an error, and `server_query` is the only place that shows it. For example, `lastUpdatedDate:[…]` becomes `submittedDate:"…"`, `au:Hinton_G` becomes `au:"Hinton G"`, and terms with no operator between them are joined with `OR`.
 - `--dry-run` builds and validates the query, prints it with its `dropped_words` and its first-page URL, and sends nothing.
+- `fetch --explain` adds `request_urls`, the URL of every request sent. When an old-style versioned ID makes arXiv answer 500, it lists that URL and then the unversioned retry. In compact output each URL is a `# request:` line at the end.
 
 **Batch:** `batch FILE` runs up to 20 searches in one call.
 - **Input:** `FILE`, or `-` for stdin, holds a JSON list of query objects.
-  - Query keys: `title`, `author`, `abstract`, `comment`, `journal_ref`, `category`, `report_number` and `all` (each a string or a list of strings), plus `raw`, `any_category`, `from` and `to`.
-  - Run settings: `label` (unique; default `q1`, `q2`, …), `max` (a positive integer, default 10), `sort` (`relevance`, `submitted` or `updated`) and `order`.
+  - Query keys: `title`, `author`, `abstract`, `comment`, `journal_ref`, `category`, `report_number`, `id` and `all` (each a string or a list of strings), plus `raw`, `any_category`, `from` and `to`.
+  - Run settings: `label` (unique; default `q1`, `q2`, …), `max` (a positive integer, default 10), `sort` (`relevance`, `submitted` or `updated`) and `order` (`ascending` needs a date sort).
 - **Validation:** every query is checked before any request is sent, and unknown keys are rejected.
 - **Output:** each query's IDs, and every paper once, with `found_by` listing the labels of the queries that returned it.
 - **Errors partway:** if an error stops the batch, stderr carries the usual error JSON, plus `completed` with the queries that finished and `papers` with the papers they returned.
@@ -65,8 +71,8 @@ arxiv pdf 2301.00001 --out ./papers
 ```
 
 **Lighter output:**
-- `--format compact` (for `search`, `fetch` and `batch`) prints one line per paper: `id | published date | primary category | title`. In `batch` it prints a header per query, marks a paper's first appearance with `*`, and ends with the unique count. Errors stay JSON on stderr.
-- `--abstract-chars N` (JSON only) cuts each abstract to N characters; `0` drops it.
+- `--format compact` (for `search`, `fetch`, `get` and `batch`) prints one line per paper: `id | published date | primary category | title`. In `batch` it prints a header per query, marks a paper's first appearance with `*`, and ends with the unique count. Errors stay JSON on stderr.
+- `--abstract-chars N` (JSON only, same four commands) cuts each abstract to N characters; `0` drops it.
 - JSON output leaves out empty author affiliation lists. An author with no affiliations is just `{"name": …}`.
 
 **Output and errors:** JSON (or compact text) goes to stdout. Errors go to stderr as `{"error": kind, "message": …}`, with `retry_after` added when arXiv throttled the request.
@@ -82,7 +88,7 @@ arxiv pdf 2301.00001 --out ./papers
 | 7 | `network_blocked` | DNS failure, refused connection, or a proxy refused the tunnel. In a sandbox, allow the domain |
 | 8 | `local_io` | a PDF could not be written: permissions, a full disk, or similar |
 
-**User-Agent:** set by `--user-agent`, then `$ARXIV_USER_AGENT`, then the default `arxiv-client/0.1`.
+**User-Agent:** set by `--user-agent`, then `$ARXIV_USER_AGENT`, then the default `arxiv-client/0.1`. The flag works before or after the subcommand. Given in both places, the one after the subcommand wins.
 
 ## Library
 
@@ -96,6 +102,7 @@ for paper in client.search(Q.title("diffusion") & Q.category("cs.CV"), max_resul
 result = client.fetch(["1706.03762", "hep-th/9901001v1", "2401.99999"])
 result.papers  # keyed by the ID strings you passed in
 result.not_found  # ["2401.99999"]
+result.request_urls  # every URL requested, including one that failed and was retried
 
 feed = client.feed(["cs.AI"])  # empty (not an error) at weekends
 client.download_pdf("2301.00001", "./papers")
@@ -105,6 +112,8 @@ client.download_pdf("2301.00001", "./papers")
 - Field constructors: `title`, `author`, `abstract`, `comment`, `journal_ref`, `category`, `report_number`, `id`, `all`.
 - Other constructors: `phrase`, `submitted_between`, and `raw`.
 - Operators: `&` for AND, `|` for OR, `-` for ANDNOT.
+- `Q.id` takes an unversioned new-style ID or a prefix with a trailing `*`. It raises `ValidationError` for a versioned or old-style ID, which an `id:` search cannot match. Use `client.fetch` for those.
+- `sort_order="ascending"` needs `sort_by="submittedDate"` or `"lastUpdatedDate"`. With relevance it raises `ValidationError`.
 - A plain string is free text, as with `--all`: its stopwords are dropped and the remaining words are joined with `AND`. An uppercase operator word raises `ValidationError`.
 
 There is no `lastUpdatedDate` filter, because arXiv silently rewrites it to `submittedDate`. Use `client.scan_revisions(query, known)` instead. It pages through `sortBy=lastUpdatedDate` and stops after N pages with nothing new.

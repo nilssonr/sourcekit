@@ -52,6 +52,20 @@ class QueryBuilderTests(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(ValidationError):
                 Q.title(bad)
 
+    def test_an_id_search_takes_an_unversioned_new_style_id_or_a_prefix(self):
+        self.assertEqual(str(Q.id("1706.037*")), "id:1706.037*")
+        self.assertEqual(str(Q.id("17*")), "id:17*")
+        self.assertEqual(str(Q.id("arXiv:1706.03762")), "id:1706.03762")
+        self.assertEqual(str(Q.field("id", "1706.03762")), "id:1706.03762")
+
+    def test_an_id_search_rejects_the_ids_it_cannot_match(self):
+        # Measured: id:1706.03762v5 and id:hep-th/9901001 both match 0 papers.
+        for bad in ("1706.03762v5", "hep-th/9901001", "hep-th/9901001v1", "math.CA/0611800"):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValidationError, "arxiv fetch"):
+                Q.id(bad)
+            with self.subTest(bad=bad, via="field"), self.assertRaises(ValidationError):
+                Q.field("id", bad)
+
     def test_blank_field_text_is_rejected(self):
         with self.assertRaises(ValidationError):
             Q.title("   ")

@@ -20,6 +20,7 @@ from typing import NamedTuple, Optional, Tuple, Union
 from urllib.parse import quote, urlencode
 
 from .errors import ValidationError
+from .ids import parse_id
 
 FIELDS = {
     "title": "ti",
@@ -137,6 +138,8 @@ class Q:
     def field(cls, name: str, text: str) -> "Q":
         if name not in FIELDS:
             raise ValidationError("unknown field %r; use one of %s" % (name, ", ".join(FIELDS)))
+        if name == "id":
+            return cls.id(text)
         return cls(_term(FIELDS[name], text))
 
     @classmethod
@@ -176,7 +179,10 @@ class Q:
 
     @classmethod
     def id(cls, text: str) -> "Q":
-        return cls.field("id", text)
+        """``id:`` search. It matches the unversioned new-style ID only, and takes a trailing
+        ``*`` (``1706.037*``). A versioned or old-style ID would find nothing, so it is rejected:
+        fetch those by ID instead."""
+        return cls(_term("id", _id_text(text)))
 
     @classmethod
     def all(cls, text: str) -> "Q":
@@ -250,6 +256,20 @@ def _clean(text: str) -> str:
     if not cleaned:
         raise ValidationError("empty query text")
     return cleaned
+
+
+def _id_text(text: str) -> str:
+    try:
+        aid = parse_id(text)
+    except ValidationError:
+        return text  # a prefix such as 1706.037*, or not an ID at all: sent as typed
+    if aid.version is not None or aid.old_style:
+        kind = "a versioned ID" if aid.version is not None else "an old-style ID"
+        raise ValidationError(
+            "an id: search matches only unversioned new-style IDs, so %s (%s) would find nothing. "
+            "Fetch it by ID instead: arxiv fetch %s (client.fetch in the library)" % (kind, aid, aid)
+        )
+    return aid.base
 
 
 def _term(prefix: str, text: str) -> str:

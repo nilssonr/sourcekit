@@ -106,9 +106,9 @@ Measured on 2026-11-09 by comparing `totalResults` and the echoed query for pair
 | `cat:` with an archive that has subcategories | Matches nothing. | `cat:cs` 0. `cat:cs.*` works. `cat:hep-th` works, because it has no subcategories. | Use `cat:cs.*` for a whole archive. |
 | `cat:` | Matches **any** of a paper's categories, not only the primary. | `cat:cs.LG` finds 1706.03762, whose primary is cs.CL. | Two `cat:` terms ANDed mean "listed in both". |
 | An unknown category | 0 results, no error. | `cat:cs.ZZ`. | |
-| `id:` | Matches the unversioned new-style ID only. | `id:1706.03762` 1. `id:1706.03762v5` 0. `id:hep-th/9901001` 0. `id:A OR id:B` 2. | For old-style or versioned IDs use `id_list`. |
+| `id:` | Matches the unversioned new-style ID only. | `id:1706.03762` 1. `id:1706.03762v5` 0. `id:hep-th/9901001` 0. `id:A OR id:B` 2. | For old-style or versioned IDs use `id_list`. `arxiv search --id` rejects them and names `fetch`. |
 
-- **`sortOrder=ascending` with `sortBy=relevance`** returns the least relevant papers first.
+- **`sortOrder=ascending` with `sortBy=relevance`** returns the least relevant papers first. The client rejects that pair (exit 2). Ascending order needs a date sort.
 
 #### Claims from other clients' issue trackers, rechecked
 
@@ -129,7 +129,7 @@ Measured on 2026-11-09 by comparing `totalResults` and the echoed query for pair
   - The rule is **unknown**. The failing papers were submitted from 1997 to 2005, and the working ones in 1995 and 2007, so it may be a band of submission dates [inf].
   - New-style non-latest versions work.
   - One failing ID fails the **whole request**.
-  - **Workaround** (cyanheads/arxiv-mcp-server #53): on a 500, re-request with old-style IDs unversioned, and mark each affected result as "requested vN, served latest". That costs at most 2 requests.
+  - **Workaround** (cyanheads/arxiv-mcp-server #53): on a 500, re-request with old-style IDs unversioned, and mark each affected result as "requested vN, served latest". That costs at most 2 requests. `arxiv fetch --explain` lists both request URLs.
 - **Missing IDs:** an ID in a valid format that doesn't exist returns 200 and is silently left out. It is not an error.
 - **Order and duplicates:** duplicates are removed, and results **do not come back in input order**. Match results to requests by ID.
 - **Paging:** `max_results` still applies. 50 IDs with the default `max_results` return only 10 entries.
