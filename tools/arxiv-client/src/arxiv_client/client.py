@@ -428,11 +428,15 @@ class ArxivClient:
         overwrite: bool = False,
         max_bytes: int = DEFAULT_MAX_PDF_BYTES,
         _pacer: Optional[Pacer] = None,
+        _latest: Optional[Mapping[str, int]] = None,
     ) -> PdfResult:
         """Download one PDF to ``dest_dir/<id>v<N>.pdf`` (old-style ``/`` becomes ``_``).
 
         For personal and research use only: arXiv PDFs are copyrighted, so don't re-host
         them. The file appears only once complete.
+
+        An existing file is not downloaded again. For an unversioned ID with some version on
+        disk, the latest version is looked up first (one query request).
         """
         aid = parse_id(arxiv_id)
         _check_int("max_bytes", max_bytes, 1)
@@ -442,6 +446,13 @@ class ArxivClient:
             target = os.path.join(dest_dir, _pdf_filename(aid.base, aid.version))
             if os.path.exists(target) and not overwrite:
                 return PdfResult(target, aid.base, aid.version, os.path.getsize(target), skipped=True)
+        elif not overwrite:
+            latest = self._latest_versions([arxiv_id], dest_dir) if _latest is None else _latest
+            known = latest.get(aid.base)
+            if known is not None:
+                target = os.path.join(dest_dir, _pdf_filename(aid.base, known))
+                if os.path.exists(target):
+                    return PdfResult(target, aid.base, known, os.path.getsize(target), skipped=True)
         url = "%s/%s" % (PDF_BASE, aid)
         # The transport maps network failures to ArxivError, so an OSError here is a local file problem.
         try:
@@ -488,15 +499,44 @@ class ArxivClient:
             raise ValidationError("at most %d PDFs per call, got %d" % (MAX_PDFS_PER_CALL, len(ids)))
         for i in ids:
             parse_id(i)
+        latest = {} if overwrite else self._latest_versions(ids, dest_dir)
         pacer = self._pacer(self._pdf_interval)
         done: List[PdfResult] = []
         for i in ids:
             try:
-                done.append(self.download_pdf(i, dest_dir, overwrite=overwrite, max_bytes=max_bytes, _pacer=pacer))
+                done.append(
+                    self.download_pdf(
+                        i, dest_dir, overwrite=overwrite, max_bytes=max_bytes, _pacer=pacer, _latest=latest
+                    )
+                )
             except ArxivError as e:
                 e.completed = list(done)  # type: ignore[attr-defined]
                 raise
         return done
+
+    def _latest_versions(self, ids: Sequence[str], dest_dir: str) -> Dict[str, int]:
+        """The latest version of each unversioned ID that has some version in ``dest_dir``.
+
+        One query request covers them all. It only saves a download, so a failed lookup
+        returns nothing and the PDF request goes ahead.
+        """
+        try:
+            names = os.listdir(dest_dir)
+        except OSError:
+            return {}
+        wanted = [str(a) for a in map(parse_id, ids) if a.version is None and _has_any_version(a.base, names)]
+        if not wanted:
+            return {}
+        try:
+            fetched = self.fetch(wanted)
+        except ArxivError:
+            return {}
+        return {p.id: p.version for p in fetched.papers.values() if p.version is not None}
+
+
+def _has_any_version(base: str, names: Sequence[str]) -> bool:
+    pattern = re.compile(re.escape(base.replace("/", "_")) + r"v\d+\.pdf")
+    return any(pattern.fullmatch(name) for name in names)
 
 
 def _match_ids(requested: Sequence[ArxivId], papers: Sequence[Paper], fallback: frozenset) -> Dict[ArxivId, Paper]:

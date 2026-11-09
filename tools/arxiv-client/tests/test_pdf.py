@@ -1,5 +1,6 @@
 import itertools
 import os
+import socket
 import tempfile
 import unittest
 
@@ -13,7 +14,16 @@ from arxiv_client import (
     ValidationError,
 )
 
-from tests.helpers import FakeClock, FakeOpener, FakeResponse, make_client, part_file_failing_after
+from tests.helpers import (
+    FakeClock,
+    FakeOpener,
+    FakeResponse,
+    make_client,
+    make_entry,
+    make_feed,
+    part_file_failing_after,
+    xml_response,
+)
 
 PDF = b"%PDF-1.5\n" + b"x" * 5000 + b"\n%%EOF"
 
@@ -69,6 +79,60 @@ class PdfTests(unittest.TestCase):
         r = self.client.download_pdf("2301.00001v1", self.dir)
         self.assertTrue(r.skipped)
         self.assertEqual(self.opener.requests, [])
+
+    def touch(self, name):
+        with open(os.path.join(self.dir, name), "wb") as f:
+            f.write(PDF)
+
+    def test_unversioned_id_with_the_latest_on_disk_is_skipped_after_one_query(self):
+        self.touch("2301.00001v2.pdf")
+        self.opener.add(xml_response(make_feed([make_entry("2301.00001", 2)])))
+        r = self.client.download_pdf("2301.00001", self.dir)
+        self.assertEqual((r.skipped, r.version), (True, 2))
+        self.assertEqual(len(self.opener.requests), 1)
+
+    def test_unversioned_id_with_an_older_version_on_disk_downloads_the_new_one(self):
+        self.touch("2301.00001v1.pdf")
+        self.opener.add(xml_response(make_feed([make_entry("2301.00001", 2)])))
+        self.opener.add(pdf_response(filename="2301.00001v2.pdf"))
+        r = self.client.download_pdf("2301.00001", self.dir)
+        self.assertEqual((r.skipped, r.version), (False, 2))
+        self.assertEqual(self.files(), ["2301.00001v1.pdf", "2301.00001v2.pdf"])
+
+    def test_a_failed_version_lookup_falls_back_to_the_download(self):
+        self.touch("2301.00001v1.pdf")
+        self.opener.add(socket.timeout("timed out"))
+        self.opener.add(pdf_response())
+        r = self.client.download_pdf("2301.00001", self.dir)
+        self.assertTrue(r.skipped)
+        self.assertEqual(len(self.opener.requests), 2)
+
+    def test_overwrite_skips_the_version_lookup(self):
+        self.touch("2301.00001v1.pdf")
+        self.opener.add(pdf_response())
+        r = self.client.download_pdf("2301.00001", self.dir, overwrite=True)
+        self.assertFalse(r.skipped)
+        self.assertEqual(len(self.opener.requests), 1)
+
+    def test_old_style_id_is_found_under_its_file_name(self):
+        self.touch("hep-th_9901001v1.pdf")
+        self.opener.add(xml_response(make_feed([make_entry("hep-th/9901001", 1)])))
+        self.assertTrue(self.client.download_pdf("hep-th/9901001", self.dir).skipped)
+        self.assertEqual(len(self.opener.requests), 1)
+
+    def test_a_file_for_a_longer_id_does_not_trigger_a_lookup(self):
+        self.touch("2301.000010v1.pdf")
+        self.opener.add(pdf_response())
+        self.assertFalse(self.client.download_pdf("2301.00001", self.dir).skipped)
+        self.assertEqual(len(self.opener.requests), 1)
+
+    def test_one_query_resolves_every_id_in_the_call(self):
+        self.touch("2301.00001v1.pdf")
+        self.touch("2301.00002v3.pdf")
+        self.opener.add(xml_response(make_feed([make_entry("2301.00001", 1), make_entry("2301.00002", 3)])))
+        results = self.client.download_pdfs(["2301.00001", "2301.00002"], self.dir)
+        self.assertEqual([r.skipped for r in results], [True, True])
+        self.assertEqual(len(self.opener.requests), 1)
 
     def test_overwrite_replaces_an_existing_file(self):
         with open(os.path.join(self.dir, "2301.00001v1.pdf"), "wb") as f:
