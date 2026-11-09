@@ -2,7 +2,7 @@ import datetime as dt
 import unittest
 
 from arxiv_client import Q, ValidationError
-from arxiv_client.query import encode_params, to_search_query
+from arxiv_client.query import STOPWORDS, encode_params, parse_free_text, to_search_query
 
 
 class QueryBuilderTests(unittest.TestCase):
@@ -25,6 +25,7 @@ class QueryBuilderTests(unittest.TestCase):
 
     def test_operator_words_are_quoted_not_operators(self):
         self.assertEqual(str(Q.all("AND")), 'all:"AND"')
+        self.assertEqual(str(Q.title("NOT")), 'ti:"NOT"')
 
     def test_operators_are_uppercase(self):
         q = Q.title("a") & Q.author("b") | Q.category("c")
@@ -111,6 +112,54 @@ class PlainTextTests(unittest.TestCase):
 
     def test_single_word(self):
         self.assertEqual(to_search_query("transformer"), "all:transformer")
+
+    def test_stopwords_are_dropped_before_the_words_are_joined(self):
+        # arXiv does not index stopwords: with "is" ANDed in, this query matched 0 papers.
+        self.assertEqual(
+            to_search_query("attention is all you need"),
+            "all:attention AND all:all AND all:you AND all:need",
+        )
+
+    def test_a_stopword_is_recognised_in_any_case_and_with_punctuation_around_it(self):
+        parsed = parse_free_text("The paper, is it (the) one?")
+        self.assertEqual(parsed.dropped, ("The", "is", "it", "(the)"))
+        # A kept word is sent as typed.
+        self.assertEqual(parsed.terms, ("paper,", "one?"))
+
+    def test_every_stopword_is_dropped(self):
+        self.assertEqual(len(STOPWORDS), 33)
+        parsed = parse_free_text("transformer " + " ".join(sorted(STOPWORDS)))
+        self.assertEqual(parsed.terms, ("transformer",))
+        self.assertEqual(len(parsed.dropped), 33)
+
+    def test_a_quoted_phrase_keeps_its_stopwords(self):
+        self.assertEqual(
+            to_search_query('"attention is all you need" by vaswani'),
+            'all:"attention is all you need" AND all:vaswani',
+        )
+
+    def test_text_of_only_stopwords_is_rejected(self):
+        with self.assertRaisesRegex(ValidationError, "only stopwords.*of the"):
+            to_search_query("of the")
+
+    def test_an_uppercase_operator_word_is_rejected(self):
+        for word in ("AND", "OR", "NOT", "ANDNOT"):
+            with self.subTest(word=word), self.assertRaisesRegex(ValidationError, "^%s is not an operator" % word):
+                to_search_query("attention %s transformer" % word)
+
+    def test_a_quoted_operator_word_is_searched_for(self):
+        self.assertEqual(to_search_query('"OR" gate'), 'all:"OR" AND all:gate')
+        self.assertEqual(to_search_query('"AND gate" circuits'), 'all:"AND gate" AND all:circuits')
+
+    def test_lowercase_operator_words_are_stopwords_and_are_dropped(self):
+        self.assertEqual(
+            to_search_query("attention and transformer or vision not text"),
+            "all:attention AND all:transformer AND all:vision AND all:text",
+        )
+
+    def test_a_hyphenated_word_with_a_stopword_inside_is_kept_whole(self):
+        # Measured: ti:state-of-the-art matches about as many papers as the phrase does.
+        self.assertEqual(to_search_query("state-of-the-art models"), "all:state-of-the-art AND all:models")
 
     def test_q_passes_through(self):
         self.assertEqual(to_search_query(Q.title("x")), "ti:x")

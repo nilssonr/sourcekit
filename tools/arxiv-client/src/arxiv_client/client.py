@@ -290,7 +290,8 @@ class ArxivClient:
         page_size: Optional[int] = None,
         strict: bool = False,
     ) -> SearchResults:
-        """Search lazily. A plain string becomes words joined with AND; use ``Q`` for more.
+        """Search lazily. A plain string is free text: its stopwords are dropped and the other
+        words are joined with AND (``Q.from_text``); use ``Q`` for more.
 
         ``max_results=None`` pages through everything (up to arXiv's 10000 limit).
         """

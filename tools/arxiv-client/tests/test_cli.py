@@ -87,6 +87,21 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(p["search_query"], ["all:protein AND all:folding AND submittedDate:[20230101 TO 20230131]"])
         self.assertEqual(p["sortBy"], ["submittedDate"])
 
+    def test_free_text_stopwords_are_left_out_of_the_request(self):
+        run = run_cli(["search", "--all", "attention is all you need"], [xml_response(make_feed([], total=0))])
+        self.assertEqual(run.code, 0, run.err)
+        self.assertEqual(
+            run.opener.requests[0].params["search_query"], ["all:attention AND all:all AND all:you AND all:need"]
+        )
+
+    def test_an_operator_word_in_free_text_is_a_validation_error_and_nothing_is_sent(self):
+        run = run_cli(["search", "--all", "attention OR transformer"], [])
+        self.assertEqual(run.code, 2)
+        self.assertEqual(error_payload(run)["error"], "validation")
+        self.assertIn("OR is not an operator", error_payload(run)["message"])
+        self.assertIn("--raw", error_payload(run)["message"])
+        self.assertEqual(run.opener.requests, [])
+
     def test_search_without_a_filter_is_a_validation_error(self):
         run = run_cli(["search"], [])
         self.assertEqual(run.code, 2)
@@ -177,6 +192,47 @@ class ExplainAndDryRunTests(unittest.TestCase):
         self.assertEqual(data["server_query"], "all:bar AND all:foo")
         self.assertEqual(len(data["request_urls"]), 1)
         self.assertIn("search_query=all:foo%20AND%20all:bar", data["request_urls"][0])
+
+    def test_explain_lists_the_stopwords_dropped_from_free_text(self):
+        feed = xml_response(make_feed([make_entry("2401.00001")], server_query="all:attention AND all:need"))
+        run = run_cli(["search", "--all", "attention is what you need", "--all", "the end", "--explain"], [feed])
+        self.assertEqual(run.code, 0, run.err)
+        data = json.loads(run.out)
+        self.assertEqual(data["query"], "all:attention AND all:what AND all:you AND all:need AND all:end")
+        self.assertEqual(data["dropped_words"], ["is", "the"])
+
+    def test_explain_reports_no_dropped_words_as_an_empty_list(self):
+        feed = xml_response(make_feed([make_entry("2401.00001")], server_query="all:foo"))
+        run = run_cli(["search", "--all", "foo", "--explain"], [feed])
+        self.assertEqual(json.loads(run.out)["dropped_words"], [])
+
+    def test_compact_explain_adds_a_dropped_line_when_words_were_dropped(self):
+        feed = xml_response(make_feed([make_entry("2401.00001")], server_query="all:transformer"))
+        run = run_cli(["search", "--all", "the transformer", "--explain", "--format", "compact"], [feed])
+        lines = run.out.splitlines()
+        self.assertEqual(lines[1], "   server [all:transformer]")
+        self.assertEqual(lines[2], "   dropped [the]")
+        self.assertTrue(lines[3].startswith("2401.00001 |"))
+
+    def test_dry_run_lists_the_dropped_words(self):
+        run = run_cli(["search", "--all", "transformers for protein folding", "--dry-run"], [])
+        data = json.loads(run.out)
+        self.assertEqual(data["query"], "all:transformers AND all:protein AND all:folding")
+        self.assertEqual(data["dropped_words"], ["for"])
+        self.assertEqual(run.opener.requests, [])
+
+    def test_batch_reports_dropped_words_per_query(self):
+        stdin = json.dumps([{"label": "a", "all": "the transformer"}, {"label": "b", "title": "x"}])
+        run = run_cli(["batch", "-", "--dry-run"], [], stdin=stdin)
+        data = json.loads(run.out)
+        self.assertEqual([q["dropped_words"] for q in data["queries"]], [["the"], []])
+
+    def test_a_batch_item_with_an_operator_word_is_named_and_nothing_is_sent(self):
+        stdin = json.dumps([{"label": "fine", "all": "transformer"}, {"label": "bad", "all": "attention OR vision"}])
+        run = run_cli(["batch", "-"], [], stdin=stdin)
+        self.assertEqual(run.code, 2)
+        self.assertIn("batch item 2 (bad): OR is not an operator", error_payload(run)["message"])
+        self.assertEqual(run.opener.requests, [])
 
     def test_without_explain_the_output_is_unchanged(self):
         run = run_cli(["search", "--all", "foo"], [feed_of("2401.00001")])

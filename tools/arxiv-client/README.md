@@ -35,16 +35,18 @@ arxiv pdf 2301.00001 --out ./papers
 
 **Search filters:**
 - Field flags (`--title`, `--author`, `--abstract`, `--comment`, `--journal-ref`, `--category`, `--report-number`) can be repeated. Their text becomes a quoted phrase when it has more than one word.
-- `--all` is free text. Its words are joined with `AND`, and `"quoted"` parts stay phrases.
-  - **A stopword among them returns 0 results**, because arXiv does not index stopwords: `--all "attention is all you need"` finds nothing, while `--all '"attention is all you need"'` finds 47 papers. See [`docs/arxiv-api.md`](docs/arxiv-api.md) §8.1.
+- `--all` is free text. Its stopwords (`the`, `of`, `is` and 30 more) are dropped, the remaining words are joined with `AND`, and `"quoted"` parts stay phrases.
+  - **Why stopwords are dropped:** arXiv does not index them, so one stopword in an `AND` query returns nothing. `--explain` and `--dry-run` list the dropped words as `dropped_words`.
+  - **An uppercase `AND`, `OR`, `NOT` or `ANDNOT` is rejected** (exit 2), because free text has no operators. Use `--raw` for a boolean query, or put the word in double quotes to search for it.
+  - **Dropping stopwords does not make a sentence a good query.** Words about the request, such as *paper* or *recent*, are still ANDed. See [`docs/arxiv-api.md`](docs/arxiv-api.md) §8.
 - `--any-category` can be repeated. Its values are joined with `OR`, so `--any-category cs.HC --any-category cs.CV` matches papers in either. (`--category` values are joined with `AND`, like the other field flags.)
 - `--raw` is passed through verbatim.
 - All filters are joined with `AND`.
 
 **Checking a query** (`search` and `batch`):
-- `--explain` adds two fields to the output. `server_query` is the query as arXiv parsed it, read from the feed title. `request_urls` lists the URL of each page requested. In compact output, `server_query` is a second header line.
+- `--explain` adds three fields to the output. `server_query` is the query as arXiv parsed it, read from the feed title. `request_urls` lists the URL of each page requested. `dropped_words` lists the stopwords left out of `--all` text. In compact output, `server_query` is a second header line, and the dropped words are a third when there are any.
   - arXiv rewrites some input without an error, and `server_query` is the only place that shows it. For example, `lastUpdatedDate:[…]` becomes `submittedDate:"…"`, `au:Hinton_G` becomes `au:"Hinton G"`, and terms with no operator between them are joined with `OR`.
-- `--dry-run` builds and validates the query, prints it with its first-page URL, and sends nothing.
+- `--dry-run` builds and validates the query, prints it with its `dropped_words` and its first-page URL, and sends nothing.
 
 **Batch:** `batch FILE` runs up to 20 searches in one call.
 - **Input:** `FILE`, or `-` for stdin, holds a JSON list of query objects.
@@ -102,7 +104,7 @@ client.download_pdf("2301.00001", "./papers")
 - Field constructors: `title`, `author`, `abstract`, `comment`, `journal_ref`, `category`, `report_number`, `id`, `all`.
 - Other constructors: `phrase`, `submitted_between`, and `raw`.
 - Operators: `&` for AND, `|` for OR, `-` for ANDNOT.
-- A plain string becomes words joined with `AND`.
+- A plain string is free text, as with `--all`: its stopwords are dropped and the remaining words are joined with `AND`. An uppercase operator word raises `ValidationError`.
 
 There is no `lastUpdatedDate` filter, because arXiv silently rewrites it to `submittedDate`. Use `client.scan_revisions(query, known)` instead. It pages through `sortBy=lastUpdatedDate` and stops after N pages with nothing new.
 

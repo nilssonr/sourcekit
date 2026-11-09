@@ -5,7 +5,9 @@
     q = Q.all("transformer") & Q.submitted_between("20230101", "20230131")
 
 Field text with several words becomes a quoted phrase. Operators are always the
-uppercase ``AND``/``OR``/``ANDNOT``. Diacritics are never altered. There is
+uppercase ``AND``/``OR``/``ANDNOT``. Diacritics are never altered. Free text
+(``Q.from_text``, or a plain string given to the client) has no operators: its
+stopwords are dropped and the remaining words are ANDed. There is
 deliberately no ``lastUpdatedDate`` filter: the server silently rewrites it to
 ``submittedDate``. Use ``ArxivClient.scan_revisions`` to find revised papers.
 """
@@ -14,7 +16,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import re
-from typing import Optional, Union
+from typing import NamedTuple, Optional, Tuple, Union
 from urllib.parse import quote, urlencode
 
 from .errors import ValidationError
@@ -31,11 +33,94 @@ FIELDS = {
     "all": "all",
 }
 
-_OPERATOR_WORDS = {"AND", "OR", "ANDNOT", "TO"}
+_OPERATOR_WORDS = {"AND", "OR", "NOT", "ANDNOT", "TO"}
+# Words arXiv does not index in titles and abstracts (docs/arxiv-api.md section 2.2). Each one
+# was measured: ``ti:<word>`` matches 0 papers, so ANDing it into a query returns nothing.
+STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "but",
+        "by",
+        "for",
+        "if",
+        "in",
+        "into",
+        "is",
+        "it",
+        "no",
+        "not",
+        "of",
+        "on",
+        "or",
+        "such",
+        "that",
+        "the",
+        "their",
+        "then",
+        "there",
+        "these",
+        "they",
+        "this",
+        "to",
+        "was",
+        "will",
+        "with",
+    }
+)
+_FREE_TEXT_OPERATORS = ("AND", "OR", "NOT", "ANDNOT")
+# Stripped only to recognise a stopword ("is," or "(the"); a kept word is sent as typed.
+_EDGE_PUNCTUATION = ".,;:!?()[]{}'\""
 _NEEDS_QUOTES = re.compile(r"[\s():\[\]]")
 _DATE_RE = re.compile(r"^\d{8}(?:\d{4}(?:\d{2})?)?$")
 
 DateLike = Union[str, _dt.date, _dt.datetime]
+
+
+class FreeText(NamedTuple):
+    """Plain user text, split: ``terms`` are ANDed, ``dropped`` are the stopwords left out."""
+
+    terms: Tuple[str, ...]
+    dropped: Tuple[str, ...]
+
+
+def parse_free_text(text: str) -> FreeText:
+    """Split plain user text into the terms to search for and the stopwords to leave out.
+
+    Words are separated by whitespace; a segment in double quotes is one term and is kept
+    whole, stopwords and all (arXiv drops them from a phrase itself). An unquoted stopword is
+    dropped, in any case and with punctuation around it. An unquoted uppercase ``AND``,
+    ``OR``, ``NOT`` or ``ANDNOT`` is rejected: free text has no operators, and sent as a
+    word it would silently change the query.
+    """
+    terms = []
+    dropped = []
+    for m in re.finditer(r'"([^"]*)"|(\S+)', text or ""):
+        if m.group(1) is not None:
+            phrase = m.group(1).strip()
+            if phrase:
+                terms.append(phrase)
+            continue
+        word = m.group(2)
+        if word in _FREE_TEXT_OPERATORS:
+            raise ValidationError(
+                "%s is not an operator in free text. For a boolean query use --raw (Q.raw in the library); "
+                'to search for the word itself, put it in double quotes: "%s"' % (word, word)
+            )
+        if word.strip(_EDGE_PUNCTUATION).lower() in STOPWORDS:
+            dropped.append(word)
+        else:
+            terms.append(word)
+    if not terms:
+        if dropped:
+            raise ValidationError("search text has only stopwords, which arXiv does not index: %s" % " ".join(dropped))
+        raise ValidationError("empty search text")
+    return FreeText(tuple(terms), tuple(dropped))
 
 
 class Q:
@@ -114,16 +199,12 @@ class Q:
 
     @classmethod
     def from_text(cls, text: str) -> "Q":
-        """Plain user text: words joined with AND; segments in double quotes stay phrases.
+        """Plain user text: stopwords dropped, the other words joined with AND; segments in
+        double quotes stay phrases. See ``parse_free_text`` for the rules.
 
-        ``transformer protein folding`` -> ``all:transformer AND all:protein AND all:folding``.
+        ``transformers for protein folding`` -> ``all:transformers AND all:protein AND all:folding``.
         """
-        parts = [
-            m.group(1) if m.group(1) is not None else m.group(2) for m in re.finditer(r'"([^"]*)"|(\S+)', text or "")
-        ]
-        parts = [p for p in (p.strip() for p in parts) if p]
-        if not parts:
-            raise ValidationError("empty search text")
+        parts = parse_free_text(text).terms
         result = cls.all(parts[0])
         for p in parts[1:]:
             result = result & cls.all(p)

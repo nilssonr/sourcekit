@@ -34,7 +34,7 @@ from .errors import (
     ValidationError,
 )
 from .models import Paper
-from .query import Q
+from .query import Q, parse_free_text
 from .transport import DEFAULT_USER_AGENT
 
 EXIT_CODES = (
@@ -98,7 +98,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         metavar="TEXT",
-        help='free text: words are ANDed; "quoted" parts stay phrases',
+        help='free text: stopwords are dropped, the other words are ANDed; "quoted" parts stay phrases',
     )
     s.add_argument(
         "--any-category",
@@ -246,9 +246,19 @@ def _first_page_url(client: ArxivClient, q: Q, max_results: int, sort: str, orde
     return client.query_url(q, 0, min(client.page_size, max_results), SORTS[sort], order)
 
 
-def _explain(target: Dict[str, Any], results) -> None:
+def _dropped_words(spec: Dict[str, Any]) -> List[str]:
+    """The stopwords left out of the query's free text (``all``), in the order given."""
+    return [w for v in _strings("all", spec.get("all")) for w in parse_free_text(v).dropped]
+
+
+def _dropped_line(dropped: List[str]) -> List[str]:
+    return ["   dropped [%s]" % " ".join(dropped)] if dropped else []
+
+
+def _explain(target: Dict[str, Any], results, dropped: List[str]) -> None:
     target["server_query"] = results.server_query
     target["request_urls"] = list(results.request_urls)
+    target["dropped_words"] = dropped
 
 
 def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[object, Optional[str]]:
@@ -275,21 +285,27 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
             results = client.search(q, max_results=max_results, sort_by=SORTS[sort], sort_order=order)
         except ValidationError as e:
             raise ValidationError("batch item %d (%s): %s" % (i + 1, label, e)) from None
-        planned.append((label, q, results, max_results, sort, order))
+        planned.append((label, q, results, max_results, sort, order, _dropped_words(item)))
 
     if args.dry_run:
         plan = [
-            {"label": label, "query": q.expr, "request_url": _first_page_url(client, q, m, sort, order)}
-            for label, q, _results, m, sort, order in planned
+            {
+                "label": label,
+                "query": q.expr,
+                "dropped_words": dropped,
+                "request_url": _first_page_url(client, q, m, sort, order),
+            }
+            for label, q, _results, m, sort, order, dropped in planned
         ]
         return {"dry_run": True, "queries": plan}, "\n".join(
-            "## %s  [%s]\n%s" % (p["label"], p["query"], p["request_url"]) for p in plan
+            "\n".join(["## %s  [%s]" % (p["label"], p["query"]), *_dropped_line(p["dropped_words"]), p["request_url"]])
+            for p in plan
         )
 
     queries: List[Dict[str, Any]] = []
     papers: Dict[str, Dict[str, Any]] = {}
     lines: List[str] = []
-    for label, q, results, _max_results, _sort, _order in planned:
+    for label, q, results, _max_results, _sort, _order, dropped in planned:
         try:
             found = list(results)
         except ArxivError as e:
@@ -303,6 +319,7 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
         )
         if args.explain:
             lines.append("   server [%s]" % results.server_query)
+            lines.extend(_dropped_line(dropped))
         for paper in found:
             ids.append(paper.id)
             new = paper.id not in papers
@@ -321,7 +338,7 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
             "ids": ids,
         }
         if args.explain:
-            _explain(entry, results)
+            _explain(entry, results, dropped)
         queries.append(entry)
     lines.append("# %d unique papers from %d queries (* = first seen)" % (len(papers), len(queries)))
     result = {"queries": queries, "papers": papers, "unique": len(papers)}
@@ -331,13 +348,16 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
 def _run(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[object, Optional[str]]:
     """Returns (JSON result, compact text or None)."""
     if args.command == "search":
-        q = _build_query(_search_spec(args))
+        spec = _search_spec(args)
+        q = _build_query(spec)
+        dropped = _dropped_words(spec)
         results = client.search(
             q, max_results=args.max, sort_by=SORTS[args.sort], sort_order=args.order, strict=args.strict
         )
         if args.dry_run:
             url = _first_page_url(client, q, args.max, args.sort, args.order)
-            return {"dry_run": True, "query": q.expr, "request_url": url}, "## [%s]\n%s" % (q.expr, url)
+            result = {"dry_run": True, "query": q.expr, "dropped_words": dropped, "request_url": url}
+            return result, "\n".join(["## [%s]" % q.expr, *_dropped_line(dropped), url])
         found = list(results)
         result = {
             "query": q.expr,
@@ -347,7 +367,7 @@ def _run(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[
             "papers": [_paper_dict(p, args.abstract_chars) for p in found],
         }
         if args.explain:
-            _explain(result, results)
+            _explain(result, results, dropped)
         header = "## [%s]  total=%s  shown=%d%s" % (
             q.expr,
             results.total_results,
@@ -357,6 +377,7 @@ def _run(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[
         lines = [header]
         if args.explain:
             lines.append("   server [%s]" % results.server_query)
+            lines.extend(_dropped_line(dropped))
         return result, "\n".join(lines + [_compact_line(p) for p in found])
     if args.command == "batch":
         return _run_batch(args, client, stdin)
