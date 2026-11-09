@@ -36,8 +36,10 @@ arxiv pdf 2301.00001 --out ./papers
 
 **Search filters:**
 - Field flags (`--title`, `--author`, `--abstract`, `--comment`, `--journal-ref`, `--category`, `--report-number`) can be repeated. Their text becomes a quoted phrase when it has more than one word.
+  - On a single word, a trailing `*` or `?` is a wildcard. `?` stands for one character: `--title "attention?"` matched 2 papers where `--title attention` matched 14,795. Inside a phrase arXiv ignores a `?`, so a pasted title can keep its question mark.
 - `--all` is free text. Its stopwords (`the`, `of`, `is` and 30 more) are dropped, the remaining words are joined with `AND`, and `"quoted"` parts stay phrases.
   - **Why stopwords are dropped:** arXiv does not index them, so one stopword in an `AND` query returns nothing. `--explain` and `--dry-run` list the dropped words as `dropped_words`.
+  - **A trailing `?` and a possessive `'s` are removed from a word.** arXiv reads `?` as a one-character wildcard (`attention?` matched 2 papers, `attention` 14,795), and a possessive narrows the match (`Maldacena's` 982, `Maldacena` 1,171). `--explain` and `--dry-run` list each change as `changed_words`. A `"quoted"` part is sent as typed.
   - **An uppercase `AND`, `OR`, `NOT` or `ANDNOT` is rejected** (exit 2), because free text has no operators. Use `--raw` for a boolean query, or put the word in double quotes to search for it.
   - **Dropping stopwords does not make a sentence a good query.** Words about the request, such as *paper* or *recent*, are still ANDed. See [`docs/arxiv-api.md`](docs/arxiv-api.md) §8.
 - `--id` searches by ID and can be repeated. It takes an unversioned new-style ID, or the start of one with a trailing `*`: `--id '1706.037*'` finds the 100 papers with that prefix.
@@ -50,9 +52,14 @@ arxiv pdf 2301.00001 --out ./papers
 **Sorting:** `--sort` is `relevance` (the default), `submitted` or `updated`. `--order ascending` needs `--sort submitted` or `--sort updated`. With relevance it is rejected (exit 2), because arXiv would return the least relevant papers first.
 
 **Checking a query** (`search` and `batch`):
-- `--explain` adds three fields to the output. `server_query` is the query as arXiv parsed it, read from the feed title. `request_urls` lists the URL of each page requested. `dropped_words` lists the stopwords left out of `--all` text. In compact output, `server_query` is a second header line, and the dropped words are a third when there are any.
+- `--explain` adds four fields to the output.
+  - `server_query` is the query as arXiv parsed it, read from the feed title.
+  - `request_urls` lists the URL of each page requested.
+  - `dropped_words` lists the words left out of `--all` text: stopwords, and a word with nothing left, such as a lone `?`.
+  - `changed_words` lists the `--all` words that were altered, each as `{"typed": "attention?", "sent": "attention"}`.
+  - In compact output, `server_query` is a second header line. A `dropped [...]` line and a `changed [...]` line follow when there are any.
   - arXiv rewrites some input without an error, and `server_query` is the only place that shows it. For example, `lastUpdatedDate:[…]` becomes `submittedDate:"…"`, `au:Hinton_G` becomes `au:"Hinton G"`, and terms with no operator between them are joined with `OR`.
-- `--dry-run` builds and validates the query, prints it with its `dropped_words` and its first-page URL, and sends nothing.
+- `--dry-run` builds and validates the query, prints it with its `dropped_words`, its `changed_words` and its first-page URL, and sends nothing.
 - `fetch --explain` adds `request_urls`, the URL of every request sent. When an old-style versioned ID makes arXiv answer 500, it lists that URL and then the unversioned retry. In compact output each URL is a `# request:` line at the end.
 
 **Batch:** `batch FILE` runs up to 20 searches in one call.
@@ -114,7 +121,7 @@ client.download_pdf("2301.00001", "./papers")
 - Operators: `&` for AND, `|` for OR, `-` for ANDNOT.
 - `Q.id` takes an unversioned new-style ID or a prefix with a trailing `*`. It raises `ValidationError` for a versioned or old-style ID, which an `id:` search cannot match. Use `client.fetch` for those.
 - `sort_order="ascending"` needs `sort_by="submittedDate"` or `"lastUpdatedDate"`. With relevance it raises `ValidationError`.
-- A plain string is free text, as with `--all`: its stopwords are dropped and the remaining words are joined with `AND`. An uppercase operator word raises `ValidationError`.
+- A plain string is free text, as with `--all`: its stopwords are dropped, a trailing `?` or `'s` is removed from a word, and the remaining words are joined with `AND`. An uppercase operator word raises `ValidationError`.
 
 There is no `lastUpdatedDate` filter, because arXiv silently rewrites it to `submittedDate`. Use `client.scan_revisions(query, known)` instead. It pages through `sortBy=lastUpdatedDate` and stops after N pages with nothing new.
 

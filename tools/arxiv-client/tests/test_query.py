@@ -150,8 +150,60 @@ class PlainTextTests(unittest.TestCase):
     def test_a_stopword_is_recognised_in_any_case_and_with_punctuation_around_it(self):
         parsed = parse_free_text("The paper, is it (the) one?")
         self.assertEqual(parsed.dropped, ("The", "is", "it", "(the)"))
-        # A kept word is sent as typed.
-        self.assertEqual(parsed.terms, ("paper,", "one?"))
+        # A kept word keeps its punctuation, except a trailing question mark.
+        self.assertEqual(parsed.terms, ("paper,", "one"))
+
+    def test_a_trailing_question_mark_is_removed_and_reported(self):
+        # arXiv reads ? as "any one character": ti:attention? matched 2 papers, ti:attention 14,795.
+        parsed = parse_free_text("what is attention?")
+        self.assertEqual(parsed.terms, ("what", "attention"))
+        self.assertEqual(parsed.dropped, ("is",))
+        self.assertEqual(parsed.changed, (("attention?", "attention"),))
+        self.assertEqual(to_search_query("what is attention?"), "all:what AND all:attention")
+
+    def test_a_question_mark_among_other_trailing_punctuation_is_removed(self):
+        for typed, sent in (("need??", "need"), ("need?!", "need!"), ("need?,", "need,"), ("(need?)", "(need)")):
+            with self.subTest(typed=typed):
+                self.assertEqual(parse_free_text(typed), ((sent,), (), ((typed, sent),)))
+
+    def test_a_question_mark_inside_a_word_is_kept(self):
+        self.assertEqual(parse_free_text("wom?n"), (("wom?n",), (), ()))
+
+    def test_a_possessive_is_removed_and_reported(self):
+        # all:Maldacena's and all:Maldacena’s each matched 982 papers, all:Maldacena 1,171.
+        for typed, sent in (
+            ("Maldacena's", "Maldacena"),
+            ("Maldacena’s", "Maldacena"),
+            ("MALDACENA'S", "MALDACENA"),
+            ("Maldacena's,", "Maldacena,"),
+            ("Maldacena's?", "Maldacena"),
+        ):
+            with self.subTest(typed=typed):
+                self.assertEqual(parse_free_text(typed), ((sent,), (), ((typed, sent),)))
+
+    def test_an_apostrophe_that_is_not_a_possessive_is_kept(self):
+        self.assertEqual(parse_free_text("O'Brien authors' rock'n'roll").terms, ("O'Brien", "authors'", "rock'n'roll"))
+        self.assertEqual(parse_free_text("O'Brien authors' rock'n'roll").changed, ())
+
+    def test_a_word_that_becomes_a_stopword_is_dropped_not_changed(self):
+        parsed = parse_free_text("it's that's attention")
+        self.assertEqual(parsed, (("attention",), ("it's", "that's"), ()))
+
+    def test_a_word_with_nothing_left_is_dropped(self):
+        self.assertEqual(parse_free_text("attention ? 's"), (("attention",), ("?", "'s"), ()))
+
+    def test_text_with_no_word_left_is_rejected(self):
+        with self.assertRaisesRegex(ValidationError, r"no word to search for: \? the"):
+            to_search_query("? the")
+
+    def test_a_quoted_phrase_keeps_its_question_mark_and_possessive(self):
+        # Measured: arXiv ignores a ? inside a phrase.
+        parsed = parse_free_text('"is attention all you need?" "Maldacena\'s conjecture"')
+        self.assertEqual(parsed, (("is attention all you need?", "Maldacena's conjecture"), (), ()))
+
+    def test_a_field_search_keeps_a_trailing_question_mark_as_a_wildcard(self):
+        self.assertEqual(str(Q.title("attention?")), "ti:attention?")
+        self.assertEqual(str(Q.title("is attention all you need?")), 'ti:"is attention all you need?"')
 
     def test_every_stopword_is_dropped(self):
         self.assertEqual(len(STOPWORDS), 33)

@@ -7,7 +7,8 @@
 Field text with several words becomes a quoted phrase. Operators are always the
 uppercase ``AND``/``OR``/``ANDNOT``. Diacritics are never altered. Free text
 (``Q.from_text``, or a plain string given to the client) has no operators: its
-stopwords are dropped and the remaining words are ANDed. There is
+stopwords are dropped, a trailing ``?`` or possessive ``'s`` is removed from a
+word, and the remaining words are ANDed. There is
 deliberately no ``lastUpdatedDate`` filter: the server silently rewrites it to
 ``submittedDate``. Use ``ArxivClient.scan_revisions`` to find revised papers.
 """
@@ -75,8 +76,12 @@ STOPWORDS = frozenset(
     }
 )
 _FREE_TEXT_OPERATORS = ("AND", "OR", "NOT", "ANDNOT")
-# Stripped only to recognise a stopword ("is," or "(the"); a kept word is sent as typed.
+# Stripped to recognise a stopword ("is," or "(the"). A kept word is sent with its
+# punctuation, except what ``_clean_word`` removes.
 _EDGE_PUNCTUATION = ".,;:!?()[]{}'\""
+# Measured (docs/arxiv-api.md section 2.2): all:Maldacena's and all:Maldacena’s each match
+# 982 papers, all:Maldacena 1,171.
+_POSSESSIVES = ("'s", "\u2019s")
 _NEEDS_QUOTES = re.compile(r"[\s():\[\]]")
 _DATE_RE = re.compile(r"^\d{8}(?:\d{4}(?:\d{2})?)?$")
 
@@ -84,23 +89,42 @@ DateLike = Union[str, _dt.date, _dt.datetime]
 
 
 class FreeText(NamedTuple):
-    """Plain user text, split: ``terms`` are ANDed, ``dropped`` are the stopwords left out."""
+    """Plain user text, split. ``terms`` are ANDed. ``dropped`` are the words left out, as
+    typed. ``changed`` pairs each word that was altered, as typed, with the term sent."""
 
     terms: Tuple[str, ...]
     dropped: Tuple[str, ...]
+    changed: Tuple[Tuple[str, str], ...] = ()
+
+
+def _clean_word(word: str) -> str:
+    """Remove what arXiv misreads at the end of an unquoted free-text word.
+
+    A ``?`` among the trailing punctuation is a one-character wildcard (``ti:attention?``
+    matches 2 papers, ``ti:attention`` 14,795), and a possessive narrows the match.
+    """
+    core = word.rstrip(_EDGE_PUNCTUATION)
+    tail = word[len(core) :].replace("?", "")
+    if core.lower().endswith(_POSSESSIVES):
+        core = core[:-2]
+    return core + tail
 
 
 def parse_free_text(text: str) -> FreeText:
     """Split plain user text into the terms to search for and the stopwords to leave out.
 
     Words are separated by whitespace; a segment in double quotes is one term and is kept
-    whole, stopwords and all (arXiv drops them from a phrase itself). An unquoted stopword is
-    dropped, in any case and with punctuation around it. An unquoted uppercase ``AND``,
-    ``OR``, ``NOT`` or ``ANDNOT`` is rejected: free text has no operators, and sent as a
-    word it would silently change the query.
+    whole and as typed, stopwords and all (arXiv drops them from a phrase itself, and ignores
+    a ``?`` inside one). An unquoted word loses a trailing ``?`` and a possessive ``'s``,
+    and is reported in ``changed``. An unquoted stopword is dropped, in any case and with
+    punctuation around it; so is a word with nothing left, such as a lone ``?``. An unquoted
+    uppercase ``AND``, ``OR``, ``NOT`` or ``ANDNOT`` is rejected: free text has no operators,
+    and sent as a word it would silently change the query.
     """
     terms = []
     dropped = []
+    changed = []
+    only_stopwords = True
     for m in re.finditer(r'"([^"]*)"|(\S+)', text or ""):
         if m.group(1) is not None:
             phrase = m.group(1).strip()
@@ -113,15 +137,24 @@ def parse_free_text(text: str) -> FreeText:
                 "%s is not an operator in free text. For a boolean query use --raw (Q.raw in the library); "
                 'to search for the word itself, put it in double quotes: "%s"' % (word, word)
             )
-        if word.strip(_EDGE_PUNCTUATION).lower() in STOPWORDS:
+        sent = _clean_word(word)
+        bare = sent.strip(_EDGE_PUNCTUATION)
+        if bare.lower() in STOPWORDS:
             dropped.append(word)
+        elif sent != word and not bare:
+            dropped.append(word)
+            only_stopwords = False
         else:
-            terms.append(word)
+            terms.append(sent)
+            if sent != word:
+                changed.append((word, sent))
     if not terms:
-        if dropped:
+        if dropped and only_stopwords:
             raise ValidationError("search text has only stopwords, which arXiv does not index: %s" % " ".join(dropped))
+        if dropped:
+            raise ValidationError("search text has no word to search for: %s" % " ".join(dropped))
         raise ValidationError("empty search text")
-    return FreeText(tuple(terms), tuple(dropped))
+    return FreeText(tuple(terms), tuple(dropped), tuple(changed))
 
 
 class Q:
@@ -205,8 +238,9 @@ class Q:
 
     @classmethod
     def from_text(cls, text: str) -> "Q":
-        """Plain user text: stopwords dropped, the other words joined with AND; segments in
-        double quotes stay phrases. See ``parse_free_text`` for the rules.
+        """Plain user text: stopwords dropped, a trailing ``?`` or ``'s`` removed, the other
+        words joined with AND; segments in double quotes stay phrases. See ``parse_free_text``
+        for the rules.
 
         ``transformers for protein folding`` -> ``all:transformers AND all:protein AND all:folding``.
         """

@@ -21,7 +21,7 @@ import datetime as _dt
 import json
 import os
 import sys
-from typing import Any, Callable, Dict, List, Optional, Sequence, TextIO, Tuple
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence, TextIO, Tuple
 
 from .client import ArxivClient, _check_int
 from .errors import (
@@ -60,7 +60,8 @@ def _add_query_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--explain",
         action="store_true",
-        help="add request_url(s) and server_query (the query as arXiv parsed it) to the output",
+        help="add request_url(s), server_query (the query as arXiv parsed it) and the free-text "
+        "words dropped or changed to the output",
     )
     parser.add_argument(
         "--dry-run", action="store_true", help="build and validate the query, print it with its URL, send nothing"
@@ -97,7 +98,8 @@ def _build_parser() -> argparse.ArgumentParser:
             action="append",
             default=[],
             metavar="TEXT",
-            help="field search (repeatable; multi-word text is a phrase)",
+            help="field search (repeatable; multi-word text is a phrase; "
+            "on a single word a trailing * or ? is a wildcard)",
         )
     s.add_argument(
         "--id",
@@ -111,7 +113,8 @@ def _build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         metavar="TEXT",
-        help='free text: stopwords are dropped, the other words are ANDed; "quoted" parts stay phrases',
+        help="free text: stopwords are dropped, a trailing ? or 's is removed from a word, "
+        'the other words are ANDed; "quoted" parts stay phrases',
     )
     s.add_argument(
         "--any-category",
@@ -268,19 +271,37 @@ def _first_page_url(client: ArxivClient, q: Q, max_results: int, sort: str, orde
     return client.query_url(q, 0, min(client.page_size, max_results), SORTS[sort], order)
 
 
-def _dropped_words(spec: Dict[str, Any]) -> List[str]:
-    """The stopwords left out of the query's free text (``all``), in the order given."""
-    return [w for v in _strings("all", spec.get("all")) for w in parse_free_text(v).dropped]
+class TextNotes(NamedTuple):
+    """What the client did to the query's free text (``all``), in the order given."""
+
+    dropped: List[str]  # words left out, as typed
+    changed: List[Dict[str, str]]  # words altered: {"typed": ..., "sent": ...}
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"dropped_words": self.dropped, "changed_words": self.changed}
+
+    def lines(self) -> List[str]:
+        """The compact-output lines; none when nothing was dropped or changed."""
+        out = []
+        if self.dropped:
+            out.append("   dropped [%s]" % " ".join(self.dropped))
+        if self.changed:
+            out.append("   changed [%s]" % ", ".join("%s -> %s" % (c["typed"], c["sent"]) for c in self.changed))
+        return out
 
 
-def _dropped_line(dropped: List[str]) -> List[str]:
-    return ["   dropped [%s]" % " ".join(dropped)] if dropped else []
+def _text_notes(spec: Dict[str, Any]) -> TextNotes:
+    parsed = [parse_free_text(v) for v in _strings("all", spec.get("all"))]
+    return TextNotes(
+        [w for p in parsed for w in p.dropped],
+        [{"typed": typed, "sent": sent} for p in parsed for typed, sent in p.changed],
+    )
 
 
-def _explain(target: Dict[str, Any], results, dropped: List[str]) -> None:
+def _explain(target: Dict[str, Any], results, notes: TextNotes) -> None:
     target["server_query"] = results.server_query
     target["request_urls"] = list(results.request_urls)
-    target["dropped_words"] = dropped
+    target.update(notes.to_dict())
 
 
 def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[object, Optional[str]]:
@@ -307,27 +328,21 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
             results = client.search(q, max_results=max_results, sort_by=SORTS[sort], sort_order=order)
         except ValidationError as e:
             raise ValidationError("batch item %d (%s): %s" % (i + 1, label, e)) from None
-        planned.append((label, q, results, max_results, sort, order, _dropped_words(item)))
+        planned.append((label, q, results, max_results, sort, order, _text_notes(item)))
 
     if args.dry_run:
-        plan = [
-            {
-                "label": label,
-                "query": q.expr,
-                "dropped_words": dropped,
-                "request_url": _first_page_url(client, q, m, sort, order),
-            }
-            for label, q, _results, m, sort, order, dropped in planned
-        ]
-        return {"dry_run": True, "queries": plan}, "\n".join(
-            "\n".join(["## %s  [%s]" % (p["label"], p["query"]), *_dropped_line(p["dropped_words"]), p["request_url"]])
-            for p in plan
-        )
+        plan = []
+        plan_lines: List[str] = []
+        for label, q, _results, m, sort, order, notes in planned:
+            url = _first_page_url(client, q, m, sort, order)
+            plan.append({"label": label, "query": q.expr, **notes.to_dict(), "request_url": url})
+            plan_lines.extend(["## %s  [%s]" % (label, q.expr), *notes.lines(), url])
+        return {"dry_run": True, "queries": plan}, "\n".join(plan_lines)
 
     queries: List[Dict[str, Any]] = []
     papers: Dict[str, Dict[str, Any]] = {}
     lines: List[str] = []
-    for label, q, results, _max_results, _sort, _order, dropped in planned:
+    for label, q, results, _max_results, _sort, _order, notes in planned:
         try:
             found = list(results)
         except ArxivError as e:
@@ -341,7 +356,7 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
         )
         if args.explain:
             lines.append("   server [%s]" % results.server_query)
-            lines.extend(_dropped_line(dropped))
+            lines.extend(notes.lines())
         for paper in found:
             ids.append(paper.id)
             new = paper.id not in papers
@@ -360,7 +375,7 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
             "ids": ids,
         }
         if args.explain:
-            _explain(entry, results, dropped)
+            _explain(entry, results, notes)
         queries.append(entry)
     lines.append("# %d unique papers from %d queries (* = first seen)" % (len(papers), len(queries)))
     result = {"queries": queries, "papers": papers, "unique": len(papers)}
@@ -372,14 +387,14 @@ def _run(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[
     if args.command == "search":
         spec = _search_spec(args)
         q = _build_query(spec)
-        dropped = _dropped_words(spec)
+        notes = _text_notes(spec)
         results = client.search(
             q, max_results=args.max, sort_by=SORTS[args.sort], sort_order=args.order, strict=args.strict
         )
         if args.dry_run:
             url = _first_page_url(client, q, args.max, args.sort, args.order)
-            result = {"dry_run": True, "query": q.expr, "dropped_words": dropped, "request_url": url}
-            return result, "\n".join(["## [%s]" % q.expr, *_dropped_line(dropped), url])
+            result = {"dry_run": True, "query": q.expr, **notes.to_dict(), "request_url": url}
+            return result, "\n".join(["## [%s]" % q.expr, *notes.lines(), url])
         found = list(results)
         result = {
             "query": q.expr,
@@ -389,7 +404,7 @@ def _run(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[
             "papers": [_paper_dict(p, args.abstract_chars) for p in found],
         }
         if args.explain:
-            _explain(result, results, dropped)
+            _explain(result, results, notes)
         header = "## [%s]  total=%s  shown=%d%s" % (
             q.expr,
             results.total_results,
@@ -399,7 +414,7 @@ def _run(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[
         lines = [header]
         if args.explain:
             lines.append("   server [%s]" % results.server_query)
-            lines.extend(_dropped_line(dropped))
+            lines.extend(notes.lines())
         return result, "\n".join(lines + [_compact_line(p) for p in found])
     if args.command == "batch":
         return _run_batch(args, client, stdin)

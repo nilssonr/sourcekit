@@ -261,6 +261,57 @@ class ExplainAndDryRunTests(unittest.TestCase):
         feed = xml_response(make_feed([make_entry("2401.00001")], server_query="all:foo"))
         run = run_cli(["search", "--all", "foo", "--explain"], [feed])
         self.assertEqual(json.loads(run.out)["dropped_words"], [])
+        self.assertEqual(json.loads(run.out)["changed_words"], [])
+
+    def test_a_question_mark_and_a_possessive_are_left_out_of_the_request(self):
+        run = run_cli(["search", "--all", "what is Maldacena's conjecture?"], [xml_response(make_feed([], total=0))])
+        self.assertEqual(run.code, 0, run.err)
+        self.assertEqual(
+            run.opener.requests[0].params["search_query"], ["all:what AND all:Maldacena AND all:conjecture"]
+        )
+
+    def test_explain_lists_the_words_changed_in_free_text(self):
+        feed = xml_response(make_feed([make_entry("2401.00001")], server_query="all:attention"))
+        run = run_cli(["search", "--all", "what is attention?", "--all", "Maldacena's", "--explain"], [feed])
+        self.assertEqual(run.code, 0, run.err)
+        data = json.loads(run.out)
+        self.assertEqual(data["query"], "all:what AND all:attention AND all:Maldacena")
+        self.assertEqual(data["dropped_words"], ["is"])
+        self.assertEqual(
+            data["changed_words"],
+            [{"typed": "attention?", "sent": "attention"}, {"typed": "Maldacena's", "sent": "Maldacena"}],
+        )
+
+    def test_compact_explain_adds_a_changed_line_after_the_dropped_line(self):
+        feed = xml_response(make_feed([make_entry("2401.00001")], server_query="all:attention"))
+        run = run_cli(["search", "--all", "is attention? Maldacena's", "--explain", "--format", "compact"], [feed])
+        lines = run.out.splitlines()
+        self.assertEqual(lines[2], "   dropped [is]")
+        self.assertEqual(lines[3], "   changed [attention? -> attention, Maldacena's -> Maldacena]")
+        self.assertTrue(lines[4].startswith("2401.00001 |"))
+
+    def test_dry_run_lists_the_changed_words(self):
+        run = run_cli(["search", "--all", "attention?", "--dry-run"], [])
+        data = json.loads(run.out)
+        self.assertEqual(data["query"], "all:attention")
+        self.assertEqual(data["changed_words"], [{"typed": "attention?", "sent": "attention"}])
+        self.assertEqual(run.opener.requests, [])
+
+    def test_compact_dry_run_shows_the_changed_line_between_the_query_and_the_url(self):
+        run = run_cli(["search", "--all", "attention?", "--dry-run", "--format", "compact"], [])
+        lines = run.out.splitlines()
+        self.assertEqual(lines[:2], ["## [all:attention]", "   changed [attention? -> attention]"])
+        self.assertTrue(lines[2].startswith("https://export.arxiv.org/api/query?"))
+
+    def test_batch_reports_changed_words_per_query(self):
+        stdin = json.dumps([{"label": "a", "all": "attention?"}, {"label": "b", "title": "attention?"}])
+        run = run_cli(["batch", "-", "--dry-run"], [], stdin=stdin)
+        data = json.loads(run.out)
+        self.assertEqual(
+            [q["changed_words"] for q in data["queries"]], [[{"typed": "attention?", "sent": "attention"}], []]
+        )
+        # A field keeps the question mark: there it is a wildcard.
+        self.assertEqual([q["query"] for q in data["queries"]], ["all:attention", "ti:attention?"])
 
     def test_compact_explain_adds_a_dropped_line_when_words_were_dropped(self):
         feed = xml_response(make_feed([make_entry("2401.00001")], server_query="all:transformer"))
