@@ -2,6 +2,8 @@
 
 Mapped on 2026-11-07 (a Saturday) from the official docs plus about 140 live requests. Every request was throttled to at most 1 per 3.5 s with one connection at a time, per arXiv's terms of use.
 
+Extended on 2026-11-08 (a Sunday, 19:14 to 20:22 America/New_York) with about 400 more requests sent through the client: every CLI command, a matrix of query syntax (§2.2), and 32 loosely worded requests run through a ladder of queries (§8, §9).
+
 Tags: **[obs]** observed in a live capture · **[doc]** stated in info.arxiv.org docs · **[src]** read in arXiv's open-source code · **[inf]** inference, not verified · **[unmeasured]** tried but no answer, or not tried.
 
 Machine-readable spec for the query API and the feeds: [`arxiv.openapi.yaml`](arxiv.openapi.yaml).
@@ -44,16 +46,16 @@ All three XML services sit behind a Fastly/varnish CDN (`via: 1.1 google, 1.1 va
 |---|---|---|---|---|
 | `search_query` | string | — | see §2.2 | — |
 | `id_list` | comma-separated IDs | — | see §2.3 | malformed ID → 400 |
-| `start` | int | `0` | `0` to below 10000 (see note) | negative or non-int → 400; too large → **500** |
+| `start` | int | `0` | `0`–`9999` | negative or non-int → 400; `10000` or more → **500** |
 | `max_results` | int | `10` | `1`–`10000` at least | `0` → **500**; negative or non-int → 400; ≥29999 → **500** |
 | `sortBy` | enum | `relevance` | `relevance`, `lastUpdatedDate`, `submittedDate` | 400 |
 | `sortOrder` | enum | `descending` | `ascending`, `descending` | 400 |
 
 - At least one of `search_query` and `id_list` is required. Otherwise you get 400: *"Either a search_query or id_list must be specified for the classic API."* [obs]
 - **Limits [obs]:**
-  - The `start` limit is only bracketed: `start=1000` works and `start=10000` returns 500.
+  - `start=9999` works and `start=10000` returns 500.
   - `max_results=10000` works and `29999` returns 500.
-  - The documented 2000-per-call slice is **not enforced**.
+  - The documented 2000-per-call slice is **not enforced**: `max_results=2001` returned 2,001 entries in 6 s.
   - The docs say `max_results > 30000` gives 400. It actually gives **500**.
 - **Paging advice [inf]:** for paging, use `max_results ≤ 2000` and keep `start` well below 10000. For bulk work, use OAI-PMH.
 - **Count only:** `max_results=0` fails, so use `max_results=1` and read `opensearch:totalResults` [obs].
@@ -61,20 +63,54 @@ All three XML services sit behind a Fastly/varnish CDN (`via: 1.1 google, 1.1 va
 
 ### 2.2 `search_query` syntax [obs]
 
-- **Field prefixes:** `ti` (title), `au` (author), `abs` (abstract), `co` (comment), `jr` (journal ref), `cat` (category), `rn` (report number), `id`, `all`. All except `abs` were exercised individually.
+- **Field prefixes:** `ti` (title), `au` (author), `abs` (abstract), `co` (comment), `jr` (journal ref), `cat` (category), `rn` (report number), `id`, `all`. Each was exercised on its own, `abs` included.
 - **No prefix, or an unknown one:** searched as `all:`. So `foo:bar` becomes `all:foo:bar` (no error, 0 hits).
 - **Operators:** `AND`, `OR`, `ANDNOT`, **uppercase only**.
-  - Lowercase `and` becomes a search term.
-  - The **implicit operator between terms is OR**.
-- **Phrases, grouping, wildcards:** `"quoted phrases"`, `( … )` grouping, and a trailing `*` wildcard all work.
-- **Date filter:** `submittedDate:[FROM TO TO]`. It accepts `YYYYMMDD`, `YYYYMMDDHHMM` or `YYYYMMDDHHMMSS`, all in GMT, and normalises them to 12 digits. A date-only value covers the whole day.
+  - `NOT` is accepted and rewritten to `ANDNOT`.
+  - Lowercase operators become search terms. `ti:x andnot cat:y` is parsed as `ti:x OR all:andnot OR cat:y`.
+  - A leading `-` is not negation. `ti:x -cat:y` is parsed as `ti:x OR all:-cat:y`.
+  - The **implicit operator between terms is OR**, and the echo spells it out: `all:attention is all you need` comes back as `all:attention OR all:is OR all:all OR all:you OR all:need` (713,701 hits).
+- **Phrases and grouping:** `"quoted phrases"` and `( … )` grouping work.
+- **Wildcards:** a trailing `*` works in `ti`, `au`, `all`, `cat` and `id` (`id:1706.037*` returns the 100 papers with that prefix).
+- **Date filter:** `submittedDate:[FROM TO TO]`. It accepts `YYYYMMDD`, `YYYYMMDDHHMM` or `YYYYMMDDHHMMSS`, all in GMT, and normalises them to 12 digits. A date-only value covers the whole day: `[20240115 TO 20240115]` is echoed as `"202401150000 TO 202401152359"`.
+  - **Anything else in the range is an HTTP 500**, not a 400: the `T` form (`20240115T0000`), dashes (`2024-01-15`), a date that isn't on the calendar (`20231399`), and an unclosed range.
+  - A range end in the future is fine.
   - **`lastUpdatedDate:[…]` is silently rewritten to `submittedDate`.** There is no way to filter by last update.
-- **Debugging:** the feed `<title>` echoes the query as the server parsed it.
-- **From other clients' issue trackers [issue]:**
-  - **Encode the date range's spaces as `+` or `%20`.** If the `+` in `+TO+` is itself percent-encoded as `%2B`, the query returns 0 results (blazickjp/arxiv-mcp-server #13).
-  - **Never strip diacritics.** `Fréchet` matches, while `Frechet` and Latin-1-encoded forms don't (JabRef #16772, 2026-08-31).
-  - **Quote multi-word phrases.** An unquoted multi-word `all:` query such as `all:Attention Is All You Need` reportedly hangs, while the quoted phrase returns in under 1 s (paper-search-mcp #101). paper-search-mcp quotes plain multi-word input automatically.
-  - **Expect noise from implicit OR.** Combined with `sortBy=submittedDate`, it returns the newest *off-topic* papers (blazickjp #159).
+- **Debugging:** the feed `<title>` echoes the query as the server parsed it. `arxiv search --explain` prints it as `server_query`.
+
+#### How terms are matched [obs]
+
+Measured on 2026-11-09 by comparing `totalResults` and the echoed query for pairs of queries. Totals are from that day.
+
+| Input | What the server does | Evidence | So |
+|---|---|---|---|
+| A word | **Stems it.** `transformer`, `transformers`, `transformation` and `transform` are one term. So are `diffuse` and `diffusion`. | `ti:` each of the four returns the same 34,913 papers. | A single word can't separate "transformer" from "transformation". Add a second term or a phrase. |
+| A stopword | **Not indexed in titles and abstracts.** `a`, `an`, `the`, `of`, `for`, `with`, `on`, `in`, `and`, `to`, `by`, `is`, `are`, `be`, `this` and `that` were tested. `from` and `we` are not stopwords. | `ti:a`, `ti:the` and `ti:of` each match 0 papers. `all:is` matches 26, from other fields. `all:attention AND all:is` matches 0. | **Never AND a stopword.** `all:attention AND all:is AND all:all AND all:you AND all:need` returns 0, while the phrase `all:"attention is all you need"` returns 47. |
+| A stopword inside a phrase | Dropped from the phrase. | `ti:"the transformer"` returns the same 34,913 as `ti:transformer`. | Phrases are safe with stopwords. |
+| Upper or lower case | Ignored, for words, names and categories. | `cat:cs.lg` = `cat:CS.LG` = `cat:cs.LG` (297,729). | |
+| A hyphenated word, unquoted | **Split and ANDed** in that field. | `ti:self-attention` = `ti:self AND ti:attention` (1,254). | Quote it to keep the parts adjacent. |
+| A hyphenated word, quoted | A phrase of the parts. | `ti:"self-attention"` = `ti:"self attention"` (1,036). | |
+| The same word joined | A different term. | `ti:GPT-4` 259, `ti:"GPT 4"` 254, `ti:GPT4` 15. `ti:selfattention` 0. | OR the spellings. |
+| An apostrophe | Splits the word. | `au:O'Brien` 1,891, `au:OBrien` 50. | Keep the apostrophe. |
+| Symbols such as `+` | Dropped. | `ti:C++` and `ti:"C++"` both match 16,844 papers: the letter C. | `C++` can't be searched as a title word. Use the abstract plus other terms. |
+| A Greek letter | Its own term. | `ti:α-synuclein` 5, `ti:alpha-synuclein` 4. | OR the spellings. |
+| Diacritics in a **title** | **Kept.** The accented and plain spellings are different terms, and both occur. | `ti:Fréchet` 457, `ti:Frechet` 119, the OR of the two 576. `ti:Schrödinger` 7,539, `ti:Schrodinger` 1,609. | OR both spellings. |
+| Diacritics in an **author** | **Folded**, including the German `ue` form. | `au:Müller` = `au:Muller` = `au:Mueller` (12,233, same papers). | Any spelling works. |
+| A full author name | Phrase in either order. | `au:"Geoffrey Hinton"` = `au:"Hinton, Geoffrey"` (59). `au:Hinton AND au:Geoffrey` 60. `au:Hinton` alone 775. | Use surname and first name. |
+| Author initials | **Almost never match.** `_` is rewritten to a space. | `au:Hinton_G` is echoed as `au:"Hinton G"` and finds 1. `au:"G Hinton"` 1. `au:"G. E. Hinton"` 0. `au:"Geoffrey E Hinton"` 17. | Don't use initials or a middle initial. |
+| `cat:` with an archive that has subcategories | Matches nothing. | `cat:cs` 0. `cat:cs.*` works. `cat:hep-th` works, because it has no subcategories. | Use `cat:cs.*` for a whole archive. |
+| `cat:` | Matches **any** of a paper's categories, not only the primary. | `cat:cs.LG` finds 1706.03762, whose primary is cs.CL. | Two `cat:` terms ANDed mean "listed in both". |
+| An unknown category | 0 results, no error. | `cat:cs.ZZ`. | |
+| `id:` | Matches the unversioned new-style ID only. | `id:1706.03762` 1. `id:1706.03762v5` 0. `id:hep-th/9901001` 0. `id:A OR id:B` 2. | For old-style or versioned IDs use `id_list`. |
+
+- **`sortOrder=ascending` with `sortBy=relevance`** returns the least relevant papers first.
+
+#### Claims from other clients' issue trackers, rechecked
+
+- **"Encode the date range's spaces as `+` or `%20`, never `%2B`"** (blazickjp/arxiv-mcp-server #13) [issue]. `%20` works [obs]. `%2B` was not retried.
+- **"Never strip diacritics"** (JabRef #16772) [issue]. Half right [obs]: it matters in titles and not in author names. And stripping is not the only risk, because the plain spelling also occurs in titles. OR the two.
+- **"An unquoted multi-word `all:` query hangs"** (paper-search-mcp #101) [issue]. **Did not reproduce** [obs]: `all:attention is all you need` answered in normal time, as an OR of the five words.
+- **"Expect noise from implicit OR"** (blazickjp #159) [issue]. Confirmed [obs]: 713,701 hits, and the paper with that exact title is not in the first five.
 
 ### 2.3 `id_list` [obs]
 
@@ -83,7 +119,9 @@ All three XML services sit behind a Fastly/varnish CDN (`via: 1.1 google, 1.1 va
   - `vN` returns that version. Metadata (comment, journal_ref, DOI) is **per version**.
 - **Bug: some old-style IDs with a non-latest version return HTTP 500** [obs].
   - Fail: `cond-mat/0207270v1`, `hep-th/9711200v1` and `hep-th/9901001v1` (latest is v3 for all three), and `cond-mat/0501001v2` (per cyanheads #53).
-  - Work: `astro-ph/0703001v1` and `v2`, although that paper's latest is v4. The latest version always works. The rule that decides which fail is **unknown**: the failing papers are from 1997–2005, the working one from 2007, which may or may not matter.
+  - Also fail: `hep-ph/0307001v1` (latest v2).
+  - Work: `astro-ph/0703001v1` and `v2` (latest v4), `quant-ph/9508027v1` (latest v2) and `math/0702001v1` (latest v2). The latest version always works, so a `v1` that is the only version works.
+  - The rule is **unknown**. The failing papers were submitted from 1997 to 2005, and the working ones in 1995 and 2007, so it may be a band of submission dates [inf].
   - New-style non-latest versions work.
   - One failing ID fails the **whole request**.
   - **Workaround** (cyanheads/arxiv-mcp-server #53): on a 500, re-request with old-style IDs unversioned, and mark each affected result as "requested vN, served latest". That costs at most 2 requests.
@@ -175,7 +213,7 @@ Detection: check the HTTP status first. In the body, an error entry's `id` start
 | 500 | `…/api/errors` with the generic text "The server encountered an internal error…". Returned for `max_results=0`, `max_results ≥ 29999`, `start ≥ 10000`, and old-style non-latest versioned IDs. Repeatable, not transient. |
 | 200 + 0 entries | Nonexistent but valid-format ID or version; `start` past the end |
 
-**Throttling: several signals, none observed by us, all reported by other clients [issue]:**
+**Throttling: several signals.** On 2026-11-09 we observed the 429 and the hung connection [obs]. The rest are reported by other clients [issue].
 
 | Signal | Meaning and handling |
 |---|---|
@@ -187,6 +225,21 @@ Detection: check the HTTP status first. In the body, an error entry's `id` start
 | Results page with 0 entries partway through paging | Known intermittent behaviour (arxiv.py #43). arxiv.py retries it 3 times. Empty or partial pages were rare at page size 100, versus 1000. |
 
 Per arXiv staff on the API group, limits change over time (2026-02-27), blocks "expire automatically" (2026-05-14), and limits were added on new traffic, bringing more 429s and 503s (2026-06-03). Problems come in **waves** (2023-10, 2024-03, 2026-03): retries during a wave tend to fail again.
+
+**Waves, as observed [obs].** One session on Sunday 2026-11-08, from 19:14 to 20:22 America/New_York, sent about 400 requests through the client, never faster than one per 3 s and never two at once. It still met four bad spells:
+
+| When (UTC, 2026-11-09) | What happened |
+|---|---|
+| 00:14–00:17 | 13 requests got no response within 10 s, and one got 429. Then normal service: 100 requests with one timeout. |
+| 00:33–00:42 | Three different queries in a row got 429, each again after a 65 s wait. Nine throttled calls. |
+| 00:49–00:59 | One query got 429 four times across 10 minutes, with waits of 65 s and then 185 s. The queries sent just before and just after it succeeded. |
+| 01:00–01:17 | Most requests got no response within 10 s. From 01:18, more than 60 requests in a row were answered. |
+
+- Between the spells, a request took 0.5–3 s, and a repeated URL took about 0.2 s (a CDN hit).
+- **Our own pace did not cause these.** They match what arXiv staff describe as server-wide capacity. The last spell began at 01:00 UTC, which is 20:00 Eastern, the hour §6 already says to avoid.
+- **A request that got no response in 10 s still completed at arXiv.** Two abandoned URLs were sent again 12 minutes later. Both were CDN hits (`Age: 729` and `Age: 758`) and answered in 0.2 s.
+- **A wait of 60 s was not enough.** A second 429 on the same query calls for a wait of minutes.
+- **A timeout was usually followed by more timeouts.** One retry after 20 s worked for an isolated timeout. In a spell it did not.
 
 **Hung connections [issue]:** a pooled keep-alive connection can go silent. Without a read timeout, it blocks forever and holds any global lock (blazickjp #155, 2026-08-17). cyanheads deliberately doesn't retry timed-out requests, because a throttled connection just hangs again (cyanheads #8: retry storms of 108–126 s).
 
@@ -280,15 +333,15 @@ Transport: `content-type: text/xml`, with no charset in the header; the XML decl
 
 ## 4. RSS/Atom announcement feeds
 
-**Caveat:** probed on a Saturday, so every feed was empty. The channel structure and the errors were observed. The item structure is from the docs and arXiv's [arxiv-feed](https://github.com/arXiv/arxiv-feed) source. **Re-check on a weekday.**
+**Caveat:** probed on a Saturday and again on a Sunday, so every feed was empty. The channel structure and the errors were observed. The item structure is from the docs and arXiv's [arxiv-feed](https://github.com/arXiv/arxiv-feed) source. **Re-check on a weekday.**
 
 ### Requests
 
 - **URLs:** `https://rss.arxiv.org/rss/<q>` (RSS 2.0) and `https://rss.arxiv.org/atom/<q>` (Atom). `<q>` is an archive (`cs`), a category (`cs.AI`), or several joined with `+`. Case is normalised.
 - **Health check:** `https://rss.arxiv.org/feed/status` returns `Status: GOOD Version: 1.1`.
 - **Contents:** today's announcements only. The feed rebuilds at 00:00 America/New_York, so a missed day can't be recovered from it. Max 2000 items, with `replace-cross` dropped first [src]. **Replacements of v6 and above are never listed** [src].
-- **Weekends and holidays:** 200 with 0 items. RSS has `skipDays` Sat/Sun; Atom has no equivalent.
-- **Errors:** an invalid query returns **HTTP 400 with a valid, empty feed** [obs]. The message is in RSS `channel/description` or Atom `subtitle`. One bad part fails the whole `+` query. Always check the status code.
+- **Weekends and holidays:** 200 with 0 items. RSS has `skipDays` Sat/Sun; Atom has no equivalent. Seen on both days for a category, an archive and a two-category query, in both formats [obs].
+- **Errors:** an invalid query returns **HTTP 400 with a valid, empty feed** [obs]. The message is in RSS `channel/description` or Atom `subtitle`, and it lists the valid archive names. One bad part fails the whole `+` query. Always check the status code.
 - **Caching:** headers include an unquoted SHA-256 `ETag` and `Cache-Control: max-age=<seconds until next midnight ET>`. There is no `Last-Modified` [obs]. Whether a request with `If-None-Match` gets a 304 is **[unmeasured]**.
 
 ### Items [doc/src]
@@ -352,7 +405,10 @@ Checks a regex can't express:
      - Match results by ID, and report which IDs were not found.
      - On a 500 with old-style versioned IDs, use the unversioned fallback (§2.3).
    - **Queries:**
-     - Quote plain multi-word input, and keep diacritics.
+     - Quote plain multi-word input. Never AND a stopword (§2.2, §8.1).
+     - Keep diacritics, and in titles also try the plain spelling.
+     - After a timeout, retry the identical URL after a pause, not a changed one (§2.5).
+     - After a second 429 on the same request, wait minutes, not 60 s.
      - Detect revisions the arxiv-sanity way: `sortBy=lastUpdatedDate`, stopping after N pages with nothing new, and upserting by ID with the higher version.
    - **Parsing:**
      - Ignore `itemsPerPage`; model `arxiv:doi` as a list.
@@ -380,12 +436,117 @@ Checks a regex can't express:
 ## 7. Open gaps
 
 - **OAI-PMH:** `ListIdentifiers`/`ListRecords` (page size, `resumptionToken`, deleted records), most error codes, POST, gzip, and `arXivOld` contents.
-- **Feeds:** item-level structure on a weekday, and 304 handling.
+- **Feeds:** item-level structure on a weekday, and 304 handling. To close it, run `arxiv feed cs.AI`, `arxiv feed cs.AI --rss` and `arxiv feed cs` on a weekday and compare the items with §4.
 - **Query API:**
-  - The exact `start` and `max_results` thresholds.
+  - The exact `max_results` threshold between 10000 and 29999.
   - The redirect status code for http → https.
-  - The `T` date form.
-  - Whether `abs:` works on its own.
-  - Whether `max_results > 2000` actually returns more than 2000 entries on a large result set.
+  - What decides which old-style versioned IDs return 500 (§2.3).
+  - Whether a 429 can stick to one URL. One query was throttled for 10 minutes while its neighbours were served (§2.5).
+  - Whether `%2B` in a date range still returns 0 results.
 
-Raw captures (request, status, headers, body) from this session are in the session scratchpad and are not part of the repo.
+Raw captures from both sessions are in the session scratchpads and are not part of the repo.
+
+---
+
+## 8. Query strategy for agents
+
+This section turns §2.2 into a procedure for a caller that starts from a person's loosely worded request. It was measured on 2026-11-09 with 32 such requests from machine learning, HCI and software, physics and maths, and biology. Each request was run through a ladder of queries, from the words as typed up to a hand-built query. "Rank" is the position of the intended paper among the first 10 results.
+
+### 8.1 Never send the request as typed
+
+25 of the requests were a phrase or a sentence. Sent as `all:` words joined with `AND`:
+- **19 returned 0 results.** 18 of them contained a stopword. The 19th ANDed four content words.
+- **The other 6 returned 1 to 745 results**, and none had the intended paper in the first 10.
+
+Build the query instead:
+1. **Drop stopwords** (§2.2), and drop the words that describe the request and not the paper: *paper*, *study*, *review*, *work*, *latest*, *recent*, *new*, *arXiv*.
+2. **Keep two or three content words or phrases.** Each further ANDed word cut the count by 5 to 10 times (335 → 66 → 4, and 13 → 1). The last step can remove every relevant paper.
+3. **Put each word where it belongs.** The most distinctive words go in `ti:`. A qualifier goes in `abs:`. A person goes in `au:`, as a surname or as surname and first name (§2.2).
+4. **Read `server_query` back** (`--explain`) and check that it is the query you meant.
+
+### 8.2 Which query for which request
+
+| The request has | Send | Measured |
+|---|---|---|
+| An arXiv ID | `fetch` or `get` | 3 of 3 found in one request, with or without a version. |
+| A coined name, such as *Design2Code* or *ProtTrans* | `--all NAME` | Rank 1 of 8, and rank 1 of 3. |
+| A coined name that later papers reuse, such as *SWE-bench* or *LK-99* | `--raw 'ti:NAME OR abs:NAME' --sort submitted --order ascending` | By relevance the original was not in the first 10 (`all:SWE-bench` 745 results, `ti:SWE-bench` 39). Earliest first it was rank 1, both times. The LK-99 original does not have the name in its title, so `ti:` alone (19 results) cannot find it. |
+| An author and a topic | `--author SURNAME --title WORD` | Rank 1 in 4 of 5 and rank 3 in the fifth, with 1 to 6 results. |
+| An author and a topic, and no word from the title | `--author SURNAME --all WORD` | Rank 1 or 2 in 4 of 5, with 3 to 8 results. The fifth missed: *AdS/CFT* was coined after the paper it names, so the paper does not contain it. |
+| Two authors | `--author A --author B` | 7 results, rank 4. With a title phrase added: rank 1 of 4. |
+| The exact title | `--title "PHRASE"` | Rank 1 of 36, rank 2 of 3, and not in the first 10 of 438. Later papers reuse a famous title. Earliest first (§9.3): rank 1, rank 1 and rank 2. |
+| A description with no name | The two most distinctive words or phrases, each in `--title` | With the content words in `--all`: 85 to 1,925 results, and rank 3 to 5 or not in the first 10. With two of them in the title: 5 results and rank 1, 11 results and rank 4, and 151 results and rank 4. |
+| A topic | `--title "CORE PHRASE" --abstract QUALIFIER` | 27 to 152 results, on topic from the first one, for 4 topics. With the content words in `--all`: 29 to 471 results, and an off-topic paper in the first two for 2 of the 4. |
+| A topic, newest wanted | The same with `--sort submitted` | Newest first. For 4 of 4 topics the first six results were from the current year, with no date filter. |
+| One bare word | See §9. | |
+
+- **A description can share no word with the paper.** "The paper that replaced RNNs with attention" has no word of the title *Attention Is All You Need* except one. The query that found it used a word from its abstract. A caller that does not already know the paper has to ask (§9).
+- **A date window bounds the count.** It is not needed for recency. "This year" is `--from YYYY0101`.
+- **A category rarely helps a query that already has a title phrase**: 28 → 22, 152 → 149, 27 → 27. It is the only fix for a word that several fields use: `ti:homogenization` went from 9,006 to 124 with three `cs` categories.
+
+### 8.3 When to stop
+
+- **Looking for one paper:** stop when it is in the first 3 results. Skipping the as-typed query, that took at most two queries for 14 of the 16 such requests. The other two needed earliest-first ordering.
+- **Looking for a topic:** 20 to 150 results is a list worth reading. Above about 200, add an `--abstract` qualifier or a date. Below about 20, remove the least distinctive term.
+- **0 results:** look for a stopword, a term too many, or an accented title word (§2.2). Then remove one term.
+
+### 8.4 Cost and failure
+
+- **Up to 100 results cost one request**, because the client's page is 100. To see how results spread across fields or authors, ask for 100 with `--format compact` or `--abstract-chars 0`.
+- **To count, send `--max 1`** and read `total_results`.
+- **`batch` costs 3 s per query.** 20 queries took 61 s.
+- **After exit 4 (throttled):** wait `retry_after`. If the same command is throttled again, wait at least 3 minutes (§2.5).
+- **After exit 6 (timeout):** wait 20 s and send the identical command once more. A request the client gave up on often still completes at arXiv and is cached: the identical URL then answered in 0.2 s with `Age: 729`. Changing the query throws that away.
+- **Avoid the hour around 20:00 America/New_York**, Sunday to Thursday (§2.5).
+
+---
+
+## 9. Disambiguation
+
+When a result set forks, a caller working for a person should ask one multiple-choice question and not guess. In Claude Code that is an `AskUserQuestion` call. This section says what shows each fork, what to offer, and what each answer does to the query. Measured on 2026-11-09.
+
+### 9.1 The forks
+
+| Fork | What shows it | Offer | Each answer becomes |
+|---|---|---|---|
+| Several papers carry the title | `--title "PHRASE"` returns more than one paper. | The earliest paper, then the top ones by relevance, as `id · year · first author · title`. | `fetch ID` |
+| A surname matches several people | `--author SURNAME --max 100` returns that surname with different first names. | The most frequent people, each with their main archive and one title. | `--author "FIRST LAST"` |
+| A word is used in several fields | Counts per archive (§9.2), where more than one archive has a real share. | The three or four largest archives, each with its count and one title. | `--category 'ARCHIVE.*'` |
+| A topic returns too many | `total_results` above about 200 after the topic query of §8.2. | The commonest primary categories on the first page, or a date window. | `--any-category`, `--from` |
+| The request names no paper | Two content-word queries with no plausible hit. | Ask what else the person remembers: an author, a year, a phrase from it. | `--author`, `--from` and `--to`, `--title` |
+| An ID with no version | `version` above 1 in the result. | Usually nothing: use the latest. Ask only when the person cites a particular version. | `fetch IDvN` |
+
+### 9.2 The first page is not a sample [obs]
+
+Relevance order over-represents one field. Build field options from counts, not from the first page.
+
+| `ti:` word | Total | Primary archive of the first 50 by relevance | Papers per archive, from `cat:ARCHIVE.*` counts |
+|---|---|---|---|
+| homogenization | 9,006 | math 39, cs 2, quant-ph 2, stat 2 | math 5,607 · physics 889 · cond-mat 869 · cs 655 · astro-ph 436 |
+| transport | 25,396 | math 20, physics 7, cond-mat 7, cs 5 | cond-mat 12,640 · physics 4,628 · math 3,722 · cs 3,150 · quant-ph 1,521 |
+| attention | 14,795 | cs 47, econ 2, stat 1 | cs 14,275 · eess 2,348 · stat 782 · q-bio 337 · physics 258 |
+
+- For *transport*, the largest field holds half the papers and 7 of the first 50.
+- For *attention*, 337 `q-bio` papers and 2,348 `eess` papers never appear in the first 50.
+- The first 100 are no better: for *homogenization* they are 71 math and 4 cs.
+- The counts overlap, because `cat:` matches secondary categories. They sum to more than the total.
+- **Cost:** one `--max 1` query per archive. Twelve archives took about 40 s. `batch` runs them as one command.
+
+The same holds for people. `au:Hinton` returns 775 papers:
+
+| First N by relevance | Commonest name strings |
+|---|---|
+| 10 | Jim Hinton 6, Geoffrey Hinton 2 |
+| 50 | J. A. Hinton 12, Jim Hinton 10, Samuel R. Hinton 5. Geoffrey Hinton is not in the top five. |
+| 100 | Geoffrey Hinton 24, Jim Hinton 23, J. A. Hinton 15 |
+
+- The first 100 hold 20 name strings. Some are plainly one person [inf]: *Jim Hinton*, *J. A. Hinton* and *J. Hinton* all write on gamma-ray astronomy in `astro-ph`.
+- **Ask for 100, and merge name strings** that share a first initial and an archive.
+- **The archive is the clearest label**: one Hinton is in `cs`, another in `astro-ph`.
+
+### 9.3 When not to ask
+
+- **"The X paper" usually means the original.** Sort earliest first before asking: `--sort submitted --order ascending`. That put the original at rank 1 for 5 of 6 well-known papers. The sixth was at rank 2, behind an unrelated 2017 paper: `ti:"low-rank adaptation"` also matches *Low-Rank Adaptive*, because of stemming.
+- **"Recent", "latest", "new":** sort newest first. Ask for a window only when the count is too large to read.
+- **One result, or a first result whose title is the phrase:** fetch it.
+- **Ask once per search**, offer at most four options, put the best-supported one first, and show the counts.
