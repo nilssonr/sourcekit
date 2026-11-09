@@ -107,6 +107,39 @@ class ArchiveCategoryTests(unittest.TestCase):
         self.assertEqual(json.loads(run.out)["queries"][0]["query"], "cat:cs.*")
 
 
+class TimeoutFlagTests(unittest.TestCase):
+    def timeouts_given(self, argv):
+        clock = FakeClock()
+        opener = FakeOpener(clock, [feed_of("2401.00001", total=1)])
+        seen = []
+
+        def factory(ua, **kw):
+            seen.append(kw)
+            return make_client(clock, opener, user_agent=ua, **kw)
+
+        code = main(argv, client_factory=factory, stdout=io.StringIO(), stderr=io.StringIO())
+        self.assertEqual(code, 0)
+        return seen
+
+    def test_timeout_is_accepted_before_or_after_the_subcommand(self):
+        self.assertEqual(
+            self.timeouts_given(["--timeout", "25", "search", "--title", "x"]), [{"request_timeout": 25.0}]
+        )
+        self.assertEqual(
+            self.timeouts_given(["search", "--title", "x", "--timeout", "25"]), [{"request_timeout": 25.0}]
+        )
+
+    def test_without_the_flag_the_client_keeps_its_default(self):
+        self.assertEqual(self.timeouts_given(["search", "--title", "x"]), [{}])
+
+    def test_an_out_of_range_timeout_is_a_validation_error(self):
+        for value in ("0", "-1", "31", "nan"):
+            with self.subTest(value):
+                run = run_cli(["--timeout=" + value, "search", "--title", "x"], [])
+                self.assertEqual(run.code, 2, run.err)
+                self.assertIn("--timeout", error_payload(run)["message"])
+
+
 class CommandTests(unittest.TestCase):
     def test_search_prints_the_query_and_its_papers_as_json(self):
         run = run_cli(

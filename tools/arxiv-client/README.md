@@ -98,6 +98,8 @@ arxiv pdf 2301.00001 --out ./papers
 | 8 | `local_io` | a PDF could not be written: permissions, a full disk, or similar |
 
 **User-Agent:** set by `--user-agent`, then `$ARXIV_USER_AGENT`, then the default `arxiv-client/0.1`. The flag works before or after the subcommand. Given in both places, the one after the subcommand wins.
+**`--timeout SECONDS`** sets how long to wait for arXiv on each socket operation, instead of 10 s, up to the 30 s budget. It suits a caller that prefers one long wait to a retry. It works before or after the subcommand.
+
 
 ## Library
 
