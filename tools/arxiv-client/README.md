@@ -144,7 +144,7 @@ arXiv's terms allow **at most 1 request every 3 s, and one connection at a time*
 - When the gate is busy for longer than the budget allows, the call fails with `timeout` (exit 6) instead of hanging.
 - OS locks aren't first-come-first-served. With more than about 9 processes queued at once, the later ones may time out. Retry them.
 
-**What the caller must do:** after a `throttled` error, wait `retry_after` seconds.
+**What the caller must do:** after a `throttled` error, wait `retry_after` seconds. It is at least 60 s, and at least 180 s when another throttling signal came within the last 5 minutes. That memory is a `last_throttle` file next to the gate, shared by all processes and all queries. It only changes the advice: no request is refused because of it.
 
 **The 406 marker:** a 406 means a roughly 10-minute IP block, and retrying extends it. So a 406 writes a marker file, `blocked_until`, next to the gate. Every call in every process refuses to send anything until the block expires. If the marker can't be written, the client warns once on stderr and remembers the block in memory for that process only.
 

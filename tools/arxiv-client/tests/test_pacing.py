@@ -107,6 +107,15 @@ class BlockStoreTests(unittest.TestCase):
         self.assertAlmostEqual(cm.exception.retry_after, 500, delta=1)
         self.assertEqual(opener_b.requests, [])
 
+    def test_a_throttle_is_remembered_across_store_instances(self):
+        clock = FakeClock()
+        BlockStore(self.path, wall=clock.wall).record_throttle()
+        clock.sleep(30)
+        self.assertAlmostEqual(BlockStore(self.path, wall=clock.wall).seconds_since_throttle(), 30, delta=0.01)
+
+    def test_no_throttle_on_record_is_none(self):
+        self.assertIsNone(BlockStore(self.path, wall=FakeClock().wall).seconds_since_throttle())
+
     def test_block_expires_after_600s(self):
         clock = FakeClock()
         store = BlockStore(self.path, wall=clock.wall)

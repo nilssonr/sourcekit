@@ -120,6 +120,41 @@ class ThrottleSignalTests(unittest.TestCase):
             transport(clock, opener).get(URL, pacer(clock), budget=5)
         self.assertEqual(cm.exception.retry_after, 60)
 
+    def throttled_wait(self, clock, store, headers=None):
+        opener = FakeOpener(clock, [FakeResponse(429, b"", headers or {})])
+        with self.assertRaises(ThrottledError) as cm:
+            transport(clock, opener, block_store=store).get(URL, pacer(clock), budget=5)
+        return cm.exception.retry_after
+
+    def test_a_second_throttle_within_five_minutes_suggests_three_minutes(self):
+        clock, store = self.clock_and_store()
+        self.assertEqual(self.throttled_wait(clock, store), 60)
+        clock.sleep(299)
+        self.assertEqual(self.throttled_wait(clock, store), 180)
+
+    def test_a_throttle_after_five_minutes_is_back_to_the_floor(self):
+        clock, store = self.clock_and_store()
+        self.throttled_wait(clock, store)
+        clock.sleep(301)
+        self.assertEqual(self.throttled_wait(clock, store), 60)
+
+    def test_a_longer_retry_after_header_wins_over_the_repeat_wait(self):
+        clock, store = self.clock_and_store()
+        self.throttled_wait(clock, store)
+        self.assertEqual(self.throttled_wait(clock, store, {"retry-after": "400"}), 400)
+
+    def test_a_406_is_not_recorded_as_a_throttle(self):
+        clock, store = self.clock_and_store()
+        opener = FakeOpener(clock, [FakeResponse(406, b"", {})])
+        with self.assertRaises(ThrottledError):
+            transport(clock, opener, block_store=store).get(URL, pacer(clock))
+        self.assertIsNone(store.seconds_since_throttle())
+
+    @staticmethod
+    def clock_and_store():
+        clock = FakeClock()
+        return clock, MemoryBlockStore(wall=clock.wall)
+
     def test_a_406_is_not_retried_and_starts_a_10_minute_block(self):
         clock = FakeClock()
         opener = FakeOpener(clock, [FakeResponse(406, b"", {}), xml_response(OK)])

@@ -41,6 +41,8 @@ PDF_INTERVAL = 15.0  # robots.txt Crawl-delay for User-agent: *
 BACKOFFS = (5.0, 10.0)  # sleeps before the 2nd and 3rd attempt on 429/503/rate-exceeded
 MIN_REQUEST_WINDOW = 5.0  # budget that must remain after a backoff sleep to bother retrying
 SUGGESTED_THROTTLE_WAIT = 60.0  # floor for the retry_after we suggest to callers
+REPEAT_THROTTLE_WAIT = 180.0  # the floor when another throttle came recently (doc section 2.5)
+REPEAT_THROTTLE_WINDOW = 300.0  # how recent that throttle must be; wider than the 180 s wait itself
 CHUNK_SIZE = 64 * 1024
 MAX_XML_BYTES = 64 * 1024 * 1024
 RATE_EXCEEDED_BODY = b"Rate exceeded."
@@ -393,6 +395,11 @@ class Transport:
             "arXiv is throttling requests (%s from %s); wait before retrying" % (signal, host),
             retry_after=_suggested_wait(headers),
             kind=signal,
+        since_last = self.block_store.seconds_since_throttle()
+        self.block_store.record_throttle()
+        retry_after = _suggested_wait(headers)
+        if since_last is not None and since_last < REPEAT_THROTTLE_WINDOW:
+            retry_after = max(retry_after, REPEAT_THROTTLE_WAIT)
         )
 
     def _raise_for_status(self, status: int, headers: Dict[str, str], body: bytes, url: str) -> None:

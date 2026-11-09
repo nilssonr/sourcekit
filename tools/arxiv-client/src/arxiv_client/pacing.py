@@ -10,7 +10,8 @@ processes and all its legacy APIs together (doc section 6.1). Three pieces enfor
   start time of the last request in that file, so separate calls and parallel
   processes are spaced too. The OS drops the lock when a process exits, so a crash
   can't leave it stuck.
-- ``BlockStore`` remembers a 406, because retrying during a 406 block extends it.
+- ``BlockStore`` remembers a 406, because retrying during a 406 block extends it, and
+  the last throttling signal, so a repeat within minutes can suggest a longer wait.
 """
 
 from __future__ import annotations
@@ -88,15 +89,17 @@ class BlockStore:
         warn_stream: Optional[TextIO] = None,
     ) -> None:
         self.path = path if path is not None else os.path.join(default_cache_dir(), "blocked_until")
+        self.throttle_path = os.path.join(os.path.dirname(self.path), "last_throttle")
         self._wall = wall
         self._memory_until = 0.0
+        self._memory_throttle = 0.0
         self._warned = False
         self._warn_stream = warn_stream
 
     def remaining(self) -> float:
         """Seconds left on the current block, or 0."""
         now = self._wall()
-        until = max(self._memory_until, self._read_file())
+        until = max(self._memory_until, self._read_marker(self.path))
         # A marker far in the future (clock change, corruption) never blocks longer than one block.
         until = min(until, now + BLOCK_SECONDS)
         return max(0.0, until - now)
@@ -104,14 +107,29 @@ class BlockStore:
     def block(self, seconds: float = BLOCK_SECONDS) -> None:
         until = self._wall() + seconds
         self._memory_until = max(self._memory_until, until)
+        self._write_marker(self.path, until, "406 block", "block")
+
+    def record_throttle(self) -> None:
+        """Note that arXiv throttled a request just now."""
+        now = self._wall()
+        self._memory_throttle = max(self._memory_throttle, now)
+        self._write_marker(self.throttle_path, now, "throttle", "throttle")
+
+    def seconds_since_throttle(self) -> Optional[float]:
+        """Seconds since the last throttling signal, or None if there is no usable record."""
+        last = max(self._memory_throttle, self._read_marker(self.throttle_path))
+        elapsed = self._wall() - last
+        return elapsed if last > 0 and elapsed >= 0 else None  # a future time is a clock change
+
+    def _write_marker(self, path: str, value: float, marker: str, noun: str) -> None:
         try:
-            directory = os.path.dirname(self.path) or "."
+            directory = os.path.dirname(path) or "."
             os.makedirs(directory, exist_ok=True)
-            fd, tmp = tempfile.mkstemp(dir=directory, prefix=".blocked_until.", suffix=".tmp")
+            fd, tmp = tempfile.mkstemp(dir=directory, prefix=".%s." % os.path.basename(path), suffix=".tmp")
             try:
                 with os.fdopen(fd, "w") as f:
-                    f.write("%.3f\n" % until)
-                os.replace(tmp, self.path)
+                    f.write("%.3f\n" % value)
+                os.replace(tmp, path)
             except BaseException:
                 with contextlib.suppress(OSError):
                     os.unlink(tmp)
@@ -121,13 +139,13 @@ class BlockStore:
                 self._warned = True
                 stream = self._warn_stream if self._warn_stream is not None else sys.stderr
                 stream.write(
-                    "arxiv_client: could not write 406 block marker %s (%s); "
-                    "remembering the block in memory only\n" % (self.path, e)
+                    "arxiv_client: could not write %s marker %s (%s); "
+                    "remembering the %s in memory only\n" % (marker, path, e, noun)
                 )
 
-    def _read_file(self) -> float:
+    def _read_marker(self, path: str) -> float:
         try:
-            with open(self.path, encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 return float(f.read().strip() or 0)
         except OSError, ValueError:
             return 0.0
@@ -139,10 +157,10 @@ class MemoryBlockStore(BlockStore):
     def __init__(self, wall: Callable[[], float] = time.time) -> None:
         super().__init__(path="", wall=wall)
 
-    def block(self, seconds: float = BLOCK_SECONDS) -> None:
-        self._memory_until = max(self._memory_until, self._wall() + seconds)
+    def _write_marker(self, path: str, value: float, marker: str, noun: str) -> None:
+        pass
 
-    def _read_file(self) -> float:
+    def _read_marker(self, path: str) -> float:
         return 0.0
 
 
