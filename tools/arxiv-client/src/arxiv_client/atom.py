@@ -22,6 +22,7 @@ _AX = "{%s}" % ARXIV
 ERROR_ID_PREFIXES = ("https://arxiv.org/api/errors", "https://arxiv.org/help/api/user-manual")
 
 _SENTENCE_END = re.compile(r"""[.!?:;]["')\]]?$""")
+_TITLE_QUERY = re.compile(r"search_query=(.*?)&id_list=", re.DOTALL)
 
 
 def parse_xml(body: bytes) -> ET.Element:
@@ -194,6 +195,20 @@ def parse_entry(entry: ET.Element) -> Paper:
     )
 
 
+def server_query(root: ET.Element) -> Optional[str]:
+    """The parsed ``search_query`` echoed in the feed title, e.g.
+    ``arXiv Query: search_query=all:test&id_list=&start=0&max_results=10`` -> ``all:test``.
+    Falls back to the whole title minus the ``arXiv Query: `` prefix."""
+    title = normalize_space(text_of(root.find(_A + "title")))
+    if not title:
+        return None
+    m = _TITLE_QUERY.search(title)
+    if m:
+        return m.group(1).strip() or None
+    rest = title[len("arXiv Query") :].lstrip(": ") if title.startswith("arXiv Query") else title
+    return rest or None
+
+
 def parse_query_feed(body: bytes) -> SearchPage:
     """Parse a 200 query-API response. Raises ServerError if it is an error feed."""
     root = parse_xml(body)
@@ -217,4 +232,5 @@ def parse_query_feed(body: bytes) -> SearchPage:
         total_results=_int_or_none(text_of(root.find(_OS + "totalResults"))),
         start=_int_or_none(text_of(root.find(_OS + "startIndex"))),
         skipped=skipped,
+        server_query=server_query(root),
     )

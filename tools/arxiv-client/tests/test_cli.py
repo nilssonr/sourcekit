@@ -167,6 +167,64 @@ class CommandTests(unittest.TestCase):
         self.assertIn("search", proc.stdout)
 
 
+class ExplainAndDryRunTests(unittest.TestCase):
+    def test_explain_adds_the_request_urls_and_the_servers_parsed_query(self):
+        feed = xml_response(make_feed([make_entry("2401.00001")], server_query="all:bar AND all:foo"))
+        run = run_cli(["search", "--all", "foo bar", "--explain"], [feed])
+        self.assertEqual(run.code, 0, run.err)
+        data = json.loads(run.out)
+        self.assertEqual(data["query"], "all:foo AND all:bar")
+        self.assertEqual(data["server_query"], "all:bar AND all:foo")
+        self.assertEqual(len(data["request_urls"]), 1)
+        self.assertIn("search_query=all:foo%20AND%20all:bar", data["request_urls"][0])
+
+    def test_without_explain_the_output_is_unchanged(self):
+        run = run_cli(["search", "--all", "foo"], [feed_of("2401.00001")])
+        data = json.loads(run.out)
+        self.assertNotIn("server_query", data)
+        self.assertNotIn("request_urls", data)
+
+    def test_compact_explain_adds_a_server_line_under_the_header(self):
+        feed = xml_response(make_feed([make_entry("2401.00001")], server_query="all:foo"))
+        run = run_cli(["search", "--all", "foo", "--explain", "--format", "compact"], [feed])
+        lines = run.out.splitlines()
+        self.assertTrue(lines[0].startswith("## [all:foo]"))
+        self.assertEqual(lines[1], "   server [all:foo]")
+        self.assertTrue(lines[2].startswith("2401.00001 |"))
+
+    def test_dry_run_prints_the_query_and_url_and_sends_nothing(self):
+        run = run_cli(["search", "--title", "a b", "--category", "cs.LG", "--max", "3", "--dry-run"], [])
+        self.assertEqual(run.code, 0, run.err)
+        data = json.loads(run.out)
+        self.assertEqual(data["dry_run"], True)
+        self.assertEqual(data["query"], 'ti:"a b" AND cat:cs.LG')
+        self.assertIn("max_results=3", data["request_url"])
+        self.assertEqual(run.opener.requests, [])
+
+    def test_dry_run_still_validates(self):
+        run = run_cli(["search", "--title", "tr*ansform", "--dry-run"], [])
+        self.assertEqual(run.code, 2)
+        self.assertEqual(error_payload(run)["error"], "validation")
+
+    def test_batch_dry_run_lists_every_query_and_sends_nothing(self):
+        stdin = json.dumps([{"label": "a", "title": "x"}, {"abstract": ["y", "z"], "max": 3}])
+        run = run_cli(["batch", "-", "--dry-run"], [], stdin=stdin)
+        self.assertEqual(run.code, 0, run.err)
+        data = json.loads(run.out)
+        self.assertEqual([q["label"] for q in data["queries"]], ["a", "q2"])
+        self.assertEqual(data["queries"][1]["query"], "abs:y AND abs:z")
+        self.assertIn("max_results=3", data["queries"][1]["request_url"])
+        self.assertEqual(run.opener.requests, [])
+
+    def test_batch_explain_adds_server_query_per_query(self):
+        stdin = json.dumps([{"title": "x"}])
+        feed = xml_response(make_feed([make_entry("2401.00001")], server_query="ti:x"))
+        run = run_cli(["batch", "-", "--explain"], [feed], stdin=stdin)
+        data = json.loads(run.out)
+        self.assertEqual(data["queries"][0]["server_query"], "ti:x")
+        self.assertEqual(len(data["queries"][0]["request_urls"]), 1)
+
+
 class BatchTests(unittest.TestCase):
     def batch_file(self, items) -> str:
         tmp = tempfile.mkdtemp()

@@ -163,17 +163,33 @@ def make_entry(
     return "".join(parts)
 
 
-def make_feed(entries: List[str], total: Optional[int] = None, start: int = 0, items_per_page: int = 10) -> bytes:
+def make_feed(
+    entries: List[str],
+    total: Optional[int] = None,
+    start: int = 0,
+    items_per_page: int = 10,
+    server_query: Optional[str] = None,
+) -> bytes:
+    """``server_query`` puts arXiv's echo of the parsed query into the feed title, the way
+    the live API does; without it the title is the bare ``arXiv Query``."""
     total = len(entries) if total is None else total
+    title = "arXiv Query"
+    if server_query is not None:
+        title = "arXiv Query: search_query=%s&amp;id_list=&amp;start=%d&amp;max_results=%d" % (
+            server_query.replace("&", "&amp;"),
+            start,
+            items_per_page,
+        )
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" '
         'xmlns:arxiv="http://arxiv.org/schemas/atom">'
-        "<id>https://arxiv.org/api/xyz</id><title>arXiv Query</title><updated>2026-11-07T00:00:00Z</updated>"
+        "<id>https://arxiv.org/api/xyz</id><title>%s</title><updated>2026-11-07T00:00:00Z</updated>"
         '<link href="https://arxiv.org/api/query" type="application/atom+xml"/>'
         "<opensearch:itemsPerPage>%d</opensearch:itemsPerPage>"
         "<opensearch:totalResults>%d</opensearch:totalResults>"
-        "<opensearch:startIndex>%d</opensearch:startIndex>%s</feed>" % (items_per_page, total, start, "".join(entries))
+        "<opensearch:startIndex>%d</opensearch:startIndex>%s</feed>"
+        % (title, items_per_page, total, start, "".join(entries))
     ).encode("utf-8")
 
 

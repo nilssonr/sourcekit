@@ -55,6 +55,17 @@ BATCH_KEYS = QUERY_KEYS + ("label", "max", "sort", "order")
 MAX_BATCH_QUERIES = 20
 
 
+def _add_query_flags(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--explain",
+        action="store_true",
+        help="add request_url(s) and server_query (the query as arXiv parsed it) to the output",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="build and validate the query, print it with its URL, send nothing"
+    )
+
+
 def _add_output_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--format",
@@ -103,10 +114,12 @@ def _build_parser() -> argparse.ArgumentParser:
     s.add_argument("--order", choices=("descending", "ascending"), default="descending")
     s.add_argument("--max", type=int, default=10, help="maximum results (default 10)")
     s.add_argument("--strict", action="store_true", help="fail instead of truncating at 10000")
+    _add_query_flags(s)
     _add_output_flags(s)
 
     b = sub.add_parser("batch", help="run several searches in one call; papers deduplicated across them")
     b.add_argument("file", help="JSON list of query objects, or - for stdin (see the README)")
+    _add_query_flags(b)
     _add_output_flags(b)
 
     f = sub.add_parser("fetch", help="fetch papers by ID")
@@ -229,6 +242,15 @@ def _compact_line(paper: Paper, marker: str = "") -> str:
     return "%s%s | %s | %s | %s" % (marker, paper.id, date, paper.primary_category or "?", title)
 
 
+def _first_page_url(client: ArxivClient, q: Q, max_results: int, sort: str, order: str) -> str:
+    return client.query_url(q, 0, min(client.page_size, max_results), SORTS[sort], order)
+
+
+def _explain(target: Dict[str, Any], results) -> None:
+    target["server_query"] = results.server_query
+    target["request_urls"] = list(results.request_urls)
+
+
 def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[object, Optional[str]]:
     items = _load_batch(args.file, stdin)
     # Build and validate every query before sending any request.
@@ -253,12 +275,21 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
             results = client.search(q, max_results=max_results, sort_by=SORTS[sort], sort_order=order)
         except ValidationError as e:
             raise ValidationError("batch item %d (%s): %s" % (i + 1, label, e)) from None
-        planned.append((label, q, results))
+        planned.append((label, q, results, max_results, sort, order))
+
+    if args.dry_run:
+        plan = [
+            {"label": label, "query": q.expr, "request_url": _first_page_url(client, q, m, sort, order)}
+            for label, q, _results, m, sort, order in planned
+        ]
+        return {"dry_run": True, "queries": plan}, "\n".join(
+            "## %s  [%s]\n%s" % (p["label"], p["query"], p["request_url"]) for p in plan
+        )
 
     queries: List[Dict[str, Any]] = []
     papers: Dict[str, Dict[str, Any]] = {}
     lines: List[str] = []
-    for label, q, results in planned:
+    for label, q, results, _max_results, _sort, _order in planned:
         try:
             found = list(results)
         except ArxivError as e:
@@ -270,6 +301,8 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
             "## %s  [%s]  total=%s%s"
             % (label, q.expr, results.total_results, "  (truncated)" if results.truncated else "")
         )
+        if args.explain:
+            lines.append("   server [%s]" % results.server_query)
         for paper in found:
             ids.append(paper.id)
             new = paper.id not in papers
@@ -279,16 +312,17 @@ def _run_batch(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> 
             papers[paper.id]["found_by"].append(label)
             lines.append(_compact_line(paper, "* " if new else "  "))
         lines.append("")
-        queries.append(
-            {
-                "label": label,
-                "query": q.expr,
-                "total_results": results.total_results,
-                "truncated": results.truncated,
-                "count": len(ids),
-                "ids": ids,
-            }
-        )
+        entry = {
+            "label": label,
+            "query": q.expr,
+            "total_results": results.total_results,
+            "truncated": results.truncated,
+            "count": len(ids),
+            "ids": ids,
+        }
+        if args.explain:
+            _explain(entry, results)
+        queries.append(entry)
     lines.append("# %d unique papers from %d queries (* = first seen)" % (len(papers), len(queries)))
     result = {"queries": queries, "papers": papers, "unique": len(papers)}
     return result, "\n".join(lines)
@@ -301,6 +335,9 @@ def _run(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[
         results = client.search(
             q, max_results=args.max, sort_by=SORTS[args.sort], sort_order=args.order, strict=args.strict
         )
+        if args.dry_run:
+            url = _first_page_url(client, q, args.max, args.sort, args.order)
+            return {"dry_run": True, "query": q.expr, "request_url": url}, "## [%s]\n%s" % (q.expr, url)
         found = list(results)
         result = {
             "query": q.expr,
@@ -309,13 +346,18 @@ def _run(args: argparse.Namespace, client: ArxivClient, stdin: TextIO) -> Tuple[
             "count": len(found),
             "papers": [_paper_dict(p, args.abstract_chars) for p in found],
         }
+        if args.explain:
+            _explain(result, results)
         header = "## [%s]  total=%s  shown=%d%s" % (
             q.expr,
             results.total_results,
             len(found),
             "  (truncated)" if results.truncated else "",
         )
-        return result, "\n".join([header] + [_compact_line(p) for p in found])
+        lines = [header]
+        if args.explain:
+            lines.append("   server [%s]" % results.server_query)
+        return result, "\n".join(lines + [_compact_line(p) for p in found])
     if args.command == "batch":
         return _run_batch(args, client, stdin)
     if args.command == "fetch":

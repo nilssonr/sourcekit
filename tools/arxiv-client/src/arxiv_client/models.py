@@ -91,6 +91,11 @@ class SearchPage:
     total_results: Optional[int]
     start: Optional[int]
     skipped: int = 0
+    server_query: Optional[str] = None
+    """The ``search_query`` as arXiv parsed it, read from the feed's root ``<title>``. arXiv
+    rewrites some input silently (``lastUpdatedDate:`` becomes ``submittedDate:``; an unknown
+    prefix becomes ``all:``), and this is the only place it says so."""
+    request_url: Optional[str] = None
 
 
 @dataclass
