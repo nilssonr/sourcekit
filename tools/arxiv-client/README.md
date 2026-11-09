@@ -71,6 +71,7 @@ arxiv pdf 2301.00001 --out ./papers
 - **Validation:** every query is checked before any request is sent, and unknown keys are rejected.
 - **Output:** each query's IDs, and every paper once, with `found_by` listing the labels of the queries that returned it.
 - **Errors partway:** if an error stops the batch, stderr carries the usual error JSON, plus `completed` with the queries that finished and `papers` with the papers they returned.
+  - After a `throttled` or `timeout` error it also carries `remaining`: the query that failed and those not yet started, as a list you can send back with `arxiv batch -`. Each has its label filled in, so the labels stay the same.
 
 ```json
 [
@@ -96,6 +97,8 @@ arxiv pdf 2301.00001 --out ./papers
 | 6 | `timeout` | the request or its 30 s budget timed out |
 | 7 | `network_blocked` | DNS failure, refused connection, or a proxy refused the tunnel. In a sandbox, allow the domain |
 | 8 | `local_io` | a PDF could not be written: permissions, a full disk, or similar |
+
+**`--timeout SECONDS`** sets how long to wait for arXiv on each socket operation, instead of 10 s, up to the 30 s budget. It suits a caller that prefers one long wait to a retry. It works before or after the subcommand.
 
 **User-Agent:** set by `--user-agent`, then `$ARXIV_USER_AGENT`, then the default `arxiv-client/0.1`. The flag works before or after the subcommand. Given in both places, the one after the subcommand wins.
 
@@ -144,7 +147,7 @@ arXiv's terms allow **at most 1 request every 3 s, and one connection at a time*
 - When the gate is busy for longer than the budget allows, the call fails with `timeout` (exit 6) instead of hanging.
 - OS locks aren't first-come-first-served. With more than about 9 processes queued at once, the later ones may time out. Retry them.
 
-**What the caller must do:** after a `throttled` error, wait `retry_after` seconds.
+**What the caller must do:** after a `throttled` error, wait `retry_after` seconds. It is at least 60 s, and at least 180 s when another throttling signal came within the last 5 minutes. That memory is a `last_throttle` file next to the gate, shared by all processes and all queries. It only changes the advice: no request is refused because of it.
 
 **The 406 marker:** a 406 means a roughly 10-minute IP block, and retrying extends it. So a 406 writes a marker file, `blocked_until`, next to the gate. Every call in every process refuses to send anything until the block expires. If the marker can't be written, the client warns once on stderr and remembers the block in memory for that process only.
 

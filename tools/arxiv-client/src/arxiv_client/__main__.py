@@ -37,7 +37,7 @@ from .errors import (
 )
 from .models import Paper
 from .query import Q, parse_free_text
-from .transport import DEFAULT_USER_AGENT
+from .transport import DEFAULT_BUDGET, DEFAULT_USER_AGENT
 
 EXIT_CODES = (
     (ValidationError, 2, "validation"),
@@ -85,10 +85,13 @@ def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="arxiv", description="Query arXiv; prints JSON.")
     user_agent_help = "User-Agent header (default: $ARXIV_USER_AGENT or %s)" % DEFAULT_USER_AGENT
     p.add_argument("--user-agent", help=user_agent_help)
+    timeout_help = "seconds to wait for arXiv on each socket operation, up to %d (default 10)" % DEFAULT_BUDGET
+    p.add_argument("--timeout", type=float, metavar="SECONDS", help=timeout_help)
     # The flag is also accepted after the subcommand. SUPPRESS keeps a subparser that was not
     # given the flag from overwriting the value given before the subcommand.
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--user-agent", default=argparse.SUPPRESS, help=user_agent_help)
+    common.add_argument("--timeout", type=float, default=argparse.SUPPRESS, metavar="SECONDS", help=timeout_help)
     sub = p.add_subparsers(dest="command")
     sub.required = True
 
@@ -349,12 +352,12 @@ def _run_batch(
         except ValidationError as e:
             raise ValidationError("batch item %d (%s): %s" % (i + 1, label, e)) from None
         warnings.extend(_author_warnings(item, "%s: " % label))
-        planned.append((label, q, results, max_results, sort, order, _text_notes(item)))
+        planned.append((label, q, results, max_results, sort, order, _text_notes(item), item))
 
     if args.dry_run:
         plan = []
         plan_lines: List[str] = []
-        for label, q, _results, m, sort, order, notes in planned:
+        for label, q, _results, m, sort, order, notes, _item in planned:
             url = _first_page_url(client, q, m, sort, order)
             plan.append({"label": label, "query": q.expr, **notes.to_dict(), "request_url": url})
             plan_lines.extend(["## %s  [%s]" % (label, q.expr), *notes.lines(), url])
@@ -363,12 +366,15 @@ def _run_batch(
     queries: List[Dict[str, Any]] = []
     papers: Dict[str, Dict[str, Any]] = {}
     lines: List[str] = []
-    for label, q, results, _max_results, _sort, _order, notes in planned:
+    for index, (label, q, results, _max_results, _sort, _order, notes, _item) in enumerate(planned):
         try:
             found = list(results)
         except ArxivError as e:
             e.completed_queries = list(queries)  # type: ignore[attr-defined]
             e.completed_papers = dict(papers)  # type: ignore[attr-defined]
+            if isinstance(e, (ThrottledError, ArxivTimeoutError)):
+                # Labels are filled in so a default q3 stays q3 when only these are resent.
+                e.remaining_queries = [{**p[7], "label": p[0]} for p in planned[index:]]  # type: ignore[attr-defined]
             raise
         ids = []
         lines.append(
@@ -480,10 +486,15 @@ def main(
     if getattr(args, "abstract_chars", None) is not None and args.abstract_chars < 0:
         stderr.write(json.dumps({"error": "validation", "message": "--abstract-chars must be 0 or more"}) + "\n")
         return 2
+    if args.timeout is not None and not 0 < args.timeout <= DEFAULT_BUDGET:
+        message = "--timeout must be above 0 and at most %d seconds" % DEFAULT_BUDGET
+        stderr.write(json.dumps({"error": "validation", "message": message}) + "\n")
+        return 2
     user_agent = args.user_agent or os.environ.get("ARXIV_USER_AGENT") or DEFAULT_USER_AGENT
+    timeout_kw = {} if args.timeout is None else {"request_timeout": args.timeout}
     warnings: List[str] = []
     try:
-        client = (client_factory or ArxivClient)(user_agent)
+        client = (client_factory or ArxivClient)(user_agent, **timeout_kw)
         result, compact = _run(args, client, stdin, warnings)
     except ArxivError as e:
         code, kind = 1, "error"
@@ -502,6 +513,9 @@ def main(
         if completed_queries:
             payload["completed"] = completed_queries
             payload["papers"] = getattr(e, "completed_papers", {})
+        remaining = getattr(e, "remaining_queries", None)
+        if remaining:
+            payload["remaining"] = remaining
         stderr.write(json.dumps(payload, ensure_ascii=False) + "\n")
         return code
     # Only on success: on failure stderr holds exactly one JSON error.

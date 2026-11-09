@@ -524,7 +524,7 @@ The table in §8.2 was then run, one query each, on 11 requests that had not bee
 - **Up to 100 results cost one request**, because the client's page is 100. To see how results spread across fields or authors, ask for 100 with `--format compact` or `--abstract-chars 0`.
 - **To count, send `--max 1`** and read `total_results`.
 - **`batch` costs 3 s per query.** 20 queries took 61 s.
-- **After exit 4 (throttled):** wait `retry_after`. If the same command is throttled again, wait at least 3 minutes (§2.5).
+- **After exit 4 (throttled):** wait `retry_after`. The client raises it to at least 3 minutes when another throttle came within 5 minutes (§2.5). A `batch` error carries `remaining`, the queries still to send.
 - **After exit 6 (timeout):** wait 20 s and send the identical command once more. A request the client gave up on often still completes at arXiv and is cached: the identical URL then answered in 0.2 s with `Age: 729`. Changing the query throws that away.
 - **Avoid the hour around 20:00 America/New_York**, Sunday to Thursday (§2.5).
 

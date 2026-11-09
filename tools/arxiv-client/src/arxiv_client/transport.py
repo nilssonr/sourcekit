@@ -41,6 +41,12 @@ PDF_INTERVAL = 15.0  # robots.txt Crawl-delay for User-agent: *
 BACKOFFS = (5.0, 10.0)  # sleeps before the 2nd and 3rd attempt on 429/503/rate-exceeded
 MIN_REQUEST_WINDOW = 5.0  # budget that must remain after a backoff sleep to bother retrying
 SUGGESTED_THROTTLE_WAIT = 60.0  # floor for the retry_after we suggest to callers
+REPEAT_THROTTLE_WAIT = 180.0  # the floor when another throttle came recently (doc section 2.5)
+REPEAT_THROTTLE_WINDOW = 300.0  # how recent that throttle must be; wider than the 180 s wait itself
+# A request given up on often still completes at arXiv and is cached (doc section 2.5).
+TIMEOUT_HINT = (
+    "arXiv may still finish and cache the request, so repeating the identical request after a pause may succeed"
+)
 CHUNK_SIZE = 64 * 1024
 MAX_XML_BYTES = 64 * 1024 * 1024
 RATE_EXCEEDED_BODY = b"Rate exceeded."
@@ -282,7 +288,7 @@ class Transport:
 
     def _map_network_error(self, reason: Any, host: str) -> ArxivError:
         if _is_timeout(reason) or "timed out" in str(reason):
-            return ArxivTimeoutError("request to %s timed out" % host)
+            return ArxivTimeoutError("request to %s timed out; %s" % (host, TIMEOUT_HINT))
         text = str(reason)
         if isinstance(reason, (socket.gaierror, ConnectionRefusedError)) or "Tunnel connection failed" in text:
             return NetworkBlockedError(
@@ -307,7 +313,7 @@ class Transport:
                 chunk = raw.read(CHUNK_SIZE)
             except Exception as e:
                 if _is_timeout(e):
-                    raise ArxivTimeoutError("timed out reading the response") from None
+                    raise ArxivTimeoutError("timed out reading the response; %s" % TIMEOUT_HINT) from None
                 raise ServerError("connection error while reading the response: %s" % e) from None
             if not chunk:
                 return total
@@ -389,9 +395,14 @@ class Transport:
         host = urlsplit(url).hostname or url
         if signal == "empty-200":
             raise ServerError("%s kept returning empty 200 responses" % host, status=200)
+        since_last = self.block_store.seconds_since_throttle()
+        self.block_store.record_throttle()
+        retry_after = _suggested_wait(headers)
+        if since_last is not None and since_last < REPEAT_THROTTLE_WINDOW:
+            retry_after = max(retry_after, REPEAT_THROTTLE_WAIT)
         raise ThrottledError(
             "arXiv is throttling requests (%s from %s); wait before retrying" % (signal, host),
-            retry_after=_suggested_wait(headers),
+            retry_after=retry_after,
             kind=signal,
         )
 
