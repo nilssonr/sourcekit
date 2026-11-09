@@ -40,6 +40,7 @@ arxiv pdf 2301.00001 --out ./papers
   - **An uppercase `AND`, `OR`, `NOT` or `ANDNOT` is rejected** (exit 2), because free text has no operators. Use `--raw` for a boolean query, or put the word in double quotes to search for it.
   - **Dropping stopwords does not make a sentence a good query.** Words about the request, such as *paper* or *recent*, are still ANDed. See [`docs/arxiv-api.md`](docs/arxiv-api.md) §8.
 - `--any-category` can be repeated. Its values are joined with `OR`, so `--any-category cs.HC --any-category cs.CV` matches papers in either. (`--category` values are joined with `AND`, like the other field flags.)
+- `--from` and `--to` take a GMT date as `YYYYMMDD`, optionally followed by `HHMM` or `HHMMSS`. A date-only value covers the whole day. A date or time that isn't on the calendar, such as `20231399`, is rejected (exit 2): arXiv would answer it with HTTP 500.
 - `--raw` is passed through verbatim.
 - All filters are joined with `AND`.
 

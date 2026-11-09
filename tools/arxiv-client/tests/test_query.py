@@ -88,6 +88,19 @@ class DateRangeTests(unittest.TestCase):
             with self.subTest(start=start, end=end), self.assertRaises(ValidationError):
                 Q.submitted_between(start, end)
 
+    def test_a_date_or_time_that_is_not_on_the_calendar_is_rejected(self):
+        # arXiv answers these with HTTP 500, not 400.
+        for bad in ("20231399", "20230229", "20230001", "202401152460", "20240115235960"):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValidationError, "^%s is not a calendar date" % bad):
+                Q.submitted_between(bad, "20991231")
+            with self.subTest(bad=bad, position="end"), self.assertRaises(ValidationError):
+                Q.submitted_between("19910101", bad)
+
+    def test_a_leap_day_and_the_last_second_of_a_day_are_accepted(self):
+        self.assertEqual(
+            str(Q.submitted_between("20240229", "20240229235959")), "submittedDate:[20240229 TO 20240229235959]"
+        )
+
     def test_spaces_encode_as_percent20_never_percent2B(self):
         encoded = encode_params(
             {"search_query": str(Q.category("cs.LG") & Q.submitted_between("20230101", "20230131"))}

@@ -102,6 +102,13 @@ class CommandTests(unittest.TestCase):
         self.assertIn("--raw", error_payload(run)["message"])
         self.assertEqual(run.opener.requests, [])
 
+    def test_a_date_that_is_not_on_the_calendar_is_a_validation_error_and_nothing_is_sent(self):
+        run = run_cli(["search", "--title", "transformer", "--from", "20231399", "--to", "20231399"], [])
+        self.assertEqual(run.code, 2)
+        self.assertEqual(error_payload(run)["error"], "validation")
+        self.assertIn("20231399 is not a calendar date", error_payload(run)["message"])
+        self.assertEqual(run.opener.requests, [])
+
     def test_search_without_a_filter_is_a_validation_error(self):
         run = run_cli(["search"], [])
         self.assertEqual(run.code, 2)

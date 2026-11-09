@@ -273,7 +273,14 @@ def _format_date(value: DateLike) -> str:
     if isinstance(value, _dt.date):
         return value.strftime("%Y%m%d")
     if isinstance(value, str) and _DATE_RE.match(value.strip()):
-        return value.strip()
+        text = value.strip()
+        # arXiv answers a date that is not on the calendar with HTTP 500 (docs/arxiv-api.md section 2.2).
+        parts = [int(text[:4]), int(text[4:6]), int(text[6:8])] + [int(text[i : i + 2]) for i in range(8, len(text), 2)]
+        try:
+            _dt.datetime(*parts)
+        except ValueError as e:
+            raise ValidationError("%s is not a calendar date and time: %s" % (text, e)) from None
+        return text
     raise ValidationError("dates must be date/datetime objects or YYYYMMDD[HHMM[SS]] strings, got %r" % (value,))
 
 

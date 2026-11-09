@@ -74,6 +74,7 @@ All three XML services sit behind a Fastly/varnish CDN (`via: 1.1 google, 1.1 va
 - **Wildcards:** a trailing `*` works in `ti`, `au`, `all`, `cat` and `id` (`id:1706.037*` returns the 100 papers with that prefix).
 - **Date filter:** `submittedDate:[FROM TO TO]`. It accepts `YYYYMMDD`, `YYYYMMDDHHMM` or `YYYYMMDDHHMMSS`, all in GMT, and normalises them to 12 digits. A date-only value covers the whole day: `[20240115 TO 20240115]` is echoed as `"202401150000 TO 202401152359"`.
   - **Anything else in the range is an HTTP 500**, not a 400: the `T` form (`20240115T0000`), dashes (`2024-01-15`), a date that isn't on the calendar (`20231399`), and an unclosed range.
+    - The client rejects all but the last before sending anything (exit 2), for `--from`, `--to` and `Q.submitted_between`. A range written by hand in `--raw` is sent as typed.
   - A range end in the future is fine.
   - **`lastUpdatedDate:[…]` is silently rewritten to `submittedDate`.** There is no way to filter by last update.
 - **Debugging:** the feed `<title>` echoes the query as the server parsed it. `arxiv search --explain` prints it as `server_query`.
