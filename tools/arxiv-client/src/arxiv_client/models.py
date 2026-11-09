@@ -100,10 +100,15 @@ class SearchPage:
 
 @dataclass
 class FetchResult:
-    """Result of fetching by ID. ``papers`` is keyed by the ID string you passed in."""
+    """Result of fetching by ID. ``papers`` is keyed by the ID string you passed in.
+
+    ``request_urls`` lists every URL requested, in order. After arXiv's old-style-ID bug it
+    holds the URL that returned 500 and then the unversioned retry.
+    """
 
     papers: Dict[str, Paper]
     not_found: List[str] = field(default_factory=list)
+    request_urls: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {

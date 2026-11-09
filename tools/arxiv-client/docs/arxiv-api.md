@@ -74,6 +74,7 @@ All three XML services sit behind a Fastly/varnish CDN (`via: 1.1 google, 1.1 va
 - **Wildcards:** a trailing `*` works in `ti`, `au`, `all`, `cat` and `id` (`id:1706.037*` returns the 100 papers with that prefix).
 - **Date filter:** `submittedDate:[FROM TO TO]`. It accepts `YYYYMMDD`, `YYYYMMDDHHMM` or `YYYYMMDDHHMMSS`, all in GMT, and normalises them to 12 digits. A date-only value covers the whole day: `[20240115 TO 20240115]` is echoed as `"202401150000 TO 202401152359"`.
   - **Anything else in the range is an HTTP 500**, not a 400: the `T` form (`20240115T0000`), dashes (`2024-01-15`), a date that isn't on the calendar (`20231399`), and an unclosed range.
+    - The client rejects all but the last before sending anything (exit 2), for `--from`, `--to` and `Q.submitted_between`. A range written by hand in `--raw` is sent as typed.
   - A range end in the future is fine.
   - **`lastUpdatedDate:[…]` is silently rewritten to `submittedDate`.** There is no way to filter by last update.
 - **Debugging:** the feed `<title>` echoes the query as the server parsed it. `arxiv search --explain` prints it as `server_query`.
@@ -88,9 +89,10 @@ Measured on 2026-11-09 by comparing `totalResults` and the echoed query for pair
 | A stopword | **Not indexed in titles and abstracts.** There are 33: a, an, and, are, as, at, be, but, by, for, if, in, into, is, it, no, not, of, on, or, such, that, the, their, then, there, these, they, this, to, was, will, with. `from`, `we`, `all` and `you` are not stopwords. | `ti:WORD` matches 0 papers for each of the 33. `all:is` matches 26, from other fields. `all:attention AND all:is` matches 0. | **Never AND a stopword.** `all:attention AND all:is AND all:all AND all:you AND all:need` returns 0, while the phrase `all:"attention is all you need"` returns 47. |
 | A stopword inside a phrase | Dropped from the phrase. | `ti:"the transformer"` returns the same 34,913 as `ti:transformer`. | Phrases are safe with stopwords. |
 | A stopword inside a hyphenated word | Ignored. | `ti:state-of-the-art` 1,166. `ti:"state of the art"` 1,128. | No need to quote it. |
-| A trailing `?` | **A wildcard for one character.** | `ti:attention?` 2. `ti:attention` 14,795. | Remove a question mark from a person's words. |
+| A trailing `?` | **A wildcard for one character.** | `ti:attention?` 2. `ti:attention` 14,795. | Remove a question mark from a person's words. The client does, for an unquoted free-text word. A field flag keeps it as a wildcard. |
+| A `?` inside a quoted phrase | Ignored. | `ti:"attention is all you need?"` 36, the same as without it. `ti:"low-rank adaptation?"` 440, the same as without it. | A pasted title can keep its question mark. |
 | A trailing comma | Ignored. | `ti:attention,` 14,795. | |
-| A possessive `'s` | Narrows the match. | `all:Maldacena's` 982. `all:Maldacena` 1,171. | Remove the `'s`. |
+| A possessive `'s` | Narrows the match, with a straight or a curly apostrophe. | `all:Maldacena's` 982. `all:Maldacena’s` 982. `all:Maldacena` 1,171. | Remove the `'s`. The client does, for an unquoted free-text word. |
 | Upper or lower case | Ignored, for words, names and categories. | `cat:cs.lg` = `cat:CS.LG` = `cat:cs.LG` (297,729). | |
 | A hyphenated word, unquoted | **Split and ANDed** in that field. | `ti:self-attention` = `ti:self AND ti:attention` (1,254). | Quote it to keep the parts adjacent. |
 | A hyphenated word, quoted | A phrase of the parts. | `ti:"self-attention"` = `ti:"self attention"` (1,036). | |
@@ -105,9 +107,10 @@ Measured on 2026-11-09 by comparing `totalResults` and the echoed query for pair
 | `cat:` with an archive that has subcategories | Matches nothing. | `cat:cs` 0. `cat:cs.*` works. `cat:hep-th` works, because it has no subcategories. | Use `cat:cs.*` for a whole archive. |
 | `cat:` | Matches **any** of a paper's categories, not only the primary. | `cat:cs.LG` finds 1706.03762, whose primary is cs.CL. | Two `cat:` terms ANDed mean "listed in both". |
 | An unknown category | 0 results, no error. | `cat:cs.ZZ`. | |
-| `id:` | Matches the unversioned new-style ID only. | `id:1706.03762` 1. `id:1706.03762v5` 0. `id:hep-th/9901001` 0. `id:A OR id:B` 2. | For old-style or versioned IDs use `id_list`. |
+| `id:` | Matches the unversioned new-style ID only. | `id:1706.03762` 1. `id:1706.03762v5` 0. `id:hep-th/9901001` 0. `id:A OR id:B` 2. | For old-style or versioned IDs use `id_list`. `arxiv search --id` rejects them and names `fetch`. |
 
-- **`sortOrder=ascending` with `sortBy=relevance`** returns the least relevant papers first.
+- The row for a `?` inside a phrase and the curly-apostrophe total were measured later the same day, at 14:15 UTC, with 7 more requests.
+- **`sortOrder=ascending` with `sortBy=relevance`** returns the least relevant papers first. The client rejects that pair (exit 2). Ascending order needs a date sort.
 
 #### Claims from other clients' issue trackers, rechecked
 
@@ -128,7 +131,7 @@ Measured on 2026-11-09 by comparing `totalResults` and the echoed query for pair
   - The rule is **unknown**. The failing papers were submitted from 1997 to 2005, and the working ones in 1995 and 2007, so it may be a band of submission dates [inf].
   - New-style non-latest versions work.
   - One failing ID fails the **whole request**.
-  - **Workaround** (cyanheads/arxiv-mcp-server #53): on a 500, re-request with old-style IDs unversioned, and mark each affected result as "requested vN, served latest". That costs at most 2 requests.
+  - **Workaround** (cyanheads/arxiv-mcp-server #53): on a 500, re-request with old-style IDs unversioned, and mark each affected result as "requested vN, served latest". That costs at most 2 requests. `arxiv fetch --explain` lists both request URLs.
 - **Missing IDs:** an ID in a valid format that doesn't exist returns 200 and is silently left out. It is not an error.
 - **Order and duplicates:** duplicates are removed, and results **do not come back in input order**. Match results to requests by ID.
 - **Paging:** `max_results` still applies. 50 IDs with the default `max_results` return only 10 entries.
@@ -467,6 +470,8 @@ This section turns §2.2 into a procedure for a caller that starts from a person
 - **14 returned results**, from 1 to 471.
 - **The intended paper was in the first 10 for 4 of the 13** that had one.
 - The words that still sink a query are the ones about the request: *paper*, *study*, *recent*, *latest*. So the rest of this section still applies.
+
+After that, free text also lost a trailing `?` and a possessive `'s` from each unquoted word (§2.2). The 19 requests were not sent again after that change.
 
 Build the query instead:
 1. **Drop stopwords** (§2.2), and drop the words that describe the request and not the paper: *paper*, *study*, *review*, *work*, *latest*, *recent*, *new*, *arXiv*.
