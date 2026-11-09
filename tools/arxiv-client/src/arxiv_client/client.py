@@ -86,6 +86,8 @@ class SearchResults:
         self._strict = strict
         self.total_results: Optional[int] = None
         self.truncated = False
+        self.server_query: Optional[str] = None
+        self.request_urls: List[str] = []
         self._iterator: Optional[Iterator[Paper]] = None
 
     def __iter__(self) -> Iterator[Paper]:
@@ -100,9 +102,12 @@ class SearchResults:
         yielded = 0
         first = True
         for page in self._client._iter_pages(self._query, self._sort_by, self._sort_order, self._page_size, self._max):
+            if page.request_url:
+                self.request_urls.append(page.request_url)
             if first:
                 first = False
                 self.total_results = page.total_results
+                self.server_query = page.server_query
                 wanted = page.total_results or 0
                 if self._max is not None:
                     wanted = min(wanted, self._max)
@@ -191,6 +196,23 @@ class ArxivClient:
     ) -> SearchPage:
         """Fetch one page. ``start`` must be below 10000; ``max_results`` is clamped so
         that start + max_results <= 10000."""
+        url = self.query_url(query, start, max_results, sort_by, sort_order, id_list=id_list)
+        response = self.transport.get(url, _pacer or self._pacer(), self.budget)
+        page = parse_query_feed(response.body)
+        page.request_url = url
+        return page
+
+    def query_url(
+        self,
+        query: Optional[QueryLike] = None,
+        start: int = 0,
+        max_results: int = 10,
+        sort_by: str = "relevance",
+        sort_order: str = "descending",
+        *,
+        id_list: Optional[Sequence[str]] = None,
+    ) -> str:
+        """The URL ``search_page`` would request, validated but not sent."""
         if query is None and not id_list:
             raise ValidationError("either a query or an id_list is required")
         _check_int("start", start, 0)
@@ -207,9 +229,7 @@ class ArxivClient:
         if id_list:
             params["id_list"] = ",".join(id_list)
         params.update(start=start, max_results=max_results, sortBy=sort_by, sortOrder=sort_order)
-        url = "%s?%s" % (QUERY_URL, encode_params(params))
-        response = self.transport.get(url, _pacer or self._pacer(), self.budget)
-        return parse_query_feed(response.body)
+        return "%s?%s" % (QUERY_URL, encode_params(params))
 
     def _iter_pages(
         self,

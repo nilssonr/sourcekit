@@ -20,6 +20,16 @@ class FullFeedTests(unittest.TestCase):
         self.assertEqual(self.page.total_results, 3)
         self.assertEqual(self.page.start, 0)
 
+    def test_server_query_is_read_from_the_feed_title(self):
+        self.assertEqual(self.page.server_query, "all:test")
+
+    def test_server_query_is_none_when_the_title_carries_no_query(self):
+        self.assertIsNone(parse_query_feed(make_feed([])).server_query)
+        rewritten = make_feed([], server_query='cat:cs.AI AND submittedDate:"202401010000 TO 202401022359"')
+        self.assertEqual(
+            parse_query_feed(rewritten).server_query, 'cat:cs.AI AND submittedDate:"202401010000 TO 202401022359"'
+        )
+
     def test_id_split_into_base_and_version(self):
         self.assertEqual(self.paper.id, "2301.00001")
         self.assertEqual(self.paper.version, 2)

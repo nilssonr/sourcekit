@@ -195,7 +195,7 @@ components:
     start:
       name: start
       in: query
-      description: 0-based offset. Negative/non-int → 400. Observed 500 at ≥ 10000 (works at 1000). Past end → 200, 0 entries.
+      description: 0-based offset. Negative/non-int → 400. Observed 500 at ≥ 10000 (works at 9999). Past end → 200, 0 entries.
       schema: { type: integer, minimum: 0, default: 0 }
     max_results:
       name: max_results

@@ -24,6 +24,8 @@ arxiv search --title "attention is all you need" --max 5
 arxiv search --all "protein folding" --category q-bio.BM --sort submitted --max 20
 arxiv search --author Hinton --from 20230101 --to 20231231
 arxiv search --abstract homogenization --any-category cs.HC --any-category cs.CL --format compact
+arxiv search --all "protein folding" --explain    # adds the query as arXiv parsed it
+arxiv search --title "low-rank adaptation" --dry-run   # prints the query and URL, sends nothing
 arxiv batch queries.json --format compact   # or - to read the list from stdin
 arxiv fetch 1706.03762 hep-th/9901001v1 --abstract-chars 300
 arxiv get 2301.00001
@@ -34,9 +36,15 @@ arxiv pdf 2301.00001 --out ./papers
 **Search filters:**
 - Field flags (`--title`, `--author`, `--abstract`, `--comment`, `--journal-ref`, `--category`, `--report-number`) can be repeated. Their text becomes a quoted phrase when it has more than one word.
 - `--all` is free text. Its words are joined with `AND`, and `"quoted"` parts stay phrases.
+  - **A stopword among them returns 0 results**, because arXiv does not index stopwords: `--all "attention is all you need"` finds nothing, while `--all '"attention is all you need"'` finds 47 papers. See [`docs/arxiv-api.md`](docs/arxiv-api.md) §8.1.
 - `--any-category` can be repeated. Its values are joined with `OR`, so `--any-category cs.HC --any-category cs.CV` matches papers in either. (`--category` values are joined with `AND`, like the other field flags.)
 - `--raw` is passed through verbatim.
 - All filters are joined with `AND`.
+
+**Checking a query** (`search` and `batch`):
+- `--explain` adds two fields to the output. `server_query` is the query as arXiv parsed it, read from the feed title. `request_urls` lists the URL of each page requested. In compact output, `server_query` is a second header line.
+  - arXiv rewrites some input without an error, and `server_query` is the only place that shows it. For example, `lastUpdatedDate:[…]` becomes `submittedDate:"…"`, `au:Hinton_G` becomes `au:"Hinton G"`, and terms with no operator between them are joined with `OR`.
+- `--dry-run` builds and validates the query, prints it with its first-page URL, and sends nothing.
 
 **Batch:** `batch FILE` runs up to 20 searches in one call.
 - **Input:** `FILE`, or `-` for stdin, holds a JSON list of query objects.
